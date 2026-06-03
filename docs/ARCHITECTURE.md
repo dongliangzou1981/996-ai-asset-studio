@@ -32,3 +32,11 @@
 - `panel_type` is constrained by Pydantic to the supported seven panel types.
 - AI generation is intentionally not connected in Sprint 3.
 
+## Sprint 4 Scope
+
+- `/assets` manages uploaded and manually registered asset records.
+- `POST /assets/upload` stores local image files under `assets/uploads`.
+- Asset records support project-scoped and loose records with `project_id = null`.
+- `/job-center` can create mock jobs, show details, display logs, and retry failed jobs.
+- Generation jobs now track input, output, error, retry count, logs, status, and progress.
+- AI generation is intentionally not connected in Sprint 4.

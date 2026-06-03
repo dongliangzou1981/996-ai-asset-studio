@@ -59,12 +59,55 @@ export type BasePanelInput = Omit<BasePanel, "id" | "created_at" | "updated_at">
 
 export type GenerationJob = {
   id: string;
-  project_id: string;
+  project_id: string | null;
   job_type: string;
   status: string;
   progress: number;
+  input_json: string;
+  output_json: string;
+  error_message: string;
+  retry_count: number;
+  logs: string;
   created_at: string;
   updated_at: string;
+};
+
+export type GenerationJobInput = {
+  project_id: string | null;
+  job_type: string;
+  status: string;
+  progress: number;
+  input_json: string;
+  output_json: string;
+  error_message: string;
+  logs: string;
+};
+
+export type Asset = {
+  id: string;
+  project_id: string | null;
+  asset_type:
+    | "reference_image"
+    | "ui_preview"
+    | "annotated_preview"
+    | "sliced_component"
+    | "base_panel"
+    | "icon";
+  device_type: string;
+  width: number;
+  height: number;
+  file_path: string;
+  original_filename: string;
+  metadata_json: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type UploadAssetInput = {
+  file: File;
+  project_id: string | null;
+  asset_type: Asset["asset_type"];
+  device_type: string;
 };
 
 export type ListResponse<T> = {
@@ -88,6 +131,19 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 
   if (response.status === 204) {
     return undefined as T;
+  }
+
+  return response.json() as Promise<T>;
+}
+
+async function uploadRequest<T>(path: string, formData: FormData): Promise<T> {
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    method: "POST",
+    body: formData,
+  });
+
+  if (!response.ok) {
+    throw new Error(`API request failed: ${response.status}`);
   }
 
   return response.json() as Promise<T>;
@@ -162,5 +218,47 @@ export const studioApi = {
   listGenerationJobs(projectId?: string) {
     const query = projectId ? `?project_id=${encodeURIComponent(projectId)}` : "";
     return request<ListResponse<GenerationJob>>(`/generation_jobs${query}`);
+  },
+  createGenerationJob(payload: GenerationJobInput) {
+    return request<GenerationJob>("/generation_jobs", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+  getGenerationJob(generationJobId: string) {
+    return request<GenerationJob>(`/generation_jobs/${generationJobId}`);
+  },
+  retryGenerationJob(generationJobId: string) {
+    return request<GenerationJob>(`/generation_jobs/${generationJobId}/retry`, { method: "POST" });
+  },
+  updateGenerationJob(generationJobId: string, payload: Partial<GenerationJobInput>) {
+    return request<GenerationJob>(`/generation_jobs/${generationJobId}`, {
+      method: "PATCH",
+      body: JSON.stringify(payload),
+    });
+  },
+  deleteAsset(assetId: string) {
+    return request<void>(`/assets/${assetId}`, { method: "DELETE" });
+  },
+  listAssets(projectId?: string, assetType?: string) {
+    const params = new URLSearchParams();
+    if (projectId) {
+      params.set("project_id", projectId);
+    }
+    if (assetType) {
+      params.set("asset_type", assetType);
+    }
+    const query = params.toString() ? `?${params.toString()}` : "";
+    return request<ListResponse<Asset>>(`/assets${query}`);
+  },
+  uploadAsset(payload: UploadAssetInput) {
+    const formData = new FormData();
+    formData.append("file", payload.file);
+    if (payload.project_id) {
+      formData.append("project_id", payload.project_id);
+    }
+    formData.append("asset_type", payload.asset_type);
+    formData.append("device_type", payload.device_type);
+    return uploadRequest<Asset>("/assets/upload", formData);
   },
 };

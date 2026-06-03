@@ -41,6 +41,9 @@ export default function Home() {
             <Link className="rounded-md border border-studio-line bg-white px-4 py-3 text-sm font-semibold" href="/panels">
               基础面板
             </Link>
+            <Link className="rounded-md border border-studio-line bg-white px-4 py-3 text-sm font-semibold" href="/assets">
+              素材管理
+            </Link>
             <Link className="rounded-md border border-studio-line bg-white px-4 py-3 text-sm font-semibold" href="/job-center">
               Job Center
             </Link>

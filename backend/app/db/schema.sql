@@ -39,13 +39,17 @@ CREATE TABLE IF NOT EXISTS base_panels (
 
 CREATE TABLE IF NOT EXISTS reference_images (
   id TEXT PRIMARY KEY,
-  project_id TEXT NOT NULL,
+  project_id TEXT,
+  asset_type TEXT NOT NULL DEFAULT 'reference_image',
+  device_type TEXT,
+  width INTEGER NOT NULL DEFAULT 0,
+  height INTEGER NOT NULL DEFAULT 0,
   file_path TEXT NOT NULL,
-  source_url TEXT,
-  role TEXT NOT NULL,
-  notes TEXT,
+  original_filename TEXT,
+  metadata_json TEXT,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL
 );
 
 CREATE TABLE IF NOT EXISTS ui_screens (
@@ -63,16 +67,17 @@ CREATE TABLE IF NOT EXISTS ui_screens (
 
 CREATE TABLE IF NOT EXISTS assets (
   id TEXT PRIMARY KEY,
-  project_id TEXT NOT NULL,
-  ui_screen_id TEXT,
-  name TEXT NOT NULL,
+  project_id TEXT,
   asset_type TEXT NOT NULL,
+  device_type TEXT,
+  width INTEGER NOT NULL DEFAULT 0,
+  height INTEGER NOT NULL DEFAULT 0,
   file_path TEXT NOT NULL,
+  original_filename TEXT,
   metadata_json TEXT,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE,
-  FOREIGN KEY (ui_screen_id) REFERENCES ui_screens(id) ON DELETE SET NULL
+  FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL
 );
 
 CREATE TABLE IF NOT EXISTS exports (
@@ -89,11 +94,16 @@ CREATE TABLE IF NOT EXISTS exports (
 
 CREATE TABLE IF NOT EXISTS generation_jobs (
   id TEXT PRIMARY KEY,
-  project_id TEXT NOT NULL,
+  project_id TEXT,
   job_type TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT 'pending',
   progress INTEGER NOT NULL DEFAULT 0,
+  input_json TEXT,
+  output_json TEXT,
+  error_message TEXT,
+  retry_count INTEGER NOT NULL DEFAULT 0,
+  logs TEXT,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+  FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL
 );

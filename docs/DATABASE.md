@@ -20,12 +20,15 @@ Alembic config: `backend/alembic.ini`
 - `style_profiles.project_id` references `projects.id`.
 - `base_panels.project_id` references `projects.id`.
 - `base_panels.style_profile_id` references `style_profiles.id`.
-- `generation_jobs.project_id` references `projects.id`.
+- `assets.project_id` references `projects.id` and can be null for loose assets.
+- `reference_images.project_id` references `projects.id` and can be null for loose reference records.
+- `generation_jobs.project_id` references `projects.id` and can be null for studio-wide test jobs.
 
 ## Migrations
 
 - `0001_create_projects_style_profiles.py`: creates `projects` and `style_profiles`.
 - `0002_base_panels_generation_jobs.py`: creates the Sprint 3 `base_panels` shape and `generation_jobs`.
+- `0003_assets_jobs_state_flow.py`: updates assets, reference images, and generation job state fields for Sprint 4.
 
 Default local database URL:
 
@@ -55,6 +58,28 @@ sqlite:///backend/data/studio.db
 - `job_type`
 - `status`
 - `progress`
+- `input_json`
+- `output_json`
+- `error_message`
+- `retry_count`
+- `logs`
 - `created_at`
 - `updated_at`
 
+Allowed status values: `pending`, `running`, `completed`, `failed`, `cancelled`.
+
+## Asset Fields
+
+- `id`
+- `project_id`
+- `asset_type`
+- `device_type`
+- `width`
+- `height`
+- `file_path`
+- `original_filename`
+- `metadata_json`
+- `created_at`
+- `updated_at`
+
+Allowed asset types: `reference_image`, `ui_preview`, `annotated_preview`, `sliced_component`, `base_panel`, `icon`.

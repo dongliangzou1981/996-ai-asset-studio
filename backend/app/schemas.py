@@ -108,13 +108,101 @@ class BasePanelList(BaseModel):
 
 class GenerationJob(BaseModel):
     id: str
-    project_id: str
+    project_id: str | None
     job_type: str
     status: str
     progress: int
+    input_json: str
+    output_json: str
+    error_message: str
+    retry_count: int
+    logs: str
     created_at: str
     updated_at: str
 
 
 class GenerationJobList(BaseModel):
     items: list[GenerationJob]
+
+
+AssetType = Literal[
+    "reference_image",
+    "ui_preview",
+    "annotated_preview",
+    "sliced_component",
+    "base_panel",
+    "icon",
+]
+
+JobStatus = Literal["pending", "running", "completed", "failed", "cancelled"]
+
+
+class AssetCreate(BaseModel):
+    model_config = ConfigDict(json_schema_extra={
+        "examples": [
+            {
+                "project_id": "project-id",
+                "asset_type": "reference_image",
+                "device_type": "mobile",
+                "width": 1080,
+                "height": 1920,
+                "file_path": "assets/reference.png",
+                "original_filename": "reference.png",
+                "metadata_json": "{\"role\":\"mood\"}",
+            }
+        ]
+    })
+
+    project_id: str | None = None
+    asset_type: AssetType
+    device_type: str = ""
+    width: int = Field(ge=0)
+    height: int = Field(ge=0)
+    file_path: str = Field(min_length=1)
+    original_filename: str = ""
+    metadata_json: str = ""
+
+
+class Asset(AssetCreate):
+    id: str
+    created_at: str
+    updated_at: str
+
+
+class AssetList(BaseModel):
+    items: list[Asset]
+
+
+class GenerationJobCreate(BaseModel):
+    model_config = ConfigDict(json_schema_extra={
+        "examples": [
+            {
+                "project_id": "project-id",
+                "job_type": "asset_prepare",
+                "status": "pending",
+                "progress": 0,
+                "input_json": "{\"asset_id\":\"asset-id\"}",
+                "output_json": "",
+                "error_message": "",
+                "logs": "queued",
+            }
+        ]
+    })
+
+    project_id: str | None = None
+    job_type: str = Field(min_length=1, max_length=80)
+    status: JobStatus = "pending"
+    progress: int = Field(default=0, ge=0, le=100)
+    input_json: str = ""
+    output_json: str = ""
+    error_message: str = ""
+    logs: str = ""
+
+
+class GenerationJobPatch(BaseModel):
+    status: JobStatus | None = None
+    progress: int | None = Field(default=None, ge=0, le=100)
+    input_json: str | None = None
+    output_json: str | None = None
+    error_message: str | None = None
+    logs: str | None = None

@@ -3,9 +3,13 @@ import sqlite3
 from uuid import uuid4
 
 from app.schemas import (
+    Asset,
+    AssetCreate,
     BasePanel,
     BasePanelCreate,
     GenerationJob,
+    GenerationJobCreate,
+    GenerationJobPatch,
     Project,
     ProjectCreate,
     StyleProfile,
@@ -291,7 +295,8 @@ class StudioDatabase:
 
     def list_generation_jobs(self, project_id: str | None = None) -> list[GenerationJob]:
         query = """
-            SELECT id, project_id, job_type, status, progress, created_at, updated_at
+            SELECT id, project_id, job_type, status, progress, input_json, output_json,
+                   error_message, retry_count, logs, created_at, updated_at
             FROM generation_jobs
         """
         params: tuple[str, ...] = ()
@@ -303,3 +308,200 @@ class StudioDatabase:
         with self.connect() as connection:
             rows = connection.execute(query, params).fetchall()
         return [GenerationJob.model_validate(dict(row)) for row in rows]
+
+    def create_asset(self, payload: AssetCreate) -> Asset:
+        asset_id = uuid4().hex
+        with self.connect() as connection:
+            connection.execute(
+                """
+                INSERT INTO assets (
+                  id, project_id, asset_type, device_type, width, height,
+                  file_path, original_filename, metadata_json
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    asset_id,
+                    payload.project_id,
+                    payload.asset_type,
+                    payload.device_type,
+                    payload.width,
+                    payload.height,
+                    payload.file_path,
+                    payload.original_filename,
+                    payload.metadata_json,
+                ),
+            )
+        asset = self.get_asset(asset_id)
+        if asset is None:
+            raise RuntimeError("Created asset could not be loaded")
+        return asset
+
+    def list_assets(
+        self, project_id: str | None = None, asset_type: str | None = None
+    ) -> list[Asset]:
+        query = """
+            SELECT id, project_id, asset_type, device_type, width, height,
+                   file_path, original_filename, metadata_json, created_at, updated_at
+            FROM assets
+        """
+        clauses: list[str] = []
+        params: list[str] = []
+        if project_id:
+            clauses.append("project_id = ?")
+            params.append(project_id)
+        if asset_type:
+            clauses.append("asset_type = ?")
+            params.append(asset_type)
+        if clauses:
+            query += " WHERE " + " AND ".join(clauses)
+        query += " ORDER BY created_at DESC, id DESC"
+
+        with self.connect() as connection:
+            rows = connection.execute(query, tuple(params)).fetchall()
+        return [Asset.model_validate(dict(row)) for row in rows]
+
+    def get_asset(self, asset_id: str) -> Asset | None:
+        with self.connect() as connection:
+            row = connection.execute(
+                """
+                SELECT id, project_id, asset_type, device_type, width, height,
+                       file_path, original_filename, metadata_json, created_at, updated_at
+                FROM assets
+                WHERE id = ?
+                """,
+                (asset_id,),
+            ).fetchone()
+        return Asset.model_validate(dict(row)) if row else None
+
+    def update_asset(self, asset_id: str, payload: AssetCreate) -> Asset | None:
+        with self.connect() as connection:
+            result = connection.execute(
+                """
+                UPDATE assets
+                SET project_id = ?,
+                    asset_type = ?,
+                    device_type = ?,
+                    width = ?,
+                    height = ?,
+                    file_path = ?,
+                    original_filename = ?,
+                    metadata_json = ?,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+                """,
+                (
+                    payload.project_id,
+                    payload.asset_type,
+                    payload.device_type,
+                    payload.width,
+                    payload.height,
+                    payload.file_path,
+                    payload.original_filename,
+                    payload.metadata_json,
+                    asset_id,
+                ),
+            )
+        if result.rowcount == 0:
+            return None
+        return self.get_asset(asset_id)
+
+    def delete_asset(self, asset_id: str) -> bool:
+        with self.connect() as connection:
+            result = connection.execute("DELETE FROM assets WHERE id = ?", (asset_id,))
+        return result.rowcount > 0
+
+    def create_generation_job(self, payload: GenerationJobCreate) -> GenerationJob:
+        job_id = uuid4().hex
+        with self.connect() as connection:
+            connection.execute(
+                """
+                INSERT INTO generation_jobs (
+                  id, project_id, job_type, status, progress, input_json,
+                  output_json, error_message, retry_count, logs
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?)
+                """,
+                (
+                    job_id,
+                    payload.project_id,
+                    payload.job_type,
+                    payload.status,
+                    payload.progress,
+                    payload.input_json,
+                    payload.output_json,
+                    payload.error_message,
+                    payload.logs,
+                ),
+            )
+        job = self.get_generation_job(job_id)
+        if job is None:
+            raise RuntimeError("Created generation job could not be loaded")
+        return job
+
+    def get_generation_job(self, generation_job_id: str) -> GenerationJob | None:
+        with self.connect() as connection:
+            row = connection.execute(
+                """
+                SELECT id, project_id, job_type, status, progress, input_json, output_json,
+                       error_message, retry_count, logs, created_at, updated_at
+                FROM generation_jobs
+                WHERE id = ?
+                """,
+                (generation_job_id,),
+            ).fetchone()
+        return GenerationJob.model_validate(dict(row)) if row else None
+
+    def update_generation_job(
+        self, generation_job_id: str, payload: GenerationJobPatch
+    ) -> GenerationJob | None:
+        current = self.get_generation_job(generation_job_id)
+        if current is None:
+            return None
+        with self.connect() as connection:
+            connection.execute(
+                """
+                UPDATE generation_jobs
+                SET status = ?,
+                    progress = ?,
+                    input_json = ?,
+                    output_json = ?,
+                    error_message = ?,
+                    logs = ?,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+                """,
+                (
+                    payload.status if payload.status is not None else current.status,
+                    payload.progress if payload.progress is not None else current.progress,
+                    payload.input_json if payload.input_json is not None else current.input_json,
+                    payload.output_json if payload.output_json is not None else current.output_json,
+                    payload.error_message if payload.error_message is not None else current.error_message,
+                    payload.logs if payload.logs is not None else current.logs,
+                    generation_job_id,
+                ),
+            )
+        return self.get_generation_job(generation_job_id)
+
+    def retry_generation_job(self, generation_job_id: str) -> GenerationJob | None:
+        current = self.get_generation_job(generation_job_id)
+        if current is None:
+            return None
+        retry_count = current.retry_count + 1
+        retry_log = f"Retry {retry_count} queued"
+        logs = f"{current.logs}\n{retry_log}" if current.logs else retry_log
+        with self.connect() as connection:
+            connection.execute(
+                """
+                UPDATE generation_jobs
+                SET status = 'pending',
+                    progress = 0,
+                    error_message = '',
+                    retry_count = ?,
+                    logs = ?,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+                """,
+                (retry_count, logs, generation_job_id),
+            )
+        return self.get_generation_job(generation_job_id)

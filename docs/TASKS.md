@@ -35,3 +35,19 @@
 
 AI generation is not part of Sprint 3.
 
+## Sprint 4
+
+- [x] Backend asset CRUD
+- [x] Backend image upload endpoint
+- [x] Support loose assets with `project_id = null`
+- [x] Support Sprint 4 asset types
+- [x] Frontend `/assets` page
+- [x] Generation job create/list/detail/update/retry API
+- [x] Frontend `/job-center` creation, detail, log, and retry flow
+- [x] Alembic 0003 migration
+- [x] Backend tests for uploads, asset CRUD, job update, and retry
+- [x] Frontend tests for `/assets` and `/job-center`
+- [x] Update API, database, architecture, task, changelog, and test docs
+- [ ] AI generation
+
+AI generation is not part of Sprint 4.

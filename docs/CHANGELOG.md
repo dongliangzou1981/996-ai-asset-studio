@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.4.0 - 2026-06-03
+
+- Added asset CRUD API and local image upload endpoint.
+- Added `/assets` page with upload, filters, list, and delete actions.
+- Expanded `generation_jobs` API with create, detail, patch, and retry.
+- Enhanced `/job-center` with mock job creation, details, logs, and failed-job retry.
+- Added Alembic 0003 migration for assets, reference images, and generation job state fields.
+- Added backend tests for asset upload, asset CRUD, job state updates, retry, and OpenAPI contract.
+- Added frontend tests for asset management and job center workflows.
+
 ## 0.3.0 - 2026-06-03
 
 - Added Base Panel CRUD and copy API.
@@ -23,4 +33,3 @@
 - Added FastAPI backend.
 - Added database schema.
 - Added docs structure.
-
