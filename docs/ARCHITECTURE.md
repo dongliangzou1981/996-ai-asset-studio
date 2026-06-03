@@ -13,11 +13,17 @@
 
 ## Sprint 1 架构
 
-前端通过静态页面展示项目状态。后端提供 `/health` 和 `/schema/tables`，数据库结构先以 SQL 文件定义，后续 Sprint 再接入迁移工具和持久化访问层。
+前端通过工作台页面展示项目状态，并提供项目管理与风格管理页面。后端提供 `/health`、`/schema/tables`、项目 CRUD 和风格资料 CRUD，默认使用 SQLite 持久化。
 
 ## 技术栈
 
 - Frontend: Next.js 15, React, TypeScript, Tailwind CSS
-- Backend: FastAPI, Uvicorn
-- Database: SQLite-compatible SQL schema for local development
+- Backend: FastAPI, Uvicorn, Pydantic
+- Database: SQLite-compatible SQL schema for local development, Alembic migrations
 
+## Sprint 2 数据流
+
+1. 前端 `studioApi` 使用 `NEXT_PUBLIC_API_BASE_URL` 或默认 `http://127.0.0.1:8000` 调用后端。
+2. FastAPI 使用 Pydantic schema 进行 JSON schema 验证并生成 OpenAPI。
+3. 后端仓储通过 Python `sqlite3` 读写本地数据库。
+4. Alembic 提供 `projects` 与 `style_profiles` 的迁移入口。

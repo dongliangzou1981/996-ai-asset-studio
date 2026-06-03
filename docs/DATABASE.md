@@ -2,6 +2,8 @@
 
 Sprint 1 定义 7 张核心表，SQL 文件位于 `backend/app/db/schema.sql`。
 
+Sprint 2 初始化 Alembic，迁移配置位于 `backend/alembic.ini`，迁移脚本位于 `backend/migrations/versions/0001_create_projects_style_profiles.py`。
+
 ## 表
 
 - `projects`: 项目主表。
@@ -18,3 +20,12 @@ Sprint 1 定义 7 张核心表，SQL 文件位于 `backend/app/db/schema.sql`。
 - `assets` 可选关联 `ui_screens`。
 - `exports` 通过 `project_id` 关联项目。
 
+## 迁移
+
+本地默认 SQLite URL:
+
+```text
+sqlite:///backend/data/studio.db
+```
+
+可通过 `DATABASE_URL` 覆盖为 PostgreSQL 等 SQLAlchemy 支持的连接字符串。Sprint 2 的首个迁移脚本覆盖 `projects` 和 `style_profiles` 两张表。

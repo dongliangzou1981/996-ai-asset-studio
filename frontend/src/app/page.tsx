@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 const tables = [
   "projects",
   "style_profiles",
@@ -29,9 +31,13 @@ export default function Home() {
               Sprint 1 初始化工作台：项目结构、文档、前端、后端和数据库表结构已进入可验证状态。
             </p>
           </div>
-          <div className="rounded-md border border-studio-line bg-white px-4 py-3 text-sm">
-            <span className="font-medium text-studio-success">Ready</span>
-            <span className="ml-2 text-studio-muted">AI 生成暂未接入</span>
+          <div className="flex flex-wrap gap-2">
+            <Link className="rounded-md bg-studio-action px-4 py-3 text-sm font-semibold text-white" href="/projects">
+              项目管理
+            </Link>
+            <Link className="rounded-md border border-studio-line bg-white px-4 py-3 text-sm font-semibold" href="/styles">
+              风格管理
+            </Link>
           </div>
         </header>
 
@@ -82,4 +88,3 @@ export default function Home() {
     </main>
   );
 }
-
