@@ -135,6 +135,7 @@ AssetType = Literal[
 ]
 
 JobStatus = Literal["pending", "running", "completed", "failed", "cancelled"]
+AssetSource = Literal["uploaded", "mock_generated"]
 
 
 class AssetCreate(BaseModel):
@@ -161,6 +162,8 @@ class AssetCreate(BaseModel):
     file_path: str = Field(min_length=1)
     original_filename: str = ""
     metadata_json: str = ""
+    source: AssetSource = "uploaded"
+    generation_job_id: str | None = None
 
 
 class Asset(AssetCreate):
@@ -206,3 +209,26 @@ class GenerationJobPatch(BaseModel):
     output_json: str | None = None
     error_message: str | None = None
     logs: str | None = None
+
+
+class MockUiGenerationRequest(BaseModel):
+    project_id: str | None = None
+    device_type: str = Field(default="mobile", min_length=1, max_length=40)
+    width: int = Field(default=1080, gt=0)
+    height: int = Field(default=1920, gt=0)
+
+
+class AiProviderCreate(BaseModel):
+    name: str = Field(min_length=1, max_length=80)
+    provider_type: str = Field(min_length=1, max_length=80)
+    enabled: bool = False
+
+
+class AiProvider(AiProviderCreate):
+    id: str
+    created_at: str
+    updated_at: str
+
+
+class AiProviderList(BaseModel):
+    items: list[AiProvider]

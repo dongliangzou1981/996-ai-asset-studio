@@ -181,6 +181,35 @@ Updates status flow fields such as `status`, `progress`, `output_json`, `error_m
 
 Resets a failed job to `pending`, clears `error_message`, sets `progress` to `0`, increments `retry_count`, and appends a retry log line.
 
+### POST /generation_jobs/mock-ui
+
+Creates a `mock_ui_generation` job. This endpoint does not call a real AI model.
+
+```json
+{
+  "project_id": "project-id",
+  "device_type": "mobile",
+  "width": 1080,
+  "height": 1920
+}
+```
+
+### POST /generation_jobs/{generation_job_id}/run-mock
+
+Runs the local mock worker for a `mock_ui_generation` job. Success flow is `pending -> running -> completed`; invalid mock input can produce `pending -> running -> failed`.
+
+The mock worker creates:
+
+- `ui_preview`
+- `annotated_preview`
+- `sliced_component`
+
+Each result is written to `assets`, linked by `generation_job_id`, and summarized in `job.output_json`.
+
+### GET /generation_jobs/{generation_job_id}/results
+
+Returns assets created by a generation job.
+
 ## Assets
 
 Supported `asset_type` values:
@@ -203,17 +232,23 @@ Supported `asset_type` values:
   "height": 1920,
   "file_path": "assets/uploads/reference.png",
   "original_filename": "reference.png",
-  "metadata_json": "{}"
+  "metadata_json": "{}",
+  "source": "uploaded",
+  "generation_job_id": null
 }
 ```
 
 ### GET /assets
 
-Accepts optional `project_id` and `asset_type` query parameters.
+Accepts optional `project_id`, `asset_type`, and `generation_job_id` query parameters.
 
 ### GET /assets/{asset_id}
 
 Returns one asset or `404`.
+
+### GET /assets/{asset_id}/file
+
+Streams the asset file for browser previews.
 
 ### PUT /assets/{asset_id}
 
@@ -235,6 +270,28 @@ Multipart upload endpoint. Fields:
 
 Returns the created asset record with file path, width, height, type, and original filename. Real AI generation is not connected.
 
+## AI Providers
+
+Provider config is a Sprint 5 placeholder for Sprint 6. It stores provider name, provider type, and enabled state only. No real API keys are stored.
+
+### POST /ai_providers
+
+```json
+{
+  "name": "Mock Provider",
+  "provider_type": "mock",
+  "enabled": false
+}
+```
+
+### GET /ai_providers
+
+```json
+{
+  "items": []
+}
+```
+
 ## Frontend Call Example
 
 ```ts
@@ -255,4 +312,13 @@ await studioApi.createGenerationJob({
   error_message: "",
   logs: "queued",
 });
+
+await studioApi.createMockUiGenerationJob({
+  project_id: "project-id",
+  device_type: "mobile",
+  width: 1080,
+  height: 1920,
+});
+
+await studioApi.runMockGenerationJob("generation-job-id");
 ```

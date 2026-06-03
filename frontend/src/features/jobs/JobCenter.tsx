@@ -2,20 +2,39 @@
 
 import { FormEvent, useEffect, useState } from "react";
 
-import { GenerationJob, studioApi } from "@/lib/api";
+import { Asset, GenerationJob, Project, studioApi } from "@/lib/api";
 
-type JobApi = Pick<typeof studioApi, "createGenerationJob" | "listGenerationJobs" | "retryGenerationJob">;
+type JobApi = Pick<
+  typeof studioApi,
+  | "createGenerationJob"
+  | "createMockUiGenerationJob"
+  | "getAssetFileUrl"
+  | "listGenerationJobResults"
+  | "listGenerationJobs"
+  | "listProjects"
+  | "retryGenerationJob"
+  | "runMockGenerationJob"
+>;
 
 export function JobCenter({ api = studioApi }: { api?: JobApi }) {
   const [jobs, setJobs] = useState<GenerationJob[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [selectedJob, setSelectedJob] = useState<GenerationJob | null>(null);
+  const [results, setResults] = useState<Asset[]>([]);
   const [jobType, setJobType] = useState("");
+  const [mockProjectId, setMockProjectId] = useState<string | null>(null);
+  const [mockDevice, setMockDevice] = useState("mobile");
+  const [mockWidth, setMockWidth] = useState(1080);
+  const [mockHeight, setMockHeight] = useState(1920);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    api
-      .listGenerationJobs()
-      .then((result) => setJobs(result.items))
+    Promise.all([api.listGenerationJobs(), api.listProjects()])
+      .then(([jobResult, projectResult]) => {
+        setJobs(jobResult.items);
+        setProjects(projectResult.items);
+        setMockProjectId(projectResult.items[0]?.id ?? null);
+      })
       .catch(() => setError("Jobs failed to load"));
   }, [api]);
 
@@ -35,18 +54,106 @@ export function JobCenter({ api = studioApi }: { api?: JobApi }) {
     setJobType("");
   }
 
+  async function createMockJob(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const created = await api.createMockUiGenerationJob({
+      project_id: mockProjectId,
+      device_type: mockDevice,
+      width: mockWidth,
+      height: mockHeight,
+    });
+    setJobs((items) => [created, ...items]);
+    setSelectedJob(created);
+    setResults([]);
+  }
+
   async function retryJob(job: GenerationJob) {
     const retried = await api.retryGenerationJob(job.id);
     setJobs((items) => items.map((item) => (item.id === retried.id ? retried : item)));
     setSelectedJob(retried);
+    setResults([]);
+  }
+
+  async function runMock(job: GenerationJob) {
+    const completed = await api.runMockGenerationJob(job.id);
+    const result = await api.listGenerationJobResults(completed.id);
+    setJobs((items) => items.map((item) => (item.id === completed.id ? completed : item)));
+    setSelectedJob(completed);
+    setResults(result.items);
+  }
+
+  async function viewJob(job: GenerationJob) {
+    setSelectedJob(job);
+    if (job.output_json || job.job_type === "mock_ui_generation") {
+      const result = await api.listGenerationJobResults(job.id);
+      setResults(result.items);
+    } else {
+      setResults([]);
+    }
   }
 
   return (
     <section className="grid gap-6 lg:grid-cols-[0.75fr_1.25fr]">
       <div className="rounded-md border border-studio-line bg-white p-5">
         <h2 className="text-lg font-semibold">Job Center</h2>
-        <p className="mt-2 text-sm text-studio-muted">Sprint 4 tracks mock job state. No real AI model is connected.</p>
-        <form className="mt-5 grid gap-3" onSubmit={createJob}>
+        <p className="mt-2 text-sm text-studio-muted">Sprint 5 runs a local mock pipeline. No real AI model is connected.</p>
+
+        <form className="mt-5 grid gap-3" onSubmit={createMockJob}>
+          <label className="grid gap-1 text-sm font-medium">
+            Mock 项目
+            <select
+              className="rounded-md border border-studio-line px-3 py-2 font-normal"
+              onChange={(event) => setMockProjectId(event.target.value || null)}
+              value={mockProjectId ?? ""}
+            >
+              <option value="">Loose mock</option>
+              {projects.map((project) => (
+                <option key={project.id} value={project.id}>
+                  {project.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="grid gap-1 text-sm font-medium">
+            Mock device
+            <select
+              className="rounded-md border border-studio-line px-3 py-2 font-normal"
+              onChange={(event) => setMockDevice(event.target.value)}
+              value={mockDevice}
+            >
+              <option value="mobile">mobile</option>
+              <option value="tablet">tablet</option>
+              <option value="desktop">desktop</option>
+            </select>
+          </label>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="grid gap-1 text-sm font-medium">
+              Mock width
+              <input
+                className="rounded-md border border-studio-line px-3 py-2 font-normal"
+                min={1}
+                onChange={(event) => setMockWidth(Number(event.target.value))}
+                type="number"
+                value={mockWidth}
+              />
+            </label>
+            <label className="grid gap-1 text-sm font-medium">
+              Mock height
+              <input
+                className="rounded-md border border-studio-line px-3 py-2 font-normal"
+                min={1}
+                onChange={(event) => setMockHeight(Number(event.target.value))}
+                type="number"
+                value={mockHeight}
+              />
+            </label>
+          </div>
+          <button className="rounded-md bg-studio-action px-4 py-2 text-sm font-semibold text-white" type="submit">
+            Create mock UI job
+          </button>
+        </form>
+
+        <form className="mt-6 grid gap-3 border-t border-studio-line pt-5" onSubmit={createJob}>
           <label className="grid gap-1 text-sm font-medium">
             Job type
             <input
@@ -56,7 +163,7 @@ export function JobCenter({ api = studioApi }: { api?: JobApi }) {
               value={jobType}
             />
           </label>
-          <button className="rounded-md bg-studio-action px-4 py-2 text-sm font-semibold text-white" type="submit">
+          <button className="rounded-md border border-studio-line px-4 py-2 text-sm font-semibold" type="submit">
             Create test job
           </button>
         </form>
@@ -79,11 +186,21 @@ export function JobCenter({ api = studioApi }: { api?: JobApi }) {
                   <button
                     aria-label={`View ${job.job_type}`}
                     className="rounded-md border border-studio-line px-3 py-2 text-sm"
-                    onClick={() => setSelectedJob(job)}
+                    onClick={() => viewJob(job)}
                     type="button"
                   >
                     View
                   </button>
+                  {job.job_type === "mock_ui_generation" && job.status !== "completed" ? (
+                    <button
+                      aria-label={`Run Mock ${job.job_type}`}
+                      className="rounded-md border border-studio-line px-3 py-2 text-sm"
+                      onClick={() => runMock(job)}
+                      type="button"
+                    >
+                      运行 Mock
+                    </button>
+                  ) : null}
                   {job.status === "failed" ? (
                     <button
                       aria-label={`Retry ${job.job_type}`}
@@ -122,13 +239,29 @@ export function JobCenter({ api = studioApi }: { api?: JobApi }) {
                 <dd className="break-all text-studio-muted">{selectedJob.input_json || "{}"}</dd>
               </div>
             </dl>
-            <pre className="mt-4 whitespace-pre-wrap rounded-md bg-slate-50 p-3 text-xs text-studio-ink">
+            <h4 className="mt-4 text-sm font-semibold">Log Timeline</h4>
+            <pre className="mt-2 whitespace-pre-wrap rounded-md bg-slate-50 p-3 text-xs text-studio-ink">
               {selectedJob.logs || "No logs"}
             </pre>
+            <h4 className="mt-4 text-sm font-semibold">Result Assets</h4>
+            <div className="mt-2 grid gap-3 sm:grid-cols-3">
+              {results.map((asset) => (
+                <figure className="rounded-md border border-studio-line p-3" key={asset.id}>
+                  <img
+                    alt={`Result ${asset.asset_type}`}
+                    className="h-28 w-full rounded-md object-cover"
+                    src={api.getAssetFileUrl(asset.id)}
+                  />
+                  <figcaption className="mt-2 break-all text-xs text-studio-muted">
+                    {asset.asset_type} / {asset.source}
+                  </figcaption>
+                </figure>
+              ))}
+              {results.length === 0 ? <p className="text-sm text-studio-muted">No result assets.</p> : null}
+            </div>
           </aside>
         ) : null}
       </div>
     </section>
   );
 }
-

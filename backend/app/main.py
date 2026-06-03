@@ -1,13 +1,19 @@
 from pathlib import Path
+import json
 import os
 import re
 
 from fastapi import FastAPI, File, Form, HTTPException, Response, UploadFile, status
+from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.db import StudioDatabase
+from app.mock_worker import run_mock_generation
 from app.schema import TABLE_NAMES
 from app.schemas import (
+    AiProvider,
+    AiProviderCreate,
+    AiProviderList,
     Asset,
     AssetCreate,
     AssetList,
@@ -18,6 +24,7 @@ from app.schemas import (
     GenerationJobCreate,
     GenerationJobList,
     GenerationJobPatch,
+    MockUiGenerationRequest,
     Project,
     ProjectCreate,
     ProjectList,
@@ -67,7 +74,7 @@ def image_size(data: bytes, extension: str) -> tuple[int, int]:
 
 
 def create_app(database_path: str | Path | None = None, upload_dir: str | Path | None = None) -> FastAPI:
-    app = FastAPI(title="996 AI Asset Studio API", version="0.4.0")
+    app = FastAPI(title="996 AI Asset Studio API", version="0.5.0")
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
@@ -198,8 +205,18 @@ def create_app(database_path: str | Path | None = None, upload_dir: str | Path |
         return database.create_asset(payload)
 
     @app.get("/assets", response_model=AssetList)
-    def list_assets(project_id: str | None = None, asset_type: str | None = None) -> AssetList:
-        return AssetList(items=database.list_assets(project_id=project_id, asset_type=asset_type))
+    def list_assets(
+        project_id: str | None = None,
+        asset_type: str | None = None,
+        generation_job_id: str | None = None,
+    ) -> AssetList:
+        return AssetList(
+            items=database.list_assets(
+                project_id=project_id,
+                asset_type=asset_type,
+                generation_job_id=generation_job_id,
+            )
+        )
 
     @app.get("/assets/{asset_id}", response_model=Asset)
     def get_asset(asset_id: str) -> Asset:
@@ -207,6 +224,16 @@ def create_app(database_path: str | Path | None = None, upload_dir: str | Path |
         if asset is None:
             raise HTTPException(status_code=404, detail="Asset not found")
         return asset
+
+    @app.get("/assets/{asset_id}/file")
+    def get_asset_file(asset_id: str) -> FileResponse:
+        asset = database.get_asset(asset_id)
+        if asset is None:
+            raise HTTPException(status_code=404, detail="Asset not found")
+        file_path = Path(asset.file_path)
+        if not file_path.exists():
+            raise HTTPException(status_code=404, detail="Asset file not found")
+        return FileResponse(file_path)
 
     @app.put("/assets/{asset_id}", response_model=Asset)
     def update_asset(asset_id: str, payload: AssetCreate) -> Asset:
@@ -252,6 +279,31 @@ def create_app(database_path: str | Path | None = None, upload_dir: str | Path |
                 file_path=str(upload_path),
                 original_filename=original_filename,
                 metadata_json="{}",
+                source="uploaded",
+                generation_job_id=None,
+            )
+        )
+
+    @app.post("/generation_jobs/mock-ui", response_model=GenerationJob, status_code=status.HTTP_201_CREATED)
+    def create_mock_ui_generation_job(payload: MockUiGenerationRequest) -> GenerationJob:
+        if payload.project_id and database.get_project(payload.project_id) is None:
+            raise HTTPException(status_code=400, detail="Project does not exist")
+        return database.create_generation_job(
+            GenerationJobCreate(
+                project_id=payload.project_id,
+                job_type="mock_ui_generation",
+                status="pending",
+                progress=0,
+                input_json=json.dumps(
+                    {
+                        "device_type": payload.device_type,
+                        "width": payload.width,
+                        "height": payload.height,
+                    }
+                ),
+                output_json="",
+                error_message="",
+                logs="Mock UI job queued",
             )
         )
 
@@ -260,6 +312,24 @@ def create_app(database_path: str | Path | None = None, upload_dir: str | Path |
         if payload.project_id and database.get_project(payload.project_id) is None:
             raise HTTPException(status_code=400, detail="Project does not exist")
         return database.create_generation_job(payload)
+
+    @app.post("/generation_jobs/{generation_job_id}/run-mock", response_model=GenerationJob)
+    def run_mock_generation_job(generation_job_id: str) -> GenerationJob:
+        generation_job = database.get_generation_job(generation_job_id)
+        if generation_job is None:
+            raise HTTPException(status_code=404, detail="Generation job not found")
+        if generation_job.job_type != "mock_ui_generation":
+            raise HTTPException(status_code=400, detail="Only mock_ui_generation jobs can run mock")
+        completed = run_mock_generation(database, upload_root, generation_job_id)
+        if completed is None:
+            raise HTTPException(status_code=404, detail="Generation job not found")
+        return completed
+
+    @app.get("/generation_jobs/{generation_job_id}/results", response_model=AssetList)
+    def get_generation_job_results(generation_job_id: str) -> AssetList:
+        if database.get_generation_job(generation_job_id) is None:
+            raise HTTPException(status_code=404, detail="Generation job not found")
+        return AssetList(items=database.list_assets(generation_job_id=generation_job_id))
 
     @app.get("/generation_jobs/{generation_job_id}", response_model=GenerationJob)
     def get_generation_job(generation_job_id: str) -> GenerationJob:
@@ -281,6 +351,14 @@ def create_app(database_path: str | Path | None = None, upload_dir: str | Path |
         if generation_job is None:
             raise HTTPException(status_code=404, detail="Generation job not found")
         return generation_job
+
+    @app.post("/ai_providers", response_model=AiProvider, status_code=status.HTTP_201_CREATED)
+    def create_ai_provider(payload: AiProviderCreate) -> AiProvider:
+        return database.create_ai_provider(payload)
+
+    @app.get("/ai_providers", response_model=AiProviderList)
+    def list_ai_providers() -> AiProviderList:
+        return AiProviderList(items=database.list_ai_providers())
 
     return app
 

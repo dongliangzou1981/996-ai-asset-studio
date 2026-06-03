@@ -3,6 +3,8 @@ import sqlite3
 from uuid import uuid4
 
 from app.schemas import (
+    AiProvider,
+    AiProviderCreate,
     Asset,
     AssetCreate,
     BasePanel,
@@ -316,9 +318,9 @@ class StudioDatabase:
                 """
                 INSERT INTO assets (
                   id, project_id, asset_type, device_type, width, height,
-                  file_path, original_filename, metadata_json
+                  file_path, original_filename, metadata_json, source, generation_job_id
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     asset_id,
@@ -330,6 +332,8 @@ class StudioDatabase:
                     payload.file_path,
                     payload.original_filename,
                     payload.metadata_json,
+                    payload.source,
+                    payload.generation_job_id,
                 ),
             )
         asset = self.get_asset(asset_id)
@@ -338,11 +342,15 @@ class StudioDatabase:
         return asset
 
     def list_assets(
-        self, project_id: str | None = None, asset_type: str | None = None
+        self,
+        project_id: str | None = None,
+        asset_type: str | None = None,
+        generation_job_id: str | None = None,
     ) -> list[Asset]:
         query = """
             SELECT id, project_id, asset_type, device_type, width, height,
-                   file_path, original_filename, metadata_json, created_at, updated_at
+                   file_path, original_filename, metadata_json, source, generation_job_id,
+                   created_at, updated_at
             FROM assets
         """
         clauses: list[str] = []
@@ -353,6 +361,9 @@ class StudioDatabase:
         if asset_type:
             clauses.append("asset_type = ?")
             params.append(asset_type)
+        if generation_job_id:
+            clauses.append("generation_job_id = ?")
+            params.append(generation_job_id)
         if clauses:
             query += " WHERE " + " AND ".join(clauses)
         query += " ORDER BY created_at DESC, id DESC"
@@ -366,7 +377,8 @@ class StudioDatabase:
             row = connection.execute(
                 """
                 SELECT id, project_id, asset_type, device_type, width, height,
-                       file_path, original_filename, metadata_json, created_at, updated_at
+                       file_path, original_filename, metadata_json, source, generation_job_id,
+                       created_at, updated_at
                 FROM assets
                 WHERE id = ?
                 """,
@@ -387,6 +399,8 @@ class StudioDatabase:
                     file_path = ?,
                     original_filename = ?,
                     metadata_json = ?,
+                    source = ?,
+                    generation_job_id = ?,
                     updated_at = CURRENT_TIMESTAMP
                 WHERE id = ?
                 """,
@@ -399,6 +413,8 @@ class StudioDatabase:
                     payload.file_path,
                     payload.original_filename,
                     payload.metadata_json,
+                    payload.source,
+                    payload.generation_job_id,
                     asset_id,
                 ),
             )
@@ -482,6 +498,44 @@ class StudioDatabase:
                 ),
             )
         return self.get_generation_job(generation_job_id)
+
+    def create_ai_provider(self, payload: AiProviderCreate) -> AiProvider:
+        provider_id = uuid4().hex
+        with self.connect() as connection:
+            connection.execute(
+                """
+                INSERT INTO ai_providers (id, name, provider_type, enabled)
+                VALUES (?, ?, ?, ?)
+                """,
+                (provider_id, payload.name, payload.provider_type, int(payload.enabled)),
+            )
+        provider = self.get_ai_provider(provider_id)
+        if provider is None:
+            raise RuntimeError("Created AI provider could not be loaded")
+        return provider
+
+    def list_ai_providers(self) -> list[AiProvider]:
+        with self.connect() as connection:
+            rows = connection.execute(
+                """
+                SELECT id, name, provider_type, enabled, created_at, updated_at
+                FROM ai_providers
+                ORDER BY created_at ASC, id ASC
+                """
+            ).fetchall()
+        return [AiProvider.model_validate({**dict(row), "enabled": bool(row["enabled"])}) for row in rows]
+
+    def get_ai_provider(self, provider_id: str) -> AiProvider | None:
+        with self.connect() as connection:
+            row = connection.execute(
+                """
+                SELECT id, name, provider_type, enabled, created_at, updated_at
+                FROM ai_providers
+                WHERE id = ?
+                """,
+                (provider_id,),
+            ).fetchone()
+        return AiProvider.model_validate({**dict(row), "enabled": bool(row["enabled"])}) if row else None
 
     def retry_generation_job(self, generation_job_id: str) -> GenerationJob | None:
         current = self.get_generation_job(generation_job_id)

@@ -7,4 +7,5 @@ TABLE_NAMES = [
     "assets",
     "exports",
     "generation_jobs",
+    "ai_providers",
 ]

@@ -47,9 +47,12 @@ CREATE TABLE IF NOT EXISTS reference_images (
   file_path TEXT NOT NULL,
   original_filename TEXT,
   metadata_json TEXT,
+  source TEXT NOT NULL DEFAULT 'uploaded',
+  generation_job_id TEXT,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL
+  FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL,
+  FOREIGN KEY (generation_job_id) REFERENCES generation_jobs(id) ON DELETE SET NULL
 );
 
 CREATE TABLE IF NOT EXISTS ui_screens (
@@ -75,9 +78,21 @@ CREATE TABLE IF NOT EXISTS assets (
   file_path TEXT NOT NULL,
   original_filename TEXT,
   metadata_json TEXT,
+  source TEXT NOT NULL DEFAULT 'uploaded',
+  generation_job_id TEXT,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL
+  FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL,
+  FOREIGN KEY (generation_job_id) REFERENCES generation_jobs(id) ON DELETE SET NULL
+);
+
+CREATE TABLE IF NOT EXISTS ai_providers (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  provider_type TEXT NOT NULL,
+  enabled INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS exports (

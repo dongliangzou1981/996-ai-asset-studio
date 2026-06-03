@@ -38,3 +38,20 @@
 10. Run `npm test -- --runInBand` in `frontend/`.
 11. Run `npm run build` in `frontend/`.
 12. Run `backend\.venv\Scripts\python -m alembic -c backend\alembic.ini upgrade head`.
+
+## Sprint 5
+
+1. Check `POST /generation_jobs/mock-ui` creates a `mock_ui_generation` job.
+2. Check `POST /generation_jobs/{id}/run-mock` moves a valid mock job to `completed`.
+3. Check invalid mock `input_json` moves a job to `failed`.
+4. Check mock run creates `ui_preview`, `annotated_preview`, and `sliced_component` assets.
+5. Check result assets use `source = mock_generated` and contain `generation_job_id`.
+6. Check `GET /generation_jobs/{id}/results` returns generated assets.
+7. Check `GET /assets?generation_job_id={id}` filters generated assets.
+8. Check `GET /assets/{id}/file` streams preview files.
+9. Check `/job-center` can create mock jobs, run mock, show logs, and show result assets.
+10. Check `/assets` shows image previews, details, source, and job filtering.
+11. Run `backend\.venv\Scripts\python -m pytest backend\tests -q`.
+12. Run `npm test -- --runInBand` in `frontend/`.
+13. Run `npm run build` in `frontend/`.
+14. Run `backend\.venv\Scripts\python -m alembic -c backend\alembic.ini upgrade head`.

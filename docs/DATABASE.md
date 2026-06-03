@@ -14,6 +14,7 @@ Alembic config: `backend/alembic.ini`
 - `assets`: generated or imported asset metadata.
 - `exports`: export records.
 - `generation_jobs`: generation job status records.
+- `ai_providers`: provider config placeholder records without secrets.
 
 ## Relationships
 
@@ -21,6 +22,7 @@ Alembic config: `backend/alembic.ini`
 - `base_panels.project_id` references `projects.id`.
 - `base_panels.style_profile_id` references `style_profiles.id`.
 - `assets.project_id` references `projects.id` and can be null for loose assets.
+- `assets.generation_job_id` references `generation_jobs.id` and can be null for uploaded assets.
 - `reference_images.project_id` references `projects.id` and can be null for loose reference records.
 - `generation_jobs.project_id` references `projects.id` and can be null for studio-wide test jobs.
 
@@ -29,6 +31,7 @@ Alembic config: `backend/alembic.ini`
 - `0001_create_projects_style_profiles.py`: creates `projects` and `style_profiles`.
 - `0002_base_panels_generation_jobs.py`: creates the Sprint 3 `base_panels` shape and `generation_jobs`.
 - `0003_assets_jobs_state_flow.py`: updates assets, reference images, and generation job state fields for Sprint 4.
+- `0004_mock_pipeline_assets_providers.py`: adds asset source/job linkage fields and `ai_providers`.
 
 Default local database URL:
 
@@ -79,7 +82,22 @@ Allowed status values: `pending`, `running`, `completed`, `failed`, `cancelled`.
 - `file_path`
 - `original_filename`
 - `metadata_json`
+- `source`
+- `generation_job_id`
 - `created_at`
 - `updated_at`
 
 Allowed asset types: `reference_image`, `ui_preview`, `annotated_preview`, `sliced_component`, `base_panel`, `icon`.
+
+Allowed asset sources: `uploaded`, `mock_generated`.
+
+## AI Provider Fields
+
+- `id`
+- `name`
+- `provider_type`
+- `enabled`
+- `created_at`
+- `updated_at`
+
+Provider records are placeholders. Sprint 5 does not store real API keys.

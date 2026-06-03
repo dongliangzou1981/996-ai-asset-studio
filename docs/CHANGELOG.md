@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.5.0 - 2026-06-03
+
+- Added local Mock AI pipeline for `mock_ui_generation` jobs.
+- Added mock worker that creates placeholder `ui_preview`, `annotated_preview`, and `sliced_component` PNG assets.
+- Added job result endpoints and asset linkage through `generation_job_id`.
+- Added asset source tracking with `uploaded` and `mock_generated`.
+- Enhanced `/job-center` with mock job creation, run action, log timeline, and result assets.
+- Enhanced `/assets` with image previews, detail view, source display, and job filter.
+- Added `ai_providers` placeholder table and API without secret storage.
+- Added Alembic 0004 migration and Sprint 5 tests.
+
 ## 0.4.0 - 2026-06-03
 
 - Added asset CRUD API and local image upload endpoint.

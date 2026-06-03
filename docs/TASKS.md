@@ -51,3 +51,25 @@ AI generation is not part of Sprint 3.
 - [ ] AI generation
 
 AI generation is not part of Sprint 4.
+
+## Sprint 5
+
+- [x] Support `mock_ui_generation` jobs
+- [x] Add pending/running/completed and pending/running/failed mock flows
+- [x] Add mock worker service
+- [x] Generate local placeholder PNG previews with Pillow
+- [x] Create `ui_preview`, `annotated_preview`, and `sliced_component` result assets
+- [x] Link generated assets to `generation_job_id`
+- [x] Write result asset data to `job.output_json`
+- [x] Add `POST /generation_jobs/mock-ui`
+- [x] Add `POST /generation_jobs/{id}/run-mock`
+- [x] Add `GET /generation_jobs/{id}/results`
+- [x] Enhance `/job-center` with mock create, run, logs, and result assets
+- [x] Enhance `/assets` with image preview, details, source, and job_id filtering
+- [x] Add `ai_providers` placeholder table and API
+- [x] Add Alembic 0004 migration
+- [x] Add backend and frontend Sprint 5 tests
+- [x] Update docs
+- [ ] Real AI provider integration
+
+AI generation is not part of Sprint 5.

@@ -5,6 +5,7 @@ import { AssetManager } from "./AssetManager";
 
 const api = {
   deleteAsset: jest.fn(),
+  getAssetFileUrl: jest.fn((assetId: string) => `/assets/${assetId}/file`),
   listAssets: jest.fn(),
   listProjects: jest.fn(),
   uploadAsset: jest.fn(),
@@ -36,6 +37,8 @@ beforeEach(() => {
         file_path: "assets/reference.png",
         original_filename: "reference.png",
         metadata_json: "{}",
+        source: "uploaded",
+        generation_job_id: null,
         created_at: "2026-06-03 10:00:00",
         updated_at: "2026-06-03 10:00:00",
       },
@@ -43,7 +46,7 @@ beforeEach(() => {
   });
 });
 
-test("filters, uploads, and deletes assets through the API client", async () => {
+test("filters, previews, uploads, shows details, and deletes assets", async () => {
   const user = userEvent.setup();
   api.uploadAsset.mockResolvedValue({
     id: "asset-2",
@@ -55,6 +58,8 @@ test("filters, uploads, and deletes assets through the API client", async () => 
     file_path: "assets/uploads/preview.png",
     original_filename: "preview.png",
     metadata_json: "{}",
+    source: "uploaded",
+    generation_job_id: null,
     created_at: "2026-06-03 11:00:00",
     updated_at: "2026-06-03 11:00:00",
   });
@@ -63,12 +68,14 @@ test("filters, uploads, and deletes assets through the API client", async () => 
   render(<AssetManager api={api} />);
 
   expect(await screen.findByText("reference.png")).toBeInTheDocument();
+  expect(screen.getByAltText("Preview reference.png")).toHaveAttribute("src", "/assets/asset-1/file");
 
   await user.selectOptions(screen.getByLabelText("项目筛选"), "project-1");
   await user.selectOptions(screen.getByLabelText("类型筛选"), "reference_image");
+  await user.type(screen.getByLabelText("Job ID 筛选"), "job-1");
   await user.click(screen.getByRole("button", { name: "应用筛选" }));
 
-  expect(api.listAssets).toHaveBeenLastCalledWith("project-1", "reference_image");
+  expect(api.listAssets).toHaveBeenLastCalledWith("project-1", "reference_image", "job-1");
 
   const file = new File(["fake"], "preview.png", { type: "image/png" });
   await user.upload(screen.getByLabelText("上传文件"), file);
@@ -84,10 +91,14 @@ test("filters, uploads, and deletes assets through the API client", async () => 
   });
   expect(await screen.findByText("preview.png")).toBeInTheDocument();
 
+  await user.click(screen.getByRole("button", { name: "查看 reference.png" }));
+  expect(screen.getByText("Asset Detail")).toBeInTheDocument();
+  expect(screen.getByAltText("Detail reference.png")).toHaveAttribute("src", "/assets/asset-1/file");
+  expect(screen.getByText("uploaded")).toBeInTheDocument();
+
   await user.click(screen.getByRole("button", { name: "删除 reference.png" }));
   expect(api.deleteAsset).toHaveBeenCalledWith("asset-1");
   await waitFor(() => {
     expect(screen.queryByText("reference.png")).not.toBeInTheDocument();
   });
 });
-

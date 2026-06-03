@@ -83,6 +83,13 @@ export type GenerationJobInput = {
   logs: string;
 };
 
+export type MockUiGenerationInput = {
+  project_id: string | null;
+  device_type: string;
+  width: number;
+  height: number;
+};
+
 export type Asset = {
   id: string;
   project_id: string | null;
@@ -99,6 +106,8 @@ export type Asset = {
   file_path: string;
   original_filename: string;
   metadata_json: string;
+  source: "uploaded" | "mock_generated";
+  generation_job_id: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -231,6 +240,18 @@ export const studioApi = {
   retryGenerationJob(generationJobId: string) {
     return request<GenerationJob>(`/generation_jobs/${generationJobId}/retry`, { method: "POST" });
   },
+  createMockUiGenerationJob(payload: MockUiGenerationInput) {
+    return request<GenerationJob>("/generation_jobs/mock-ui", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+  runMockGenerationJob(generationJobId: string) {
+    return request<GenerationJob>(`/generation_jobs/${generationJobId}/run-mock`, { method: "POST" });
+  },
+  listGenerationJobResults(generationJobId: string) {
+    return request<ListResponse<Asset>>(`/generation_jobs/${generationJobId}/results`);
+  },
   updateGenerationJob(generationJobId: string, payload: Partial<GenerationJobInput>) {
     return request<GenerationJob>(`/generation_jobs/${generationJobId}`, {
       method: "PATCH",
@@ -240,7 +261,7 @@ export const studioApi = {
   deleteAsset(assetId: string) {
     return request<void>(`/assets/${assetId}`, { method: "DELETE" });
   },
-  listAssets(projectId?: string, assetType?: string) {
+  listAssets(projectId?: string, assetType?: string, generationJobId?: string) {
     const params = new URLSearchParams();
     if (projectId) {
       params.set("project_id", projectId);
@@ -248,8 +269,14 @@ export const studioApi = {
     if (assetType) {
       params.set("asset_type", assetType);
     }
+    if (generationJobId) {
+      params.set("generation_job_id", generationJobId);
+    }
     const query = params.toString() ? `?${params.toString()}` : "";
     return request<ListResponse<Asset>>(`/assets${query}`);
+  },
+  getAssetFileUrl(assetId: string) {
+    return `${API_BASE_URL}/assets/${assetId}/file`;
   },
   uploadAsset(payload: UploadAssetInput) {
     const formData = new FormData();
