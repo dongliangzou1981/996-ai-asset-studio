@@ -2,23 +2,26 @@
 
 import { FormEvent, useEffect, useState } from "react";
 
-import { Asset, GenerationJob, Project, studioApi } from "@/lib/api";
+import { AiProvider, Asset, GenerationJob, Project, studioApi } from "@/lib/api";
 
 type JobApi = Pick<
   typeof studioApi,
   | "createGenerationJob"
   | "createMockUiGenerationJob"
   | "getAssetFileUrl"
+  | "listAiProviders"
   | "listGenerationJobResults"
   | "listGenerationJobs"
   | "listProjects"
   | "retryGenerationJob"
+  | "runGenerationJob"
   | "runMockGenerationJob"
 >;
 
 export function JobCenter({ api = studioApi }: { api?: JobApi }) {
   const [jobs, setJobs] = useState<GenerationJob[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
+  const [providers, setProviders] = useState<AiProvider[]>([]);
   const [selectedJob, setSelectedJob] = useState<GenerationJob | null>(null);
   const [results, setResults] = useState<Asset[]>([]);
   const [jobType, setJobType] = useState("");
@@ -26,14 +29,18 @@ export function JobCenter({ api = studioApi }: { api?: JobApi }) {
   const [mockDevice, setMockDevice] = useState("mobile");
   const [mockWidth, setMockWidth] = useState(1080);
   const [mockHeight, setMockHeight] = useState(1920);
+  const [providerId, setProviderId] = useState<string | null>(null);
+  const [inputJson, setInputJson] = useState("{\"device_type\":\"mobile\",\"width\":1080,\"height\":1920}");
   const [error, setError] = useState("");
 
   useEffect(() => {
-    Promise.all([api.listGenerationJobs(), api.listProjects()])
-      .then(([jobResult, projectResult]) => {
+    Promise.all([api.listGenerationJobs(), api.listProjects(), api.listAiProviders()])
+      .then(([jobResult, projectResult, providerResult]) => {
         setJobs(jobResult.items);
         setProjects(projectResult.items);
+        setProviders(providerResult.items);
         setMockProjectId(projectResult.items[0]?.id ?? null);
+        setProviderId(providerResult.items.find((provider) => provider.enabled)?.id ?? null);
       })
       .catch(() => setError("Jobs failed to load"));
   }, [api]);
@@ -42,11 +49,13 @@ export function JobCenter({ api = studioApi }: { api?: JobApi }) {
     event.preventDefault();
     const created = await api.createGenerationJob({
       project_id: null,
+      provider_id: providerId,
       job_type: jobType,
       status: "pending",
       progress: 0,
-      input_json: "{}",
+      input_json: inputJson,
       output_json: "",
+      output_preview_path: "",
       error_message: "",
       logs: "queued",
     });
@@ -76,6 +85,14 @@ export function JobCenter({ api = studioApi }: { api?: JobApi }) {
 
   async function runMock(job: GenerationJob) {
     const completed = await api.runMockGenerationJob(job.id);
+    const result = await api.listGenerationJobResults(completed.id);
+    setJobs((items) => items.map((item) => (item.id === completed.id ? completed : item)));
+    setSelectedJob(completed);
+    setResults(result.items);
+  }
+
+  async function runJob(job: GenerationJob) {
+    const completed = await api.runGenerationJob(job.id);
     const result = await api.listGenerationJobResults(completed.id);
     setJobs((items) => items.map((item) => (item.id === completed.id ? completed : item)));
     setSelectedJob(completed);
@@ -155,12 +172,35 @@ export function JobCenter({ api = studioApi }: { api?: JobApi }) {
 
         <form className="mt-6 grid gap-3 border-t border-studio-line pt-5" onSubmit={createJob}>
           <label className="grid gap-1 text-sm font-medium">
+            Provider
+            <select
+              className="rounded-md border border-studio-line px-3 py-2 font-normal"
+              onChange={(event) => setProviderId(event.target.value || null)}
+              value={providerId ?? ""}
+            >
+              <option value="">Default provider</option>
+              {providers.map((provider) => (
+                <option key={provider.id} value={provider.id}>
+                  {provider.name} / {provider.type}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="grid gap-1 text-sm font-medium">
             Job type
             <input
               className="rounded-md border border-studio-line px-3 py-2 font-normal"
               onChange={(event) => setJobType(event.target.value)}
               required
               value={jobType}
+            />
+          </label>
+          <label className="grid gap-1 text-sm font-medium">
+            Input JSON
+            <textarea
+              className="min-h-24 rounded-md border border-studio-line px-3 py-2 font-mono text-xs font-normal"
+              onChange={(event) => setInputJson(event.target.value)}
+              value={inputJson}
             />
           </label>
           <button className="rounded-md border border-studio-line px-4 py-2 text-sm font-semibold" type="submit">
@@ -199,6 +239,16 @@ export function JobCenter({ api = studioApi }: { api?: JobApi }) {
                       type="button"
                     >
                       运行 Mock
+                    </button>
+                  ) : null}
+                  {job.job_type !== "mock_ui_generation" && job.status !== "completed" ? (
+                    <button
+                      aria-label={`Run Job ${job.job_type}`}
+                      className="rounded-md border border-studio-line px-3 py-2 text-sm"
+                      onClick={() => runJob(job)}
+                      type="button"
+                    >
+                      运行任务
                     </button>
                   ) : null}
                   {job.status === "failed" ? (

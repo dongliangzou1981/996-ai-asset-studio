@@ -141,13 +141,16 @@ Supported `status` values:
 ```json
 {
   "project_id": "project-id",
+  "provider_id": "provider-id",
   "job_type": "asset_prepare",
   "status": "pending",
   "progress": 0,
   "input_json": "{}",
   "output_json": "",
+  "output_preview_path": "",
   "error_message": "",
-  "logs": "queued"
+  "logs": "queued",
+  "auto_run": false
 }
 ```
 
@@ -165,6 +168,8 @@ Accepts optional `project_id` query parameter.
 
 Returns one generation job or `404`.
 
+Response includes `provider_id`, `output_preview_path`, `output_json`, `logs`, and retry fields.
+
 ### PATCH /generation_jobs/{generation_job_id}
 
 Updates status flow fields such as `status`, `progress`, `output_json`, `error_message`, and `logs`.
@@ -180,6 +185,12 @@ Updates status flow fields such as `status`, `progress`, `output_json`, `error_m
 ### POST /generation_jobs/{generation_job_id}/retry
 
 Resets a failed job to `pending`, clears `error_message`, sets `progress` to `0`, increments `retry_count`, and appends a retry log line.
+
+### POST /generation_jobs/{generation_job_id}/run
+
+Runs a job through the unified Job Runner. Supported provider types are `mock`, `openai`, and `custom`.
+
+Successful runs create a 996-ready output directory under `assets/uploads/996-ready/{generation_job_id}` with previews, components, thumbnails, and `package/manifest.json`.
 
 ### POST /generation_jobs/mock-ui
 
@@ -240,7 +251,7 @@ Supported `asset_type` values:
 
 ### GET /assets
 
-Accepts optional `project_id`, `asset_type`, and `generation_job_id` query parameters.
+Accepts optional `project_id`, `asset_type`, `device_type`, and `generation_job_id` query parameters.
 
 ### GET /assets/{asset_id}
 
@@ -249,6 +260,10 @@ Returns one asset or `404`.
 ### GET /assets/{asset_id}/file
 
 Streams the asset file for browser previews.
+
+### GET /assets/{asset_id}/thumbnail
+
+Streams the generated thumbnail when present, otherwise falls back to the source image.
 
 ### PUT /assets/{asset_id}
 
@@ -272,15 +287,18 @@ Returns the created asset record with file path, width, height, type, and origin
 
 ## AI Providers
 
-Provider config is a Sprint 5 placeholder for Sprint 6. It stores provider name, provider type, and enabled state only. No real API keys are stored.
+Provider config supports `mock`, `openai`, and `custom`.
+
+OpenAI config can include `api_key`, `api_key_env`, `model`, `size`, and `output_format`. Prefer `api_key_env`; do not commit real keys.
 
 ### POST /ai_providers
 
 ```json
 {
   "name": "Mock Provider",
-  "provider_type": "mock",
-  "enabled": false
+  "type": "mock",
+  "enabled": false,
+  "config_json": "{}"
 }
 ```
 
@@ -291,6 +309,18 @@ Provider config is a Sprint 5 placeholder for Sprint 6. It stores provider name,
   "items": []
 }
 ```
+
+### PUT /ai_providers/{provider_id}
+
+Uses the same JSON body as `POST /ai_providers`.
+
+### GET /ai_providers/{provider_id}/health
+
+Returns health status for one provider.
+
+### GET /ai_providers/health
+
+Returns health status for all providers.
 
 ## Frontend Call Example
 
@@ -304,11 +334,13 @@ await studioApi.uploadAsset({
 
 await studioApi.createGenerationJob({
   project_id: null,
+  provider_id: null,
   job_type: "asset_prepare",
   status: "pending",
   progress: 0,
   input_json: "{}",
   output_json: "",
+  output_preview_path: "",
   error_message: "",
   logs: "queued",
 });
@@ -321,4 +353,6 @@ await studioApi.createMockUiGenerationJob({
 });
 
 await studioApi.runMockGenerationJob("generation-job-id");
+
+await studioApi.runGenerationJob("generation-job-id");
 ```

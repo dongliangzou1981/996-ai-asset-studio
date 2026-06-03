@@ -51,3 +51,14 @@
 - `/assets` can preview image files through `GET /assets/{id}/file`.
 - `ai_providers` is a placeholder table for Sprint 6 provider integration and stores no secrets.
 - AI generation is intentionally not connected in Sprint 5.
+
+## Sprint 6 Scope
+
+- `BaseJobRunner` defines the shared execution flow for provider-backed jobs.
+- `MockJobRunner`, `OpenAIJobRunner`, and `CustomJobRunner` run through `JobRunnerService`.
+- Jobs move through `pending -> running -> completed`, or `pending -> running -> failed`.
+- The OpenAI runner calls the official Images API only when provider config supplies credentials.
+- Generated preview images are post-processed into annotated previews, sliced components, thumbnails, and a 996-ready manifest.
+- Frontend `/providers` manages provider config and health checks.
+- Frontend `/job-center` can create and run provider-backed jobs.
+- Frontend `/assets` supports thumbnail preview, download, path copy, and project/job/type/device filtering.

@@ -109,11 +109,13 @@ class BasePanelList(BaseModel):
 class GenerationJob(BaseModel):
     id: str
     project_id: str | None
+    provider_id: str | None
     job_type: str
     status: str
     progress: int
     input_json: str
     output_json: str
+    output_preview_path: str
     error_message: str
     retry_count: int
     logs: str
@@ -135,7 +137,7 @@ AssetType = Literal[
 ]
 
 JobStatus = Literal["pending", "running", "completed", "failed", "cancelled"]
-AssetSource = Literal["uploaded", "mock_generated"]
+AssetSource = Literal["uploaded", "mock_generated", "ai_generated"]
 
 
 class AssetCreate(BaseModel):
@@ -164,6 +166,7 @@ class AssetCreate(BaseModel):
     metadata_json: str = ""
     source: AssetSource = "uploaded"
     generation_job_id: str | None = None
+    thumbnail_path: str = ""
 
 
 class Asset(AssetCreate):
@@ -193,20 +196,25 @@ class GenerationJobCreate(BaseModel):
     })
 
     project_id: str | None = None
+    provider_id: str | None = None
     job_type: str = Field(min_length=1, max_length=80)
     status: JobStatus = "pending"
     progress: int = Field(default=0, ge=0, le=100)
     input_json: str = ""
     output_json: str = ""
+    output_preview_path: str = ""
     error_message: str = ""
     logs: str = ""
+    auto_run: bool = False
 
 
 class GenerationJobPatch(BaseModel):
+    provider_id: str | None = None
     status: JobStatus | None = None
     progress: int | None = Field(default=None, ge=0, le=100)
     input_json: str | None = None
     output_json: str | None = None
+    output_preview_path: str | None = None
     error_message: str | None = None
     logs: str | None = None
 
@@ -220,8 +228,9 @@ class MockUiGenerationRequest(BaseModel):
 
 class AiProviderCreate(BaseModel):
     name: str = Field(min_length=1, max_length=80)
-    provider_type: str = Field(min_length=1, max_length=80)
+    type: Literal["mock", "openai", "custom"] = "mock"
     enabled: bool = False
+    config_json: str = "{}"
 
 
 class AiProvider(AiProviderCreate):
@@ -232,3 +241,16 @@ class AiProvider(AiProviderCreate):
 
 class AiProviderList(BaseModel):
     items: list[AiProvider]
+
+
+class ProviderHealth(BaseModel):
+    id: str
+    name: str
+    type: str
+    enabled: bool
+    status: str
+    message: str
+
+
+class ProviderHealthList(BaseModel):
+    items: list[ProviderHealth]

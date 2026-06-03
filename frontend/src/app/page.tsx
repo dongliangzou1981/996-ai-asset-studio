@@ -8,14 +8,16 @@ const tables = [
   "ui_screens",
   "assets",
   "exports",
+  "generation_jobs",
+  "ai_providers",
 ];
 
 const milestones = [
-  "项目骨架",
-  "文档体系",
-  "前端框架",
-  "后端框架",
-  "数据库结构",
+  "项目与风格 CRUD",
+  "Base Panel System",
+  "素材与参考图管理",
+  "Mock AI Pipeline",
+  "统一 Job Runner",
 ];
 
 export default function Home() {
@@ -24,11 +26,9 @@ export default function Home() {
       <div className="mx-auto flex max-w-6xl flex-col gap-6">
         <header className="flex flex-col gap-4 border-b border-studio-line pb-5 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <h1 className="text-2xl font-semibold leading-tight sm:text-3xl">
-              996 AI Asset Studio
-            </h1>
+            <h1 className="text-2xl font-semibold leading-tight sm:text-3xl">996 AI Asset Studio</h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-studio-muted">
-              Sprint 1 初始化工作台：项目结构、文档、前端、后端和数据库表结构已进入可验证状态。
+              本地优先的 996 美术资产生成工作台，支持项目、风格、面板、素材、任务和 Provider 管理。
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -47,18 +47,16 @@ export default function Home() {
             <Link className="rounded-md border border-studio-line bg-white px-4 py-3 text-sm font-semibold" href="/job-center">
               Job Center
             </Link>
+            <Link className="rounded-md border border-studio-line bg-white px-4 py-3 text-sm font-semibold" href="/providers">
+              Provider 管理
+            </Link>
           </div>
         </header>
 
         <section className="grid gap-4 md:grid-cols-5">
-          {milestones.map((milestone) => (
-            <div
-              className="rounded-md border border-studio-line bg-white p-4"
-              key={milestone}
-            >
-              <div className="text-xs font-medium uppercase text-studio-muted">
-                Sprint 1
-              </div>
+          {milestones.map((milestone, index) => (
+            <div className="rounded-md border border-studio-line bg-white p-4" key={milestone}>
+              <div className="text-xs font-medium uppercase text-studio-muted">Sprint {index + 2}</div>
               <div className="mt-2 text-sm font-semibold">{milestone}</div>
             </div>
           ))}
@@ -66,13 +64,10 @@ export default function Home() {
 
         <section className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
           <div className="rounded-md border border-studio-line bg-white p-5">
-            <h2 className="text-lg font-semibold">数据库表结构</h2>
+            <h2 className="text-lg font-semibold">核心数据表</h2>
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               {tables.map((table) => (
-                <div
-                  className="rounded-md border border-studio-line px-3 py-2 text-sm"
-                  key={table}
-                >
+                <div className="rounded-md border border-studio-line px-3 py-2 text-sm" key={table}>
                   {table}
                 </div>
               ))}
@@ -80,7 +75,7 @@ export default function Home() {
           </div>
 
           <div className="rounded-md border border-studio-line bg-white p-5">
-            <h2 className="text-lg font-semibold">后端接口</h2>
+            <h2 className="text-lg font-semibold">后端入口</h2>
             <dl className="mt-4 space-y-3 text-sm">
               <div>
                 <dt className="font-medium">GET /health</dt>
@@ -88,7 +83,11 @@ export default function Home() {
               </div>
               <div>
                 <dt className="font-medium">GET /schema/tables</dt>
-                <dd className="text-studio-muted">核心表清单</dd>
+                <dd className="text-studio-muted">查看核心表清单</dd>
+              </div>
+              <div>
+                <dt className="font-medium">GET /docs</dt>
+                <dd className="text-studio-muted">FastAPI Swagger 文档</dd>
               </div>
             </dl>
           </div>

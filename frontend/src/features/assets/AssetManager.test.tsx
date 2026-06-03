@@ -6,6 +6,7 @@ import { AssetManager } from "./AssetManager";
 const api = {
   deleteAsset: jest.fn(),
   getAssetFileUrl: jest.fn((assetId: string) => `/assets/${assetId}/file`),
+  getAssetThumbnailUrl: jest.fn((assetId: string) => `/assets/${assetId}/thumbnail`),
   listAssets: jest.fn(),
   listProjects: jest.fn(),
   uploadAsset: jest.fn(),
@@ -39,6 +40,7 @@ beforeEach(() => {
         metadata_json: "{}",
         source: "uploaded",
         generation_job_id: null,
+        thumbnail_path: "assets/thumbs/reference.png",
         created_at: "2026-06-03 10:00:00",
         updated_at: "2026-06-03 10:00:00",
       },
@@ -60,6 +62,7 @@ test("filters, previews, uploads, shows details, and deletes assets", async () =
     metadata_json: "{}",
     source: "uploaded",
     generation_job_id: null,
+    thumbnail_path: "assets/thumbs/preview.png",
     created_at: "2026-06-03 11:00:00",
     updated_at: "2026-06-03 11:00:00",
   });
@@ -68,14 +71,15 @@ test("filters, previews, uploads, shows details, and deletes assets", async () =
   render(<AssetManager api={api} />);
 
   expect(await screen.findByText("reference.png")).toBeInTheDocument();
-  expect(screen.getByAltText("Preview reference.png")).toHaveAttribute("src", "/assets/asset-1/file");
+  expect(screen.getByAltText("Preview reference.png")).toHaveAttribute("src", "/assets/asset-1/thumbnail");
 
   await user.selectOptions(screen.getByLabelText("项目筛选"), "project-1");
   await user.selectOptions(screen.getByLabelText("类型筛选"), "reference_image");
+  await user.selectOptions(screen.getByLabelText("设备筛选"), "mobile");
   await user.type(screen.getByLabelText("Job ID 筛选"), "job-1");
   await user.click(screen.getByRole("button", { name: "应用筛选" }));
 
-  expect(api.listAssets).toHaveBeenLastCalledWith("project-1", "reference_image", "job-1");
+  expect(api.listAssets).toHaveBeenLastCalledWith("project-1", "reference_image", "mobile", "job-1");
 
   const file = new File(["fake"], "preview.png", { type: "image/png" });
   await user.upload(screen.getByLabelText("上传文件"), file);
@@ -95,7 +99,9 @@ test("filters, previews, uploads, shows details, and deletes assets", async () =
   expect(screen.getByText("Asset Detail")).toBeInTheDocument();
   expect(screen.getByAltText("Detail reference.png")).toHaveAttribute("src", "/assets/asset-1/file");
   expect(screen.getByText("uploaded")).toBeInTheDocument();
+  expect(screen.getByText("assets/thumbs/reference.png")).toBeInTheDocument();
 
+  await user.click(screen.getByRole("button", { name: "复制路径 reference.png" }));
   await user.click(screen.getByRole("button", { name: "删除 reference.png" }));
   expect(api.deleteAsset).toHaveBeenCalledWith("asset-1");
   await waitFor(() => {

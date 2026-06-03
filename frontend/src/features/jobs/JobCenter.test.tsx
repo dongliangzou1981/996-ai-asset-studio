@@ -7,10 +7,12 @@ const api = {
   createGenerationJob: jest.fn(),
   createMockUiGenerationJob: jest.fn(),
   getAssetFileUrl: jest.fn((assetId: string) => `/assets/${assetId}/file`),
+  listAiProviders: jest.fn(),
   listGenerationJobResults: jest.fn(),
   listGenerationJobs: jest.fn(),
   listProjects: jest.fn(),
   retryGenerationJob: jest.fn(),
+  runGenerationJob: jest.fn(),
   runMockGenerationJob: jest.fn(),
 };
 
@@ -21,11 +23,13 @@ beforeEach(() => {
       {
         id: "job-1",
         project_id: "project-1",
+        provider_id: null,
         job_type: "base_panel_preview",
         status: "failed",
         progress: 45,
         input_json: "{\"panel_id\":\"panel-1\"}",
         output_json: "",
+        output_preview_path: "",
         error_message: "mock failure",
         retry_count: 0,
         logs: "queued\nfailed",
@@ -46,6 +50,19 @@ beforeEach(() => {
       },
     ],
   });
+  api.listAiProviders.mockResolvedValue({
+    items: [
+      {
+        id: "provider-1",
+        name: "Mock Provider",
+        type: "mock",
+        enabled: true,
+        config_json: "{}",
+        created_at: "2026-06-03 10:00:00",
+        updated_at: "2026-06-03 10:00:00",
+      },
+    ],
+  });
   api.listGenerationJobResults.mockResolvedValue({ items: [] });
 });
 
@@ -53,11 +70,13 @@ test("creates, shows details, and retries failed generation jobs", async () => {
   api.createGenerationJob.mockResolvedValue({
     id: "job-2",
     project_id: null,
+    provider_id: "provider-1",
     job_type: "asset_prepare",
     status: "pending",
     progress: 0,
     input_json: "{}",
     output_json: "",
+    output_preview_path: "",
     error_message: "",
     retry_count: 0,
     logs: "queued",
@@ -67,11 +86,13 @@ test("creates, shows details, and retries failed generation jobs", async () => {
   api.retryGenerationJob.mockResolvedValue({
     id: "job-1",
     project_id: "project-1",
+    provider_id: null,
     job_type: "base_panel_preview",
     status: "pending",
     progress: 0,
     input_json: "{\"panel_id\":\"panel-1\"}",
     output_json: "",
+    output_preview_path: "",
     error_message: "",
     retry_count: 1,
     logs: "queued\nfailed\nRetry 1 queued",
@@ -94,11 +115,13 @@ test("creates, shows details, and retries failed generation jobs", async () => {
   await user.click(screen.getByRole("button", { name: "Create test job" }));
   expect(api.createGenerationJob).toHaveBeenCalledWith({
     project_id: null,
+    provider_id: "provider-1",
     job_type: "asset_prepare",
     status: "pending",
     progress: 0,
-    input_json: "{}",
+    input_json: "{\"device_type\":\"mobile\",\"width\":1080,\"height\":1920}",
     output_json: "",
+    output_preview_path: "",
     error_message: "",
     logs: "queued",
   });
@@ -113,11 +136,13 @@ test("creates a mock UI job, runs mock, and shows logs and result assets", async
   api.createMockUiGenerationJob.mockResolvedValue({
     id: "job-3",
     project_id: "project-1",
+    provider_id: null,
     job_type: "mock_ui_generation",
     status: "pending",
     progress: 0,
     input_json: "{\"device_type\":\"desktop\",\"width\":640,\"height\":360}",
     output_json: "",
+    output_preview_path: "",
     error_message: "",
     retry_count: 0,
     logs: "Mock UI job queued",
@@ -127,11 +152,13 @@ test("creates a mock UI job, runs mock, and shows logs and result assets", async
   api.runMockGenerationJob.mockResolvedValue({
     id: "job-3",
     project_id: "project-1",
+    provider_id: null,
     job_type: "mock_ui_generation",
     status: "completed",
     progress: 100,
     input_json: "{\"device_type\":\"desktop\",\"width\":640,\"height\":360}",
     output_json: "{\"asset_ids\":[\"asset-result-1\"]}",
+    output_preview_path: "assets/996-ready/job-3/previews/ui_preview.png",
     error_message: "",
     retry_count: 0,
     logs: "Mock UI job queued\nMock run started\nMock run completed",
@@ -152,6 +179,7 @@ test("creates a mock UI job, runs mock, and shows logs and result assets", async
         metadata_json: "{\"mock\":true}",
         source: "mock_generated",
         generation_job_id: "job-3",
+        thumbnail_path: "assets/uploads/mock/thumb.png",
         created_at: "2026-06-03 13:01:00",
         updated_at: "2026-06-03 13:01:00",
       },

@@ -73,3 +73,21 @@ AI generation is not part of Sprint 4.
 - [ ] Real AI provider integration
 
 AI generation is not part of Sprint 5.
+
+## Sprint 6
+
+- [x] Add unified `BaseJobRunner`
+- [x] Add `MockJobRunner`, `OpenAIJobRunner`, and `CustomJobRunner`
+- [x] Add unified `POST /generation_jobs/{id}/run`
+- [x] Add `provider_id` and `output_preview_path` to generation jobs
+- [x] Add provider config update and health check APIs
+- [x] Add `thumbnail_path` to assets
+- [x] Generate 996-ready preview, annotated preview, component slice, thumbnails, and manifest
+- [x] Enhance `/job-center` with provider-backed job creation and execution
+- [x] Enhance `/assets` with thumbnails, device filter, download, and path copy
+- [x] Add `/providers` page
+- [x] Add Alembic 0005 migration
+- [x] Add backend and frontend tests
+- [x] Update docs
+- [ ] Production-grade external custom model adapter
+- [ ] Secure secret vault integration

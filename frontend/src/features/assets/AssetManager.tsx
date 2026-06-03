@@ -6,7 +6,7 @@ import { Asset, Project, studioApi } from "@/lib/api";
 
 type AssetApi = Pick<
   typeof studioApi,
-  "deleteAsset" | "getAssetFileUrl" | "listAssets" | "listProjects" | "uploadAsset"
+  "deleteAsset" | "getAssetFileUrl" | "getAssetThumbnailUrl" | "listAssets" | "listProjects" | "uploadAsset"
 >;
 
 const assetTypes = [
@@ -23,6 +23,7 @@ export function AssetManager({ api = studioApi }: { api?: AssetApi }) {
   const [projects, setProjects] = useState<Project[]>([]);
   const [projectFilter, setProjectFilter] = useState("");
   const [typeFilter, setTypeFilter] = useState("");
+  const [deviceFilter, setDeviceFilter] = useState("");
   const [jobFilter, setJobFilter] = useState("");
   const [uploadProjectId, setUploadProjectId] = useState<string | null>(null);
   const [uploadType, setUploadType] = useState<Asset["asset_type"]>("reference_image");
@@ -45,6 +46,7 @@ export function AssetManager({ api = studioApi }: { api?: AssetApi }) {
     const result = await api.listAssets(
       projectFilter || undefined,
       typeFilter || undefined,
+      deviceFilter || undefined,
       jobFilter || undefined,
     );
     setAssets(result.items);
@@ -73,6 +75,10 @@ export function AssetManager({ api = studioApi }: { api?: AssetApi }) {
     await api.deleteAsset(asset.id);
     setAssets((items) => items.filter((item) => item.id !== asset.id));
     setSelectedAsset((current) => (current?.id === asset.id ? null : current));
+  }
+
+  async function copyPath(asset: Asset) {
+    await navigator.clipboard?.writeText(asset.file_path);
   }
 
   function projectName(projectId: string | null) {
@@ -125,6 +131,21 @@ export function AssetManager({ api = studioApi }: { api?: AssetApi }) {
               placeholder="generation_job_id"
               value={jobFilter}
             />
+          </label>
+          <label className="grid gap-1 text-sm font-medium">
+            设备筛选
+            <select
+              className="rounded-md border border-studio-line px-3 py-2 font-normal"
+              onChange={(event) => setDeviceFilter(event.target.value)}
+              value={deviceFilter}
+            >
+              <option value="">All devices</option>
+              <option value="pc">pc</option>
+              <option value="mobile">mobile</option>
+              <option value="both">both</option>
+              <option value="tablet">tablet</option>
+              <option value="desktop">desktop</option>
+            </select>
           </label>
           <button
             className="rounded-md border border-studio-line px-4 py-2 text-sm font-semibold"
@@ -202,7 +223,7 @@ export function AssetManager({ api = studioApi }: { api?: AssetApi }) {
                 <img
                   alt={`Preview ${asset.original_filename}`}
                   className="h-24 w-24 rounded-md border border-studio-line object-cover"
-                  src={api.getAssetFileUrl(asset.id)}
+                  src={api.getAssetThumbnailUrl(asset.id)}
                 />
                 <div>
                   <h3 className="font-semibold">{asset.original_filename}</h3>
@@ -223,6 +244,21 @@ export function AssetManager({ api = studioApi }: { api?: AssetApi }) {
                     type="button"
                   >
                     查看
+                  </button>
+                  <a
+                    className="rounded-md border border-studio-line px-3 py-2 text-sm"
+                    download={asset.original_filename}
+                    href={api.getAssetFileUrl(asset.id)}
+                  >
+                    下载
+                  </a>
+                  <button
+                    aria-label={`复制路径 ${asset.original_filename}`}
+                    className="rounded-md border border-studio-line px-3 py-2 text-sm"
+                    onClick={() => copyPath(asset)}
+                    type="button"
+                  >
+                    复制路径
                   </button>
                   <button
                     aria-label={`删除 ${asset.original_filename}`}
@@ -255,6 +291,10 @@ export function AssetManager({ api = studioApi }: { api?: AssetApi }) {
               <div>
                 <dt className="font-medium">Generation Job</dt>
                 <dd className="break-all text-studio-muted">{selectedAsset.generation_job_id || "none"}</dd>
+              </div>
+              <div>
+                <dt className="font-medium">Thumbnail</dt>
+                <dd className="break-all text-studio-muted">{selectedAsset.thumbnail_path || "none"}</dd>
               </div>
               <div>
                 <dt className="font-medium">Type</dt>

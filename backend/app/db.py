@@ -297,8 +297,8 @@ class StudioDatabase:
 
     def list_generation_jobs(self, project_id: str | None = None) -> list[GenerationJob]:
         query = """
-            SELECT id, project_id, job_type, status, progress, input_json, output_json,
-                   error_message, retry_count, logs, created_at, updated_at
+            SELECT id, project_id, provider_id, job_type, status, progress, input_json, output_json,
+                   output_preview_path, error_message, retry_count, logs, created_at, updated_at
             FROM generation_jobs
         """
         params: tuple[str, ...] = ()
@@ -318,9 +318,9 @@ class StudioDatabase:
                 """
                 INSERT INTO assets (
                   id, project_id, asset_type, device_type, width, height,
-                  file_path, original_filename, metadata_json, source, generation_job_id
+                  file_path, original_filename, metadata_json, source, generation_job_id, thumbnail_path
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     asset_id,
@@ -334,6 +334,7 @@ class StudioDatabase:
                     payload.metadata_json,
                     payload.source,
                     payload.generation_job_id,
+                    payload.thumbnail_path,
                 ),
             )
         asset = self.get_asset(asset_id)
@@ -345,12 +346,13 @@ class StudioDatabase:
         self,
         project_id: str | None = None,
         asset_type: str | None = None,
+        device_type: str | None = None,
         generation_job_id: str | None = None,
     ) -> list[Asset]:
         query = """
             SELECT id, project_id, asset_type, device_type, width, height,
                    file_path, original_filename, metadata_json, source, generation_job_id,
-                   created_at, updated_at
+                   thumbnail_path, created_at, updated_at
             FROM assets
         """
         clauses: list[str] = []
@@ -361,6 +363,9 @@ class StudioDatabase:
         if asset_type:
             clauses.append("asset_type = ?")
             params.append(asset_type)
+        if device_type:
+            clauses.append("device_type = ?")
+            params.append(device_type)
         if generation_job_id:
             clauses.append("generation_job_id = ?")
             params.append(generation_job_id)
@@ -378,7 +383,7 @@ class StudioDatabase:
                 """
                 SELECT id, project_id, asset_type, device_type, width, height,
                        file_path, original_filename, metadata_json, source, generation_job_id,
-                       created_at, updated_at
+                       thumbnail_path, created_at, updated_at
                 FROM assets
                 WHERE id = ?
                 """,
@@ -401,6 +406,7 @@ class StudioDatabase:
                     metadata_json = ?,
                     source = ?,
                     generation_job_id = ?,
+                    thumbnail_path = ?,
                     updated_at = CURRENT_TIMESTAMP
                 WHERE id = ?
                 """,
@@ -415,6 +421,7 @@ class StudioDatabase:
                     payload.metadata_json,
                     payload.source,
                     payload.generation_job_id,
+                    payload.thumbnail_path,
                     asset_id,
                 ),
             )
@@ -433,19 +440,21 @@ class StudioDatabase:
             connection.execute(
                 """
                 INSERT INTO generation_jobs (
-                  id, project_id, job_type, status, progress, input_json,
-                  output_json, error_message, retry_count, logs
+                  id, project_id, provider_id, job_type, status, progress, input_json,
+                  output_json, output_preview_path, error_message, retry_count, logs
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?)
                 """,
                 (
                     job_id,
                     payload.project_id,
+                    payload.provider_id,
                     payload.job_type,
                     payload.status,
                     payload.progress,
                     payload.input_json,
                     payload.output_json,
+                    payload.output_preview_path,
                     payload.error_message,
                     payload.logs,
                 ),
@@ -459,8 +468,8 @@ class StudioDatabase:
         with self.connect() as connection:
             row = connection.execute(
                 """
-                SELECT id, project_id, job_type, status, progress, input_json, output_json,
-                       error_message, retry_count, logs, created_at, updated_at
+                SELECT id, project_id, provider_id, job_type, status, progress, input_json, output_json,
+                       output_preview_path, error_message, retry_count, logs, created_at, updated_at
                 FROM generation_jobs
                 WHERE id = ?
                 """,
@@ -479,9 +488,11 @@ class StudioDatabase:
                 """
                 UPDATE generation_jobs
                 SET status = ?,
+                    provider_id = ?,
                     progress = ?,
                     input_json = ?,
                     output_json = ?,
+                    output_preview_path = ?,
                     error_message = ?,
                     logs = ?,
                     updated_at = CURRENT_TIMESTAMP
@@ -489,9 +500,13 @@ class StudioDatabase:
                 """,
                 (
                     payload.status if payload.status is not None else current.status,
+                    payload.provider_id if payload.provider_id is not None else current.provider_id,
                     payload.progress if payload.progress is not None else current.progress,
                     payload.input_json if payload.input_json is not None else current.input_json,
                     payload.output_json if payload.output_json is not None else current.output_json,
+                    payload.output_preview_path
+                    if payload.output_preview_path is not None
+                    else current.output_preview_path,
                     payload.error_message if payload.error_message is not None else current.error_message,
                     payload.logs if payload.logs is not None else current.logs,
                     generation_job_id,
@@ -504,10 +519,10 @@ class StudioDatabase:
         with self.connect() as connection:
             connection.execute(
                 """
-                INSERT INTO ai_providers (id, name, provider_type, enabled)
-                VALUES (?, ?, ?, ?)
+                INSERT INTO ai_providers (id, name, type, enabled, config_json)
+                VALUES (?, ?, ?, ?, ?)
                 """,
-                (provider_id, payload.name, payload.provider_type, int(payload.enabled)),
+                (provider_id, payload.name, payload.type, int(payload.enabled), payload.config_json),
             )
         provider = self.get_ai_provider(provider_id)
         if provider is None:
@@ -518,7 +533,7 @@ class StudioDatabase:
         with self.connect() as connection:
             rows = connection.execute(
                 """
-                SELECT id, name, provider_type, enabled, created_at, updated_at
+                SELECT id, name, type, enabled, config_json, created_at, updated_at
                 FROM ai_providers
                 ORDER BY created_at ASC, id ASC
                 """
@@ -529,13 +544,31 @@ class StudioDatabase:
         with self.connect() as connection:
             row = connection.execute(
                 """
-                SELECT id, name, provider_type, enabled, created_at, updated_at
+                SELECT id, name, type, enabled, config_json, created_at, updated_at
                 FROM ai_providers
                 WHERE id = ?
                 """,
                 (provider_id,),
             ).fetchone()
         return AiProvider.model_validate({**dict(row), "enabled": bool(row["enabled"])}) if row else None
+
+    def update_ai_provider(self, provider_id: str, payload: AiProviderCreate) -> AiProvider | None:
+        with self.connect() as connection:
+            result = connection.execute(
+                """
+                UPDATE ai_providers
+                SET name = ?,
+                    type = ?,
+                    enabled = ?,
+                    config_json = ?,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+                """,
+                (payload.name, payload.type, int(payload.enabled), payload.config_json, provider_id),
+            )
+        if result.rowcount == 0:
+            return None
+        return self.get_ai_provider(provider_id)
 
     def retry_generation_job(self, generation_job_id: str) -> GenerationJob | None:
         current = self.get_generation_job(generation_job_id)

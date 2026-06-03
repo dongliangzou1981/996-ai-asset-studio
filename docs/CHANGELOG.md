@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.6.0 - 2026-06-03
+
+- Added unified Job Runner with mock, OpenAI, and custom provider paths.
+- Added provider-backed `POST /generation_jobs/{id}/run`.
+- Added OpenAI Images API execution path using provider `config_json`.
+- Added provider update and health check APIs.
+- Added generated thumbnails, output preview paths, and 996-ready package manifests.
+- Enhanced `/job-center`, `/assets`, and added `/providers`.
+- Added Alembic 0005 migration and Sprint 6 tests.
+
 ## 0.5.0 - 2026-06-03
 
 - Added local Mock AI pipeline for `mock_ui_generation` jobs.

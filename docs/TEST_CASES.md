@@ -55,3 +55,19 @@
 12. Run `npm test -- --runInBand` in `frontend/`.
 13. Run `npm run build` in `frontend/`.
 14. Run `backend\.venv\Scripts\python -m alembic -c backend\alembic.ini upgrade head`.
+
+## Sprint 6
+
+1. Check provider CRUD can create and update `mock`, `openai`, and `custom` provider configs.
+2. Check provider health returns `ok`, `disabled`, `configured`, or `missing_config`.
+3. Check `POST /generation_jobs` accepts `provider_id`.
+4. Check `POST /generation_jobs/{id}/run` executes the unified runner.
+5. Check completed jobs include `output_preview_path` and `output_json`.
+6. Check generated assets include `thumbnail_path`, `source`, and `generation_job_id`.
+7. Check generated output writes `assets/uploads/996-ready/{job_id}`.
+8. Check `/assets` filters by project, job_id, type, and device_type.
+9. Check `/providers` can create providers, toggle enabled state, and call health check.
+10. Run `backend\.venv\Scripts\python -m pytest backend\tests -q`.
+11. Run `npm test -- --runInBand` in `frontend/`.
+12. Run `npm run build` in `frontend/`.
+13. Run `backend\.venv\Scripts\python -m alembic -c backend\alembic.ini upgrade head`.

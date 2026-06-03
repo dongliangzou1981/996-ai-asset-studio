@@ -1,0 +1,465 @@
+from __future__ import annotations
+
+from abc import ABC, abstractmethod
+from datetime import datetime, timezone
+import base64
+import json
+import os
+from pathlib import Path
+from typing import Any
+
+import httpx
+from PIL import Image, ImageDraw, ImageFont
+
+from app.db import StudioDatabase
+from app.schemas import AiProvider, Asset, AssetCreate, GenerationJob, GenerationJobPatch
+
+
+def log_line(message: str) -> str:
+    timestamp = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    return f"{timestamp} {message}"
+
+
+def append_log(existing: str, message: str) -> str:
+    line = log_line(message)
+    return f"{existing}\n{line}" if existing else line
+
+
+def parse_json_object(value: str, label: str) -> dict[str, Any]:
+    try:
+        data = json.loads(value or "{}")
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"Invalid {label}: {exc}") from exc
+    if not isinstance(data, dict):
+        raise ValueError(f"{label} must be an object")
+    return data
+
+
+def render_placeholder_png(
+    path: Path,
+    *,
+    title: str,
+    project_name: str,
+    device_type: str,
+    width: int,
+    height: int,
+    job_type: str,
+    asset_type: str,
+) -> None:
+    image = Image.new("RGB", (width, height), color=(245, 248, 252))
+    draw = ImageDraw.Draw(image)
+    font = ImageFont.load_default()
+    lines = [
+        "996 AI Asset Studio",
+        title,
+        f"Project: {project_name}",
+        f"Device: {device_type}",
+        f"Resolution: {width}x{height}",
+        f"Job: {job_type}",
+        f"Asset: {asset_type}",
+    ]
+
+    draw.rectangle([(16, 16), (width - 16, height - 16)], outline=(56, 86, 112), width=3)
+    y = 32
+    for line in lines:
+        draw.text((32, y), line, fill=(24, 36, 48), font=font)
+        y += 18
+    image.save(path, format="PNG")
+
+
+def create_thumbnail(source_path: Path, thumbnail_path: Path) -> tuple[int, int]:
+    with Image.open(source_path) as image:
+        image.thumbnail((320, 320))
+        thumbnail_path.parent.mkdir(parents=True, exist_ok=True)
+        image.save(thumbnail_path, format="PNG")
+        return image.size
+
+
+def image_dimensions(path: Path) -> tuple[int, int]:
+    with Image.open(path) as image:
+        return image.size
+
+
+def write_annotated_preview(source_path: Path, output_path: Path, label: str) -> None:
+    with Image.open(source_path).convert("RGB") as image:
+        draw = ImageDraw.Draw(image)
+        font = ImageFont.load_default()
+        draw.rectangle([(12, 12), (image.width - 12, image.height - 12)], outline=(224, 76, 76), width=4)
+        draw.text((24, 24), label, fill=(224, 76, 76), font=font)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        image.save(output_path, format="PNG")
+
+
+def write_component_slice(source_path: Path, output_path: Path) -> tuple[int, int]:
+    with Image.open(source_path).convert("RGB") as image:
+        left = max(0, image.width // 4)
+        top = max(0, image.height // 4)
+        right = min(image.width, left + max(160, image.width // 2))
+        bottom = min(image.height, top + max(120, image.height // 3))
+        crop = image.crop((left, top, right, bottom))
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        crop.save(output_path, format="PNG")
+        return crop.size
+
+
+class BaseJobRunner(ABC):
+    def __init__(self, database: StudioDatabase, upload_root: Path, job: GenerationJob) -> None:
+        self.database = database
+        self.upload_root = upload_root
+        self.job = job
+
+    @abstractmethod
+    def generate_preview(self, input_data: dict[str, Any], project_name: str, ready_dir: Path) -> Path:
+        raise NotImplementedError
+
+    @property
+    @abstractmethod
+    def source(self) -> str:
+        raise NotImplementedError
+
+    @property
+    def start_message(self) -> str:
+        return f"{self.__class__.__name__} started"
+
+    @property
+    def complete_message(self) -> str:
+        return f"{self.__class__.__name__} completed"
+
+    @property
+    def fail_message(self) -> str:
+        return f"{self.__class__.__name__} failed"
+
+    def run(self) -> GenerationJob | None:
+        running_logs = append_log(self.job.logs, self.start_message)
+        running = self.database.update_generation_job(
+            self.job.id,
+            GenerationJobPatch(status="running", progress=25, logs=running_logs, error_message=""),
+        )
+        if running is None:
+            return None
+        self.job = running
+
+        try:
+            input_data = parse_json_object(running.input_json, "input_json")
+            project = self.database.get_project(running.project_id) if running.project_id else None
+            project_name = project.name if project else "Loose Project"
+            device_type = str(input_data.get("device_type") or "mobile")
+            width = int(input_data.get("width") or 1080)
+            height = int(input_data.get("height") or 1920)
+            ready_dir = self.upload_root / "996-ready" / running.id
+            preview_dir = ready_dir / "previews"
+            component_dir = ready_dir / "components"
+            thumbnail_dir = ready_dir / "thumbnails"
+            package_dir = ready_dir / "package"
+            for directory in [preview_dir, component_dir, thumbnail_dir, package_dir]:
+                directory.mkdir(parents=True, exist_ok=True)
+
+            preview_path = self.generate_preview(input_data, project_name, ready_dir)
+            preview_width, preview_height = image_dimensions(preview_path)
+            assets: list[Asset] = []
+            assets.append(
+                self.create_asset_with_thumbnail(
+                    asset_type="ui_preview",
+                    file_path=preview_path,
+                    thumbnail_dir=thumbnail_dir,
+                    device_type=device_type,
+                    metadata={
+                        "project_name": project_name,
+                        "job_type": running.job_type,
+                        "generation_job_id": running.id,
+                        "ready_dir": str(ready_dir),
+                    },
+                )
+            )
+
+            annotated_path = preview_dir / "annotated_preview.png"
+            write_annotated_preview(preview_path, annotated_path, "996 mock annotation grid")
+            assets.append(
+                self.create_asset_with_thumbnail(
+                    asset_type="annotated_preview",
+                    file_path=annotated_path,
+                    thumbnail_dir=thumbnail_dir,
+                    device_type=device_type,
+                    metadata={"project_name": project_name, "generation_job_id": running.id},
+                )
+            )
+
+            component_path = component_dir / "sliced_component.png"
+            write_component_slice(preview_path, component_path)
+            assets.append(
+                self.create_asset_with_thumbnail(
+                    asset_type="sliced_component",
+                    file_path=component_path,
+                    thumbnail_dir=thumbnail_dir,
+                    device_type=device_type,
+                    metadata={"project_name": project_name, "generation_job_id": running.id},
+                )
+            )
+
+            manifest = {
+                "mock": isinstance(self, MockJobRunner),
+                "job_id": running.id,
+                "project_id": running.project_id,
+                "provider_id": running.provider_id,
+                "device_type": device_type,
+                "resolution": [preview_width, preview_height],
+                "ready_dir": str(ready_dir),
+                "asset_ids": [asset.id for asset in assets],
+                "assets": [
+                    {
+                        "id": asset.id,
+                        "asset_type": asset.asset_type,
+                        "file_path": asset.file_path,
+                        "thumbnail_path": asset.thumbnail_path,
+                    }
+                    for asset in assets
+                ],
+            }
+            manifest_path = package_dir / "manifest.json"
+            manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
+
+            completed_logs = append_log(running.logs, self.complete_message)
+            return self.database.update_generation_job(
+                running.id,
+                GenerationJobPatch(
+                    status="completed",
+                    progress=100,
+                    output_json=json.dumps(manifest, ensure_ascii=False),
+                    output_preview_path=str(preview_path),
+                    error_message="",
+                    logs=completed_logs,
+                ),
+            )
+        except Exception as exc:
+            failed_logs = append_log(running.logs, self.fail_message)
+            error_message = str(exc)
+            if isinstance(self, MockJobRunner) and error_message.startswith("Invalid input_json"):
+                error_message = error_message.replace("Invalid input_json", "Invalid mock input_json", 1)
+            return self.database.update_generation_job(
+                running.id,
+                GenerationJobPatch(
+                    status="failed",
+                    progress=100,
+                    error_message=error_message,
+                    logs=failed_logs,
+                ),
+            )
+
+    def create_asset_with_thumbnail(
+        self,
+        *,
+        asset_type: str,
+        file_path: Path,
+        thumbnail_dir: Path,
+        device_type: str,
+        metadata: dict[str, Any],
+    ) -> Asset:
+        width, height = image_dimensions(file_path)
+        thumbnail_path = thumbnail_dir / f"{file_path.stem}_thumb.png"
+        create_thumbnail(file_path, thumbnail_path)
+        return self.database.create_asset(
+            AssetCreate(
+                project_id=self.job.project_id,
+                asset_type=asset_type,  # type: ignore[arg-type]
+                device_type=device_type,
+                width=width,
+                height=height,
+                file_path=str(file_path),
+                original_filename=file_path.name,
+                metadata_json=json.dumps(metadata, ensure_ascii=False),
+                source=self.source,  # type: ignore[arg-type]
+                generation_job_id=self.job.id,
+                thumbnail_path=str(thumbnail_path),
+            )
+        )
+
+
+class MockJobRunner(BaseJobRunner):
+    @property
+    def source(self) -> str:
+        return "mock_generated"
+
+    @property
+    def start_message(self) -> str:
+        return "Mock run started"
+
+    @property
+    def complete_message(self) -> str:
+        return "Mock run completed"
+
+    @property
+    def fail_message(self) -> str:
+        return "Mock run failed"
+
+    def generate_preview(self, input_data: dict[str, Any], project_name: str, ready_dir: Path) -> Path:
+        device_type = str(input_data.get("device_type") or "mobile")
+        width = int(input_data.get("width") or 1080)
+        height = int(input_data.get("height") or 1920)
+        preview_path = ready_dir / "previews" / "ui_preview.png"
+        render_placeholder_png(
+            preview_path,
+            title="MOCK GENERATED",
+            project_name=project_name,
+            device_type=device_type,
+            width=width,
+            height=height,
+            job_type=self.job.job_type,
+            asset_type="ui_preview",
+        )
+        return preview_path
+
+
+class CustomJobRunner(MockJobRunner):
+    @property
+    def source(self) -> str:
+        return "ai_generated"
+
+    def generate_preview(self, input_data: dict[str, Any], project_name: str, ready_dir: Path) -> Path:
+        preview_path = super().generate_preview(input_data, project_name, ready_dir)
+        return preview_path
+
+
+class OpenAIJobRunner(BaseJobRunner):
+    def __init__(self, database: StudioDatabase, upload_root: Path, job: GenerationJob, provider: AiProvider) -> None:
+        super().__init__(database, upload_root, job)
+        self.provider = provider
+
+    @property
+    def source(self) -> str:
+        return "ai_generated"
+
+    def generate_preview(self, input_data: dict[str, Any], project_name: str, ready_dir: Path) -> Path:
+        config = parse_json_object(self.provider.config_json, "provider config_json")
+        api_key = str(config.get("api_key") or "")
+        api_key_env = str(config.get("api_key_env") or "")
+        if not api_key and api_key_env:
+            api_key = os.getenv(api_key_env, "")
+        if not api_key:
+            raise RuntimeError("OpenAI provider is missing api_key or api_key_env")
+
+        model = str(config.get("model") or "gpt-image-1")
+        output_format = str(config.get("output_format") or "png")
+        size = str(config.get("size") or f"{input_data.get('width', 1024)}x{input_data.get('height', 1024)}")
+        prompt = str(
+            input_data.get("prompt")
+            or config.get("prompt")
+            or f"Create a polished game UI preview for {project_name}."
+        )
+
+        response = httpx.post(
+            str(config.get("api_url") or "https://api.openai.com/v1/images/generations"),
+            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+            json={
+                "model": model,
+                "prompt": prompt,
+                "size": size,
+                "n": 1,
+                "output_format": output_format,
+            },
+            timeout=180,
+        )
+        response.raise_for_status()
+        payload = response.json()
+        image_data = payload.get("data", [{}])[0]
+        preview_path = ready_dir / "previews" / f"ui_preview.{output_format}"
+        if image_data.get("b64_json"):
+            preview_path.write_bytes(base64.b64decode(image_data["b64_json"]))
+        elif image_data.get("url"):
+            image_response = httpx.get(image_data["url"], timeout=180)
+            image_response.raise_for_status()
+            preview_path.write_bytes(image_response.content)
+        else:
+            raise RuntimeError("OpenAI image response did not include b64_json or url")
+        return preview_path
+
+
+class JobRunnerService:
+    def __init__(self, database: StudioDatabase, upload_root: Path) -> None:
+        self.database = database
+        self.upload_root = upload_root
+
+    def run(self, generation_job_id: str) -> GenerationJob | None:
+        job = self.database.get_generation_job(generation_job_id)
+        if job is None:
+            return None
+        provider = self.resolve_provider(job)
+        runner = self.create_runner(job, provider)
+        return runner.run()
+
+    def resolve_provider(self, job: GenerationJob) -> AiProvider | None:
+        if job.provider_id:
+            return self.database.get_ai_provider(job.provider_id)
+        enabled = [provider for provider in self.database.list_ai_providers() if provider.enabled]
+        return enabled[0] if enabled else None
+
+    def create_runner(self, job: GenerationJob, provider: AiProvider | None) -> BaseJobRunner:
+        provider_type = provider.type if provider else "mock"
+        if job.job_type == "mock_ui_generation" or provider_type == "mock":
+            return MockJobRunner(self.database, self.upload_root, job)
+        if provider_type == "openai":
+            if provider is None:
+                raise RuntimeError("OpenAI provider is not configured")
+            return OpenAIJobRunner(self.database, self.upload_root, job, provider)
+        return CustomJobRunner(self.database, self.upload_root, job)
+
+
+def provider_health(provider: AiProvider) -> dict[str, str | bool]:
+    if not provider.enabled:
+        return {
+            "id": provider.id,
+            "name": provider.name,
+            "type": provider.type,
+            "enabled": provider.enabled,
+            "status": "disabled",
+            "message": "Provider is disabled",
+        }
+    if provider.type in {"mock", "custom"}:
+        return {
+            "id": provider.id,
+            "name": provider.name,
+            "type": provider.type,
+            "enabled": provider.enabled,
+            "status": "ok",
+            "message": "Local provider is ready",
+        }
+    if provider.type == "openai":
+        try:
+            config = parse_json_object(provider.config_json, "provider config_json")
+        except ValueError as exc:
+            return {
+                "id": provider.id,
+                "name": provider.name,
+                "type": provider.type,
+                "enabled": provider.enabled,
+                "status": "error",
+                "message": str(exc),
+            }
+        api_key = str(config.get("api_key") or "")
+        api_key_env = str(config.get("api_key_env") or "")
+        if not api_key and api_key_env:
+            api_key = os.getenv(api_key_env, "")
+        if not api_key:
+            return {
+                "id": provider.id,
+                "name": provider.name,
+                "type": provider.type,
+                "enabled": provider.enabled,
+                "status": "missing_config",
+                "message": "OpenAI provider requires api_key or api_key_env",
+            }
+        return {
+            "id": provider.id,
+            "name": provider.name,
+            "type": provider.type,
+            "enabled": provider.enabled,
+            "status": "configured",
+            "message": "OpenAI provider has credentials configured",
+        }
+    return {
+        "id": provider.id,
+        "name": provider.name,
+        "type": provider.type,
+        "enabled": provider.enabled,
+        "status": "error",
+        "message": "Unknown provider type",
+    }

@@ -49,6 +49,7 @@ CREATE TABLE IF NOT EXISTS reference_images (
   metadata_json TEXT,
   source TEXT NOT NULL DEFAULT 'uploaded',
   generation_job_id TEXT,
+  thumbnail_path TEXT,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL,
@@ -80,6 +81,7 @@ CREATE TABLE IF NOT EXISTS assets (
   metadata_json TEXT,
   source TEXT NOT NULL DEFAULT 'uploaded',
   generation_job_id TEXT,
+  thumbnail_path TEXT,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL,
@@ -89,8 +91,9 @@ CREATE TABLE IF NOT EXISTS assets (
 CREATE TABLE IF NOT EXISTS ai_providers (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
-  provider_type TEXT NOT NULL,
+  type TEXT NOT NULL,
   enabled INTEGER NOT NULL DEFAULT 0,
+  config_json TEXT,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
@@ -110,15 +113,18 @@ CREATE TABLE IF NOT EXISTS exports (
 CREATE TABLE IF NOT EXISTS generation_jobs (
   id TEXT PRIMARY KEY,
   project_id TEXT,
+  provider_id TEXT,
   job_type TEXT NOT NULL,
   status TEXT NOT NULL DEFAULT 'pending',
   progress INTEGER NOT NULL DEFAULT 0,
   input_json TEXT,
   output_json TEXT,
+  output_preview_path TEXT,
   error_message TEXT,
   retry_count INTEGER NOT NULL DEFAULT 0,
   logs TEXT,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL
+  FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE SET NULL,
+  FOREIGN KEY (provider_id) REFERENCES ai_providers(id) ON DELETE SET NULL
 );

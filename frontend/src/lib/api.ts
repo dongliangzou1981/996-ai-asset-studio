@@ -60,11 +60,13 @@ export type BasePanelInput = Omit<BasePanel, "id" | "created_at" | "updated_at">
 export type GenerationJob = {
   id: string;
   project_id: string | null;
+  provider_id: string | null;
   job_type: string;
   status: string;
   progress: number;
   input_json: string;
   output_json: string;
+  output_preview_path: string;
   error_message: string;
   retry_count: number;
   logs: string;
@@ -74,13 +76,16 @@ export type GenerationJob = {
 
 export type GenerationJobInput = {
   project_id: string | null;
+  provider_id?: string | null;
   job_type: string;
   status: string;
   progress: number;
   input_json: string;
   output_json: string;
+  output_preview_path?: string;
   error_message: string;
   logs: string;
+  auto_run?: boolean;
 };
 
 export type MockUiGenerationInput = {
@@ -106,10 +111,37 @@ export type Asset = {
   file_path: string;
   original_filename: string;
   metadata_json: string;
-  source: "uploaded" | "mock_generated";
+  source: "uploaded" | "mock_generated" | "ai_generated";
   generation_job_id: string | null;
+  thumbnail_path: string;
   created_at: string;
   updated_at: string;
+};
+
+export type AiProvider = {
+  id: string;
+  name: string;
+  type: "mock" | "openai" | "custom";
+  enabled: boolean;
+  config_json: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type AiProviderInput = {
+  name: string;
+  type: AiProvider["type"];
+  enabled: boolean;
+  config_json: string;
+};
+
+export type ProviderHealth = {
+  id: string;
+  name: string;
+  type: string;
+  enabled: boolean;
+  status: string;
+  message: string;
 };
 
 export type UploadAssetInput = {
@@ -249,6 +281,9 @@ export const studioApi = {
   runMockGenerationJob(generationJobId: string) {
     return request<GenerationJob>(`/generation_jobs/${generationJobId}/run-mock`, { method: "POST" });
   },
+  runGenerationJob(generationJobId: string) {
+    return request<GenerationJob>(`/generation_jobs/${generationJobId}/run`, { method: "POST" });
+  },
   listGenerationJobResults(generationJobId: string) {
     return request<ListResponse<Asset>>(`/generation_jobs/${generationJobId}/results`);
   },
@@ -261,13 +296,16 @@ export const studioApi = {
   deleteAsset(assetId: string) {
     return request<void>(`/assets/${assetId}`, { method: "DELETE" });
   },
-  listAssets(projectId?: string, assetType?: string, generationJobId?: string) {
+  listAssets(projectId?: string, assetType?: string, deviceType?: string, generationJobId?: string) {
     const params = new URLSearchParams();
     if (projectId) {
       params.set("project_id", projectId);
     }
     if (assetType) {
       params.set("asset_type", assetType);
+    }
+    if (deviceType) {
+      params.set("device_type", deviceType);
     }
     if (generationJobId) {
       params.set("generation_job_id", generationJobId);
@@ -278,6 +316,9 @@ export const studioApi = {
   getAssetFileUrl(assetId: string) {
     return `${API_BASE_URL}/assets/${assetId}/file`;
   },
+  getAssetThumbnailUrl(assetId: string) {
+    return `${API_BASE_URL}/assets/${assetId}/thumbnail`;
+  },
   uploadAsset(payload: UploadAssetInput) {
     const formData = new FormData();
     formData.append("file", payload.file);
@@ -287,5 +328,26 @@ export const studioApi = {
     formData.append("asset_type", payload.asset_type);
     formData.append("device_type", payload.device_type);
     return uploadRequest<Asset>("/assets/upload", formData);
+  },
+  createAiProvider(payload: AiProviderInput) {
+    return request<AiProvider>("/ai_providers", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+  listAiProviders() {
+    return request<ListResponse<AiProvider>>("/ai_providers");
+  },
+  updateAiProvider(providerId: string, payload: AiProviderInput) {
+    return request<AiProvider>(`/ai_providers/${providerId}`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    });
+  },
+  getAiProviderHealth(providerId: string) {
+    return request<ProviderHealth>(`/ai_providers/${providerId}/health`);
+  },
+  listAiProviderHealth() {
+    return request<ListResponse<ProviderHealth>>("/ai_providers/health");
   },
 };

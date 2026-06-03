@@ -8,6 +8,7 @@ from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.db import StudioDatabase
+from app.job_runner import JobRunnerService, provider_health
 from app.mock_worker import run_mock_generation
 from app.schema import TABLE_NAMES
 from app.schemas import (
@@ -25,6 +26,8 @@ from app.schemas import (
     GenerationJobList,
     GenerationJobPatch,
     MockUiGenerationRequest,
+    ProviderHealth,
+    ProviderHealthList,
     Project,
     ProjectCreate,
     ProjectList,
@@ -208,12 +211,14 @@ def create_app(database_path: str | Path | None = None, upload_dir: str | Path |
     def list_assets(
         project_id: str | None = None,
         asset_type: str | None = None,
+        device_type: str | None = None,
         generation_job_id: str | None = None,
     ) -> AssetList:
         return AssetList(
             items=database.list_assets(
                 project_id=project_id,
                 asset_type=asset_type,
+                device_type=device_type,
                 generation_job_id=generation_job_id,
             )
         )
@@ -234,6 +239,16 @@ def create_app(database_path: str | Path | None = None, upload_dir: str | Path |
         if not file_path.exists():
             raise HTTPException(status_code=404, detail="Asset file not found")
         return FileResponse(file_path)
+
+    @app.get("/assets/{asset_id}/thumbnail")
+    def get_asset_thumbnail(asset_id: str) -> FileResponse:
+        asset = database.get_asset(asset_id)
+        if asset is None:
+            raise HTTPException(status_code=404, detail="Asset not found")
+        thumbnail_path = Path(asset.thumbnail_path or asset.file_path)
+        if not thumbnail_path.exists():
+            raise HTTPException(status_code=404, detail="Asset thumbnail not found")
+        return FileResponse(thumbnail_path)
 
     @app.put("/assets/{asset_id}", response_model=Asset)
     def update_asset(asset_id: str, payload: AssetCreate) -> Asset:
@@ -281,6 +296,7 @@ def create_app(database_path: str | Path | None = None, upload_dir: str | Path |
                 metadata_json="{}",
                 source="uploaded",
                 generation_job_id=None,
+                thumbnail_path="",
             )
         )
 
@@ -304,6 +320,7 @@ def create_app(database_path: str | Path | None = None, upload_dir: str | Path |
                 output_json="",
                 error_message="",
                 logs="Mock UI job queued",
+                provider_id=None,
             )
         )
 
@@ -311,7 +328,24 @@ def create_app(database_path: str | Path | None = None, upload_dir: str | Path |
     def create_generation_job(payload: GenerationJobCreate) -> GenerationJob:
         if payload.project_id and database.get_project(payload.project_id) is None:
             raise HTTPException(status_code=400, detail="Project does not exist")
-        return database.create_generation_job(payload)
+        if payload.provider_id and database.get_ai_provider(payload.provider_id) is None:
+            raise HTTPException(status_code=400, detail="Provider does not exist")
+        generation_job = database.create_generation_job(payload)
+        if payload.auto_run:
+            return JobRunnerService(database, upload_root).run(generation_job.id) or generation_job
+        return generation_job
+
+    @app.post("/generation_jobs/{generation_job_id}/run", response_model=GenerationJob)
+    def run_generation_job(generation_job_id: str) -> GenerationJob:
+        generation_job = database.get_generation_job(generation_job_id)
+        if generation_job is None:
+            raise HTTPException(status_code=404, detail="Generation job not found")
+        if generation_job.status == "cancelled":
+            raise HTTPException(status_code=400, detail="Cancelled jobs cannot be run")
+        completed = JobRunnerService(database, upload_root).run(generation_job_id)
+        if completed is None:
+            raise HTTPException(status_code=404, detail="Generation job not found")
+        return completed
 
     @app.post("/generation_jobs/{generation_job_id}/run-mock", response_model=GenerationJob)
     def run_mock_generation_job(generation_job_id: str) -> GenerationJob:
@@ -359,6 +393,26 @@ def create_app(database_path: str | Path | None = None, upload_dir: str | Path |
     @app.get("/ai_providers", response_model=AiProviderList)
     def list_ai_providers() -> AiProviderList:
         return AiProviderList(items=database.list_ai_providers())
+
+    @app.put("/ai_providers/{provider_id}", response_model=AiProvider)
+    def update_ai_provider(provider_id: str, payload: AiProviderCreate) -> AiProvider:
+        provider = database.update_ai_provider(provider_id, payload)
+        if provider is None:
+            raise HTTPException(status_code=404, detail="Provider not found")
+        return provider
+
+    @app.get("/ai_providers/{provider_id}/health", response_model=ProviderHealth)
+    def get_ai_provider_health(provider_id: str) -> ProviderHealth:
+        provider = database.get_ai_provider(provider_id)
+        if provider is None:
+            raise HTTPException(status_code=404, detail="Provider not found")
+        return ProviderHealth.model_validate(provider_health(provider))
+
+    @app.get("/ai_providers/health", response_model=ProviderHealthList)
+    def list_ai_provider_health() -> ProviderHealthList:
+        return ProviderHealthList(
+            items=[ProviderHealth.model_validate(provider_health(provider)) for provider in database.list_ai_providers()]
+        )
 
     return app
 
