@@ -71,3 +71,15 @@
 11. Run `npm test -- --runInBand` in `frontend/`.
 12. Run `npm run build` in `frontend/`.
 13. Run `backend\.venv\Scripts\python -m alembic -c backend\alembic.ini upgrade head`.
+
+## Sprint 7A
+
+1. Check mock provider health returns `healthy`.
+2. Check OpenAI provider without `api_key_env` returns `unhealthy`.
+3. Check OpenAI provider with missing local environment variable returns `unhealthy`.
+4. Check direct `api_key` in `config_json` is rejected and not echoed.
+5. Check `/providers` shows type, enabled state, health status, and key safety guidance.
+6. Run `backend\.venv\Scripts\python -m pytest backend\tests -q`.
+7. Run `npm test -- --runInBand` in `frontend/`.
+8. Run `npm run build` in `frontend/`.
+9. Run `backend\.venv\Scripts\python -m alembic -c backend\alembic.ini upgrade head`.

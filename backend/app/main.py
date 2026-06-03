@@ -4,12 +4,15 @@ import os
 import re
 
 from fastapi import FastAPI, File, Form, HTTPException, Response, UploadFile, status
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.db import StudioDatabase
-from app.job_runner import JobRunnerService, provider_health
+from app.job_runner import JobRunnerService
 from app.mock_worker import run_mock_generation
+from app.provider_security import provider_health
 from app.schema import TABLE_NAMES
 from app.schemas import (
     AiProvider,
@@ -85,6 +88,13 @@ def create_app(database_path: str | Path | None = None, upload_dir: str | Path |
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    @app.exception_handler(RequestValidationError)
+    async def safe_validation_exception_handler(request, exc):  # type: ignore[no-untyped-def]
+        safe_errors = []
+        for error in exc.errors():
+            safe_errors.append({key: value for key, value in error.items() if key not in {"input", "ctx"}})
+        return JSONResponse(status_code=422, content={"detail": safe_errors})
 
     database = StudioDatabase(Path(database_path) if database_path else default_database_path())
     database.initialize()

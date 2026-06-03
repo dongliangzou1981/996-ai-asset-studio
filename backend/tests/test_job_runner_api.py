@@ -33,7 +33,7 @@ def test_provider_health_update_and_unified_job_runner_outputs(tmp_path: Path) -
 
     health = client.get(f"/ai_providers/{provider_id}/health")
     assert health.status_code == 200
-    assert health.json()["status"] == "ok"
+    assert health.json()["status"] == "healthy"
 
     job = client.post(
         "/generation_jobs",
@@ -90,10 +90,10 @@ def test_provider_health_update_and_unified_job_runner_outputs(tmp_path: Path) -
     )
     assert updated.status_code == 200
     assert updated.json()["enabled"] is False
-    assert client.get(f"/ai_providers/{provider_id}/health").json()["status"] == "disabled"
+    assert client.get(f"/ai_providers/{provider_id}/health").json()["status"] == "healthy"
 
 
-def test_auto_run_and_openai_health_without_secret(tmp_path: Path) -> None:
+def test_auto_run_and_openai_health_without_secret(tmp_path: Path, monkeypatch) -> None:
     client = make_client(tmp_path)
 
     openai_provider = client.post(
@@ -102,10 +102,26 @@ def test_auto_run_and_openai_health_without_secret(tmp_path: Path) -> None:
             "name": "OpenAI Images",
             "type": "openai",
             "enabled": True,
-            "config_json": "{\"model\":\"gpt-image-1\"}",
+            "config_json": "{}",
         },
     ).json()
-    assert client.get(f"/ai_providers/{openai_provider['id']}/health").json()["status"] == "missing_config"
+    missing_env_key = client.get(f"/ai_providers/{openai_provider['id']}/health").json()
+    assert missing_env_key["status"] == "unhealthy"
+    assert "api_key_env" in missing_env_key["message"]
+
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    openai_env_provider = client.post(
+        "/ai_providers",
+        json={
+            "name": "OpenAI Env",
+            "type": "openai",
+            "enabled": True,
+            "config_json": "{\"api_key_env\":\"OPENAI_API_KEY\"}",
+        },
+    ).json()
+    missing_env = client.get(f"/ai_providers/{openai_env_provider['id']}/health").json()
+    assert missing_env["status"] == "unhealthy"
+    assert missing_env["message"] == "Environment variable OPENAI_API_KEY is not set"
 
     mock_provider = client.post(
         "/ai_providers",
@@ -133,4 +149,22 @@ def test_auto_run_and_openai_health_without_secret(tmp_path: Path) -> None:
 
     health_list = client.get("/ai_providers/health")
     assert health_list.status_code == 200
-    assert len(health_list.json()["items"]) == 2
+    assert len(health_list.json()["items"]) == 3
+
+
+def test_provider_config_rejects_real_api_key_without_echoing_secret(tmp_path: Path) -> None:
+    client = make_client(tmp_path)
+
+    response = client.post(
+        "/ai_providers",
+        json={
+            "name": "Unsafe Provider",
+            "type": "openai",
+            "enabled": True,
+            "config_json": "{\"api_key\":\"sk-test-secret\"}",
+        },
+    )
+
+    assert response.status_code == 422
+    assert "sk-test-secret" not in response.text
+    assert "api_key_env" in response.text

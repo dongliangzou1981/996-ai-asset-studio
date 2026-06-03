@@ -1,6 +1,8 @@
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+import json
+
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class ProjectCreate(BaseModel):
@@ -231,6 +233,23 @@ class AiProviderCreate(BaseModel):
     type: Literal["mock", "openai", "custom"] = "mock"
     enabled: bool = False
     config_json: str = "{}"
+
+    @field_validator("config_json")
+    @classmethod
+    def validate_safe_config_json(cls, value: str) -> str:
+        try:
+            config = json.loads(value or "{}")
+        except json.JSONDecodeError as exc:
+            raise ValueError("config_json must be a JSON object") from exc
+        if not isinstance(config, dict):
+            raise ValueError("config_json must be a JSON object")
+        allowed_keys = {"api_key_env"}
+        extra_keys = set(config) - allowed_keys
+        if extra_keys:
+            raise ValueError("config_json may only contain api_key_env")
+        if "api_key_env" in config and not isinstance(config["api_key_env"], str):
+            raise ValueError("api_key_env must be a string")
+        return json.dumps(config, separators=(",", ":"))
 
 
 class AiProvider(AiProviderCreate):

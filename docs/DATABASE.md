@@ -106,7 +106,7 @@ Allowed asset sources: `uploaded`, `mock_generated`, `ai_generated`.
 - `created_at`
 - `updated_at`
 
-Provider types: `mock`, `openai`, `custom`. Prefer `api_key_env` inside `config_json`; do not commit real API keys.
+Provider types: `mock`, `openai`, `custom`. `config_json` may only contain `api_key_env`; do not store real API keys.
 
 ## 996-Ready Output
 

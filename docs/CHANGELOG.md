@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.7A.0 - 2026-06-03
+
+- Hardened provider `config_json` so only `api_key_env` is accepted.
+- Added safe provider health checks with `healthy` and `unhealthy` statuses.
+- Added provider security guidance in `PROVIDERS.md`.
+- Enhanced `/providers` safety copy and health display.
+
 ## 0.6.0 - 2026-06-03
 
 - Added unified Job Runner with mock, OpenAI, and custom provider paths.

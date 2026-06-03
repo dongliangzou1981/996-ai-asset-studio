@@ -289,7 +289,7 @@ Returns the created asset record with file path, width, height, type, and origin
 
 Provider config supports `mock`, `openai`, and `custom`.
 
-OpenAI config can include `api_key`, `api_key_env`, `model`, `size`, and `output_format`. Prefer `api_key_env`; do not commit real keys.
+OpenAI config may only include `api_key_env`. Do not store real keys in `config_json`.
 
 ### POST /ai_providers
 
@@ -317,6 +317,8 @@ Uses the same JSON body as `POST /ai_providers`.
 ### GET /ai_providers/{provider_id}/health
 
 Returns health status for one provider.
+
+Status values are `healthy` and `unhealthy`. Health responses never include real API keys.
 
 ### GET /ai_providers/health
 

@@ -56,6 +56,11 @@ export function ProviderManager({ api = studioApi }: { api?: ProviderApi }) {
     <section className="grid gap-6 lg:grid-cols-[0.75fr_1.25fr]">
       <div className="rounded-md border border-studio-line bg-white p-5">
         <h2 className="text-lg font-semibold">Provider Config</h2>
+        <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+          Real API keys must live in local environment variables. config_json stores only{" "}
+          <code>{"{\"api_key_env\":\"OPENAI_API_KEY\"}"}</code>. Do not write keys to the database or commit them to
+          GitHub.
+        </div>
         <form className="mt-4 grid gap-3" onSubmit={createProvider}>
           <label className="grid gap-1 text-sm font-medium">
             Provider name
@@ -112,7 +117,9 @@ export function ProviderManager({ api = studioApi }: { api?: ProviderApi }) {
                     <p className="mt-2 text-sm text-studio-muted">
                       Health: {health[provider.id].status} / {health[provider.id].message}
                     </p>
-                  ) : null}
+                  ) : (
+                    <p className="mt-2 text-sm text-studio-muted">Health: not checked</p>
+                  )}
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <button

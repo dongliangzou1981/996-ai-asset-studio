@@ -52,13 +52,15 @@ test("creates, toggles, and checks provider health", async () => {
     name: "OpenAI Images",
     type: "openai",
     enabled: true,
-    status: "configured",
-    message: "OpenAI provider has credentials configured",
+    status: "healthy",
+    message: "Environment variable OPENAI_API_KEY is configured",
   });
 
   render(<ProviderManager api={api} />);
 
   expect(await screen.findByText("OpenAI Images")).toBeInTheDocument();
+  expect(screen.getByText(/Real API keys must live in local environment variables/)).toBeInTheDocument();
+  expect(screen.getByText("Health: not checked")).toBeInTheDocument();
 
   await user.clear(screen.getByLabelText("Provider name"));
   await user.type(screen.getByLabelText("Provider name"), "Mock Provider");
@@ -82,5 +84,5 @@ test("creates, toggles, and checks provider health", async () => {
   });
 
   await user.click(screen.getByRole("button", { name: "Health OpenAI Images" }));
-  expect(await screen.findByText(/Health: configured/)).toBeInTheDocument();
+  expect(await screen.findByText(/Health: healthy/)).toBeInTheDocument();
 });

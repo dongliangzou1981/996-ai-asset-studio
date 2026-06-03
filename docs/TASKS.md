@@ -91,3 +91,15 @@ AI generation is not part of Sprint 5.
 - [x] Update docs
 - [ ] Production-grade external custom model adapter
 - [ ] Secure secret vault integration
+
+## Sprint 7A
+
+- [x] Restrict provider `config_json` to `api_key_env`
+- [x] Reject direct API key fields
+- [x] Return provider health as `healthy` or `unhealthy`
+- [x] Check OpenAI `api_key_env` presence
+- [x] Check whether the named environment variable exists
+- [x] Avoid returning real key values
+- [x] Add `/providers` safety guidance
+- [x] Add `PROVIDERS.md`
+- [x] Add backend and frontend tests
