@@ -1,29 +1,34 @@
 # Architecture
 
-## 目录边界
+## Directory Boundaries
 
-- `frontend/`: Next.js 15 应用，负责资产工作台 UI。
-- `backend/`: FastAPI 服务，负责 API、数据库访问和后续生成任务编排。
-- `docs/`: 产品、架构、API、数据库和测试说明。
-- `prompts/`: 后续保存 prompt 模板。
-- `assets/`: 本地素材占位目录，默认不提交实际素材。
-- `exports/`: 导出产物占位目录，默认不提交实际导出文件。
-- `scripts/`: 工具脚本目录。
-- `tests/`: 跨项目测试目录。
+- `frontend/`: Next.js 15 app for the local studio UI.
+- `backend/`: FastAPI service for API, validation, persistence, and migration-backed data.
+- `docs/`: product, architecture, API, database, and test documentation.
+- `prompts/`: future prompt templates.
+- `assets/`: local asset placeholder directory.
+- `exports/`: local export placeholder directory.
+- `scripts/`: utility scripts.
+- `tests/`: shared test placeholder directory.
 
-## Sprint 1 架构
+## Current Stack
 
-前端通过工作台页面展示项目状态，并提供项目管理与风格管理页面。后端提供 `/health`、`/schema/tables`、项目 CRUD 和风格资料 CRUD，默认使用 SQLite 持久化。
+- Frontend: Next.js 15, React, TypeScript, Tailwind CSS, Jest, Testing Library
+- Backend: FastAPI, Uvicorn, Pydantic, pytest
+- Database: SQLite for local development, Alembic migrations
 
-## 技术栈
+## Data Flow
 
-- Frontend: Next.js 15, React, TypeScript, Tailwind CSS
-- Backend: FastAPI, Uvicorn, Pydantic
-- Database: SQLite-compatible SQL schema for local development, Alembic migrations
+1. Frontend pages call `studioApi`.
+2. `studioApi` uses `NEXT_PUBLIC_API_BASE_URL` or defaults to `http://127.0.0.1:8000`.
+3. FastAPI validates JSON with Pydantic schemas and exposes OpenAPI.
+4. `StudioDatabase` uses Python `sqlite3` for local persistence.
+5. Alembic manages versioned schema changes.
 
-## Sprint 2 数据流
+## Sprint 3 Scope
 
-1. 前端 `studioApi` 使用 `NEXT_PUBLIC_API_BASE_URL` 或默认 `http://127.0.0.1:8000` 调用后端。
-2. FastAPI 使用 Pydantic schema 进行 JSON schema 验证并生成 OpenAPI。
-3. 后端仓储通过 Python `sqlite3` 读写本地数据库。
-4. Alembic 提供 `projects` 与 `style_profiles` 的迁移入口。
+- `/panels` manages Base Panel CRUD and copy.
+- `/job-center` lists generation jobs.
+- `panel_type` is constrained by Pydantic to the supported seven panel types.
+- AI generation is intentionally not connected in Sprint 3.
+

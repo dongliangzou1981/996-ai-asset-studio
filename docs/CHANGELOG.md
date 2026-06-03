@@ -1,17 +1,26 @@
 # Changelog
 
-## 0.1.0 - 2026-06-03
+## 0.3.0 - 2026-06-03
 
-- 初始化 Sprint 1 项目骨架。
-- 添加前端 Next.js 应用。
-- 添加后端 FastAPI 应用。
-- 添加数据库表结构。
-- 添加文档体系。
+- Added Base Panel CRUD and copy API.
+- Added `/panels` Base Panel management page.
+- Added `/job-center` page.
+- Added `generation_jobs` table.
+- Added Alembic 0002 migration.
+- Added Base Panel and Job Center tests.
 
 ## 0.2.0 - 2026-06-03
 
-- 添加项目 CRUD API 与前端项目管理页面。
-- 添加风格资料 CRUD API 与前端风格管理页面。
-- 初始化 Alembic 迁移目录与首个迁移脚本。
-- 添加 FastAPI CRUD 测试与前端组件测试。
-- 更新 API、数据库、架构和测试文档。
+- Added project CRUD API and frontend project management.
+- Added style profile CRUD API and frontend style management.
+- Initialized Alembic.
+- Added FastAPI CRUD tests and frontend component tests.
+
+## 0.1.0 - 2026-06-03
+
+- Initialized Sprint 1 project scaffold.
+- Added Next.js frontend.
+- Added FastAPI backend.
+- Added database schema.
+- Added docs structure.
+

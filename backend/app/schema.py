@@ -6,5 +6,5 @@ TABLE_NAMES = [
     "ui_screens",
     "assets",
     "exports",
+    "generation_jobs",
 ]
-

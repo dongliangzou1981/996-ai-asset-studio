@@ -32,6 +32,41 @@ export type StyleProfileInput = {
   prompt_notes: string;
 };
 
+export type BasePanel = {
+  id: string;
+  project_id: string;
+  style_profile_id: string;
+  panel_type:
+    | "main_panel"
+    | "sub_panel"
+    | "popup_panel"
+    | "list_panel"
+    | "input_panel"
+    | "button_panel"
+    | "icon_panel";
+  device_type: string;
+  width: number;
+  height: number;
+  texture: string;
+  border_style: string;
+  background_style: string;
+  color_scheme: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type BasePanelInput = Omit<BasePanel, "id" | "created_at" | "updated_at">;
+
+export type GenerationJob = {
+  id: string;
+  project_id: string;
+  job_type: string;
+  status: string;
+  progress: number;
+  created_at: string;
+  updated_at: string;
+};
+
 export type ListResponse<T> = {
   items: T[];
 };
@@ -99,5 +134,33 @@ export const studioApi = {
       body: JSON.stringify(payload),
     });
   },
+  copyBasePanel(basePanelId: string) {
+    return request<BasePanel>(`/base_panels/${basePanelId}/copy`, { method: "POST" });
+  },
+  createBasePanel(payload: BasePanelInput) {
+    return request<BasePanel>("/base_panels", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+  deleteBasePanel(basePanelId: string) {
+    return request<void>(`/base_panels/${basePanelId}`, { method: "DELETE" });
+  },
+  getBasePanel(basePanelId: string) {
+    return request<BasePanel>(`/base_panels/${basePanelId}`);
+  },
+  listBasePanels(projectId?: string) {
+    const query = projectId ? `?project_id=${encodeURIComponent(projectId)}` : "";
+    return request<ListResponse<BasePanel>>(`/base_panels${query}`);
+  },
+  updateBasePanel(basePanelId: string, payload: BasePanelInput) {
+    return request<BasePanel>(`/base_panels/${basePanelId}`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    });
+  },
+  listGenerationJobs(projectId?: string) {
+    const query = projectId ? `?project_id=${encodeURIComponent(projectId)}` : "";
+    return request<ListResponse<GenerationJob>>(`/generation_jobs${query}`);
+  },
 };
-

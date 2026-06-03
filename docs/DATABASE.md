@@ -1,31 +1,60 @@
 # Database
 
-Sprint 1 定义 7 张核心表，SQL 文件位于 `backend/app/db/schema.sql`。
+SQL schema: `backend/app/db/schema.sql`
 
-Sprint 2 初始化 Alembic，迁移配置位于 `backend/alembic.ini`，迁移脚本位于 `backend/migrations/versions/0001_create_projects_style_profiles.py`。
+Alembic config: `backend/alembic.ini`
 
-## 表
+## Tables
 
-- `projects`: 项目主表。
-- `style_profiles`: 项目风格资料。
-- `base_panels`: 基础画面或底图面板。
-- `reference_images`: 参考图元数据。
-- `ui_screens`: UI 界面稿记录。
-- `assets`: 生成或导入的素材记录。
-- `exports`: 导出任务与产物记录。
+- `projects`: project records.
+- `style_profiles`: style templates attached to projects.
+- `base_panels`: unified base panel specs.
+- `reference_images`: reference image metadata.
+- `ui_screens`: UI screen records.
+- `assets`: generated or imported asset metadata.
+- `exports`: export records.
+- `generation_jobs`: generation job status records.
 
-## 关系
+## Relationships
 
-- 一个 project 可拥有多个 style profile、base panel、reference image、ui screen、asset 和 export。
-- `assets` 可选关联 `ui_screens`。
-- `exports` 通过 `project_id` 关联项目。
+- `style_profiles.project_id` references `projects.id`.
+- `base_panels.project_id` references `projects.id`.
+- `base_panels.style_profile_id` references `style_profiles.id`.
+- `generation_jobs.project_id` references `projects.id`.
 
-## 迁移
+## Migrations
 
-本地默认 SQLite URL:
+- `0001_create_projects_style_profiles.py`: creates `projects` and `style_profiles`.
+- `0002_base_panels_generation_jobs.py`: creates the Sprint 3 `base_panels` shape and `generation_jobs`.
+
+Default local database URL:
 
 ```text
 sqlite:///backend/data/studio.db
 ```
 
-可通过 `DATABASE_URL` 覆盖为 PostgreSQL 等 SQLAlchemy 支持的连接字符串。Sprint 2 的首个迁移脚本覆盖 `projects` 和 `style_profiles` 两张表。
+`DATABASE_URL` can override the Alembic database URL for PostgreSQL or another SQLAlchemy-supported backend.
+
+## Base Panel Fields
+
+- `project_id`
+- `style_profile_id`
+- `panel_type`
+- `device_type`
+- `width`
+- `height`
+- `texture`
+- `border_style`
+- `background_style`
+- `color_scheme`
+
+## Generation Job Fields
+
+- `id`
+- `project_id`
+- `job_type`
+- `status`
+- `progress`
+- `created_at`
+- `updated_at`
+

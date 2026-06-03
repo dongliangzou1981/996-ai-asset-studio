@@ -7,6 +7,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.db import StudioDatabase
 from app.schema import TABLE_NAMES
 from app.schemas import (
+    BasePanel,
+    BasePanelCreate,
+    BasePanelList,
+    GenerationJobList,
     Project,
     ProjectCreate,
     ProjectList,
@@ -24,7 +28,7 @@ def default_database_path() -> Path:
 
 
 def create_app(database_path: str | Path | None = None) -> FastAPI:
-    app = FastAPI(title="996 AI Asset Studio API", version="0.2.0")
+    app = FastAPI(title="996 AI Asset Studio API", version="0.3.0")
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
@@ -97,6 +101,53 @@ def create_app(database_path: str | Path | None = None) -> FastAPI:
         if not database.delete_style_profile(style_profile_id):
             raise HTTPException(status_code=404, detail="Style profile not found")
         return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+    @app.post("/base_panels", response_model=BasePanel, status_code=status.HTTP_201_CREATED)
+    def create_base_panel(payload: BasePanelCreate) -> BasePanel:
+        if database.get_project(payload.project_id) is None:
+            raise HTTPException(status_code=400, detail="Project does not exist")
+        if database.get_style_profile(payload.style_profile_id) is None:
+            raise HTTPException(status_code=400, detail="Style profile does not exist")
+        return database.create_base_panel(payload)
+
+    @app.get("/base_panels", response_model=BasePanelList)
+    def list_base_panels(project_id: str | None = None) -> BasePanelList:
+        return BasePanelList(items=database.list_base_panels(project_id=project_id))
+
+    @app.get("/base_panels/{base_panel_id}", response_model=BasePanel)
+    def get_base_panel(base_panel_id: str) -> BasePanel:
+        base_panel = database.get_base_panel(base_panel_id)
+        if base_panel is None:
+            raise HTTPException(status_code=404, detail="Base panel not found")
+        return base_panel
+
+    @app.put("/base_panels/{base_panel_id}", response_model=BasePanel)
+    def update_base_panel(base_panel_id: str, payload: BasePanelCreate) -> BasePanel:
+        if database.get_project(payload.project_id) is None:
+            raise HTTPException(status_code=400, detail="Project does not exist")
+        if database.get_style_profile(payload.style_profile_id) is None:
+            raise HTTPException(status_code=400, detail="Style profile does not exist")
+        base_panel = database.update_base_panel(base_panel_id, payload)
+        if base_panel is None:
+            raise HTTPException(status_code=404, detail="Base panel not found")
+        return base_panel
+
+    @app.delete("/base_panels/{base_panel_id}", status_code=status.HTTP_204_NO_CONTENT)
+    def delete_base_panel(base_panel_id: str) -> Response:
+        if not database.delete_base_panel(base_panel_id):
+            raise HTTPException(status_code=404, detail="Base panel not found")
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+    @app.post("/base_panels/{base_panel_id}/copy", response_model=BasePanel, status_code=status.HTTP_201_CREATED)
+    def copy_base_panel(base_panel_id: str) -> BasePanel:
+        base_panel = database.copy_base_panel(base_panel_id)
+        if base_panel is None:
+            raise HTTPException(status_code=404, detail="Base panel not found")
+        return base_panel
+
+    @app.get("/generation_jobs", response_model=GenerationJobList)
+    def list_generation_jobs(project_id: str | None = None) -> GenerationJobList:
+        return GenerationJobList(items=database.list_generation_jobs(project_id=project_id))
 
     return app
 
