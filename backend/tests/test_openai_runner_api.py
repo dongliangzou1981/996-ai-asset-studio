@@ -72,6 +72,35 @@ def create_openai_job(client: TestClient, provider_id: str) -> str:
     return response.json()["id"]
 
 
+def create_real_openai_job(client: TestClient, provider_id: str, project_id: str) -> str:
+    response = client.post(
+        "/generation_jobs",
+        json={
+            "project_id": project_id,
+            "provider_id": provider_id,
+            "job_type": "real_ui_generation",
+            "status": "pending",
+            "progress": 0,
+            "input_json": json.dumps(
+                {
+                    "project_id": project_id,
+                    "prompt": "生成一张移动端主界面 UI",
+                    "device_type": "mobile",
+                    "width": 1024,
+                    "height": 1536,
+                },
+                ensure_ascii=False,
+            ),
+            "output_json": "",
+            "output_preview_path": "",
+            "error_message": "",
+            "logs": "queued",
+        },
+    )
+    assert response.status_code == 201
+    return response.json()["id"]
+
+
 def test_openai_runner_success_writes_ai_generated_assets(tmp_path: Path, monkeypatch) -> None:
     client = make_client(tmp_path)
     monkeypatch.setenv("OPENAI_API_KEY", "sk-test-secret")
@@ -98,9 +127,57 @@ def test_openai_runner_success_writes_ai_generated_assets(tmp_path: Path, monkey
     assert Path(completed["output_preview_path"]).exists()
 
     assets = client.get(f"/generation_jobs/{job_id}/results").json()["items"]
-    assert {asset["source"] for asset in assets} == {"ai_generated"}
+    assert {"ai_generated", "component_processing"} <= {asset["source"] for asset in assets}
+    assert len([asset for asset in assets if asset["source"] == "component_processing"]) == 6
     assert all(asset["generation_job_id"] == job_id for asset in assets)
-    assert all(Path(asset["thumbnail_path"]).exists() for asset in assets)
+    assert all(Path(asset["thumbnail_path"]).exists() for asset in assets if asset["source"] == "ai_generated")
+
+
+def test_real_ui_generation_openai_runs_component_processing(tmp_path: Path, monkeypatch) -> None:
+    client = make_client(tmp_path)
+    project = client.post(
+        "/projects",
+        json={"name": "Sprint8B OpenAI", "description": "Real UI generation", "status": "active"},
+    ).json()
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-test-secret")
+    provider_id = create_openai_provider(client)
+    job_id = create_real_openai_job(client, provider_id, project["id"])
+
+    def fake_post(url: str, **kwargs):  # type: ignore[no-untyped-def]
+        assert url == "https://api.openai.com/v1/images/generations"
+        assert kwargs["headers"]["Authorization"] == "Bearer sk-test-secret"
+        assert kwargs["json"]["prompt"] == "生成一张移动端主界面 UI"
+        return FakeOpenAIResponse({"data": [{"b64_json": base64.b64encode(png_bytes()).decode("ascii")}]})
+
+    monkeypatch.setattr("app.job_runner.httpx.post", fake_post)
+
+    run = client.post(f"/generation_jobs/{job_id}/run")
+
+    assert run.status_code == 200
+    completed = run.json()
+    assert completed["status"] == "completed"
+    assert "OpenAI run completed" in completed["logs"]
+    output = json.loads(completed["output_json"])
+    assert output["component_processing"]["component_asset_ids"]
+    assert Path(output["component_processing"]["manifest_path"]).exists()
+    assert Path(output["component_processing"]["annotation_path"]).exists()
+    assert Path(output["component_processing"]["preview_html_path"]).exists()
+
+    manifest = json.loads(Path(output["component_processing"]["manifest_path"]).read_text(encoding="utf-8"))
+    assert manifest["components"][0]["component_name_zh"] == "主功能栏"
+    annotation = json.loads(Path(output["component_processing"]["annotation_path"]).read_text(encoding="utf-8"))
+    assert {"组件名称", "组件类型", "X坐标", "Y坐标", "宽度", "高度", "字体", "字号", "字体颜色"} <= set(
+        annotation["components"][0]
+    )
+    preview_html = Path(output["component_processing"]["preview_html_path"]).read_text(encoding="utf-8")
+    assert "主功能栏" in preview_html
+
+    results = client.get(f"/generation_jobs/{job_id}/results").json()["items"]
+    assert any(asset["asset_type"] == "ui_preview" and asset["source"] == "ai_generated" for asset in results)
+    component_assets = [asset for asset in results if asset["source"] == "component_processing"]
+    assert len(component_assets) == 6
+    assert {asset["asset_type"] for asset in component_assets} == {"sliced_component"}
+    assert all(Path(asset["file_path"]).exists() for asset in component_assets)
 
 
 def test_openai_runner_missing_config_and_env_fail_jobs(tmp_path: Path, monkeypatch) -> None:

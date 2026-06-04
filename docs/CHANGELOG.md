@@ -1,5 +1,14 @@
 # Changelog
 
+## Sprint 8B - 2026-06-04
+
+- Routed `real_ui_generation` jobs with OpenAI providers to the real OpenAI runner.
+- Connected successful OpenAI image generation to the Sprint 8A Component Processing Service.
+- Saved OpenAI output images as `ai_generated` `ui_preview` assets.
+- Generated six `component_processing` sliced component assets after OpenAI image creation.
+- Added component processing paths and component asset ids to generation job `output_json`.
+- Added mocked OpenAI tests for `Prompt -> OpenAI -> Assets -> component detection -> annotation -> slicing`.
+
 ## Sprint 8A.1 - 2026-06-04
 
 - Added Chinese-first wording across the main navigation, Assets, Job Center, and Providers surfaces.

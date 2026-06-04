@@ -130,3 +130,22 @@
 9. Run `npm test -- --runInBand` in `frontend/`.
 10. Run `npm run build` in `frontend/`.
 11. Run `backend\.venv\Scripts\python -m alembic -c backend\alembic.ini upgrade head`.
+
+## Sprint 8B
+
+1. Create an OpenAI provider with `config_json = {"api_key_env":"OPENAI_API_KEY"}`.
+2. Create a `real_ui_generation` job with `provider_id` set to that OpenAI provider.
+3. In automated tests, mock the OpenAI image response; do not call the external network.
+4. Run `POST /generation_jobs/{id}/run`.
+5. Check the job completes and logs `OpenAI run completed`.
+6. Check an `ai_generated` `ui_preview` asset exists for the job.
+7. Check six `component_processing` `sliced_component` assets exist for the job.
+8. Check `output_json.component_processing` contains `manifest_path`, `annotation_path`, `preview_html_path`, and `component_asset_ids`.
+9. Check `manifest.json` contains Chinese component names.
+10. Check `annotation.json` contains Chinese annotation fields.
+11. Check `preview.html` contains Chinese component names.
+12. Check no API key value is returned in job payloads or logs.
+13. Run `backend\.venv\Scripts\python -m pytest backend\tests -q`.
+14. Run `npm test -- --runInBand` in `frontend/`.
+15. Run `npm run build` in `frontend/`.
+16. Run `backend\.venv\Scripts\python -m alembic -c backend\alembic.ini upgrade head`.

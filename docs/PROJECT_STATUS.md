@@ -193,3 +193,28 @@ Remaining:
 
 - Some lower-level CRUD form fields still expose technical identifiers where the backend contract expects them.
 - Intelligent component detection and transparent background optimization remain future work.
+
+## Sprint 8B
+
+Status: complete
+
+Implemented:
+
+- `real_ui_generation` with an OpenAI provider now uses `OpenAIJobRunner`.
+- Prompt-driven OpenAI image output is saved as an `ai_generated` `ui_preview` asset.
+- The OpenAI `ui_preview` asset automatically runs through the Sprint 8A Component Processing Service.
+- The pipeline now produces component PNGs, Chinese annotation fields, `manifest.json`, and `preview.html` after OpenAI image generation.
+- `generation_jobs.output_json` records component processing paths and component asset ids.
+
+Verified:
+
+- Automated tests mock OpenAI and verify the end-to-end flow without external network access.
+- Generated component assets use `source = component_processing`.
+- Component assets inherit the OpenAI generation job id.
+- Chinese component names and annotation fields remain present.
+
+Remaining:
+
+- Manual real-key acceptance with local `OPENAI_API_KEY`.
+- Template detection still needs intelligent visual recognition.
+- Transparent PNG slicing is not optimized yet.

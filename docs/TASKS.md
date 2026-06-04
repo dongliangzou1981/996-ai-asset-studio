@@ -282,3 +282,17 @@ Chinese-first principle:
 - Annotation content defaults to Chinese.
 - Internal code identifiers may remain English.
 - API field names may remain English.
+
+## Sprint 8B
+
+- [x] Route `real_ui_generation` jobs with an OpenAI provider to `OpenAIJobRunner`
+- [x] Keep OpenAI API keys sourced only from `config_json.api_key_env`
+- [x] Save the real OpenAI output image as an `ai_generated` `ui_preview` asset
+- [x] Automatically run Component Processing after the OpenAI `ui_preview` asset is created
+- [x] Generate six `component_processing` `sliced_component` assets from the OpenAI image
+- [x] Write component `manifest.json`, `annotation.json`, and `preview.html`
+- [x] Preserve Chinese annotation fields and Chinese component names
+- [x] Include component processing paths in the generation job `output_json`
+- [x] Cover the end-to-end OpenAI path with mocked API tests
+- [ ] Manual real-key acceptance with local `OPENAI_API_KEY`
+- [ ] Transparent PNG background optimization

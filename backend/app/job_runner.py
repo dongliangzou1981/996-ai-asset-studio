@@ -12,6 +12,7 @@ from typing import Any
 import httpx
 from PIL import Image, ImageDraw, ImageFont
 
+from app.component_processing import process_ui_preview_components
 from app.db import StudioDatabase
 from app.schemas import AiProvider, Asset, AssetCreate, GenerationJob, GenerationJobPatch
 
@@ -176,20 +177,19 @@ class BaseJobRunner(ABC):
             preview_path = self.generate_preview(input_data, project_name, ready_dir)
             preview_width, preview_height = image_dimensions(preview_path)
             assets: list[Asset] = []
-            assets.append(
-                self.create_asset_with_thumbnail(
-                    asset_type="ui_preview",
-                    file_path=preview_path,
-                    thumbnail_dir=thumbnail_dir,
-                    device_type=device_type,
-                    metadata={
-                        "project_name": project_name,
-                        "job_type": running.job_type,
-                        "generation_job_id": running.id,
-                        "ready_dir": str(ready_dir),
-                    },
-                )
+            preview_asset = self.create_asset_with_thumbnail(
+                asset_type="ui_preview",
+                file_path=preview_path,
+                thumbnail_dir=thumbnail_dir,
+                device_type=device_type,
+                metadata={
+                    "project_name": project_name,
+                    "job_type": running.job_type,
+                    "generation_job_id": running.id,
+                    "ready_dir": str(ready_dir),
+                },
             )
+            assets.append(preview_asset)
 
             annotated_path = preview_dir / "annotated_preview.png"
             write_annotated_preview(preview_path, annotated_path, "996 mock annotation grid")
@@ -214,6 +214,7 @@ class BaseJobRunner(ABC):
                     metadata={"project_name": project_name, "generation_job_id": running.id},
                 )
             )
+            component_processing = self.after_preview_asset(preview_asset)
 
             manifest = {
                 "mock": isinstance(self, MockJobRunner),
@@ -234,6 +235,8 @@ class BaseJobRunner(ABC):
                     for asset in assets
                 ],
             }
+            if component_processing:
+                manifest["component_processing"] = component_processing
             manifest_path = package_dir / "manifest.json"
             manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
 
@@ -291,6 +294,9 @@ class BaseJobRunner(ABC):
                 thumbnail_path=str(thumbnail_path),
             )
         )
+
+    def after_preview_asset(self, preview_asset: Asset) -> dict[str, str | list[str]] | None:
+        return None
 
 
 class MockJobRunner(BaseJobRunner):
@@ -545,6 +551,13 @@ class OpenAIJobRunner(BaseJobRunner):
             raise RuntimeError(f"Failed to save OpenAI image: {exc}") from exc
         return preview_path
 
+    def after_preview_asset(self, preview_asset: Asset) -> dict[str, str | list[str]] | None:
+        return process_ui_preview_components(
+            database=self.database,
+            upload_root=self.upload_root,
+            ui_preview=preview_asset,
+        )
+
 
 class OpenRouterRunner(RealJobRunner):
     @property
@@ -584,14 +597,14 @@ class JobRunnerService:
         provider_type = provider.type if provider else "mock"
         if provider_type == "openrouter":
             return OpenRouterRunner(self.database, self.upload_root, job, provider)
-        if job.job_type == "real_ui_generation":
-            return RealJobRunner(self.database, self.upload_root, job, provider)
-        if job.job_type == "mock_ui_generation" or provider_type == "mock":
-            return MockJobRunner(self.database, self.upload_root, job)
         if provider_type == "openai":
             if provider is None:
                 raise RuntimeError("OpenAI provider is not configured")
             return OpenAIJobRunner(self.database, self.upload_root, job, provider)
+        if job.job_type == "real_ui_generation":
+            return RealJobRunner(self.database, self.upload_root, job, provider)
+        if job.job_type == "mock_ui_generation" or provider_type == "mock":
+            return MockJobRunner(self.database, self.upload_root, job)
         return CustomJobRunner(self.database, self.upload_root, job)
 
 

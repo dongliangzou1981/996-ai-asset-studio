@@ -265,3 +265,24 @@ Chinese-first boundaries:
 - Code internals, component IDs, filenames, and API field names may remain English for compatibility.
 
 Generated slices are stored as `sliced_component` assets with `source = component_processing` and inherit the source UI preview's `generation_job_id`.
+
+## Sprint 8B OpenAI Real UI Pipeline
+
+Sprint 8B connects the first real provider-backed path:
+
+`Prompt -> OpenAI -> real UI image -> ai_generated ui_preview asset -> Component Processing Service -> annotation.json -> sliced components`
+
+Runner behavior:
+
+- `real_ui_generation` jobs using an `openai` provider are routed to `OpenAIJobRunner`.
+- The provider still reads its key only from `ai_providers.config_json.api_key_env`.
+- The OpenAI response image is saved as an `ai_generated` `ui_preview` asset.
+- After the `ui_preview` asset is created, the runner invokes the Sprint 8A Component Processing Service.
+- Component processing writes six `component_processing` `sliced_component` assets that inherit the same `generation_job_id`.
+- The generation job `output_json` includes `component_processing.manifest_path`, `annotation_path`, `preview_html_path`, and `component_asset_ids`.
+
+Current limits:
+
+- Automated tests mock OpenAI network calls.
+- Component detection remains template-based.
+- Transparent PNG background optimization remains future work.
