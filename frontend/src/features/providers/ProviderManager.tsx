@@ -22,7 +22,7 @@ export function ProviderManager({ api = studioApi }: { api?: ProviderApi }) {
     api
       .listAiProviders()
       .then((result) => setProviders(result.items))
-      .catch(() => setError("Providers failed to load"));
+      .catch(() => setError("提供商加载失败"));
   }, [api]);
 
   async function createProvider(event: FormEvent<HTMLFormElement>) {
@@ -55,15 +55,14 @@ export function ProviderManager({ api = studioApi }: { api?: ProviderApi }) {
   return (
     <section className="grid gap-6 lg:grid-cols-[0.75fr_1.25fr]">
       <div className="rounded-md border border-studio-line bg-white p-5">
-        <h2 className="text-lg font-semibold">Provider Config</h2>
+        <h2 className="text-lg font-semibold">提供商配置</h2>
         <div className="mt-3 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
-          Real API keys must live in local environment variables. config_json stores only{" "}
-          <code>{"{\"api_key_env\":\"OPENAI_API_KEY\"}"}</code>. Do not write keys to the database or commit them to
-          GitHub.
+          真实 API Key 必须配置在本地环境变量。config_json 只保存{" "}
+          <code>{"{\"api_key_env\":\"OPENAI_API_KEY\"}"}</code>。不要写入数据库，不要提交 GitHub。
         </div>
         <form className="mt-4 grid gap-3" onSubmit={createProvider}>
           <label className="grid gap-1 text-sm font-medium">
-            Provider name
+            提供商名称
             <input
               className="rounded-md border border-studio-line px-3 py-2 font-normal"
               onChange={(event) => setName(event.target.value)}
@@ -71,7 +70,7 @@ export function ProviderManager({ api = studioApi }: { api?: ProviderApi }) {
             />
           </label>
           <label className="grid gap-1 text-sm font-medium">
-            Provider type
+            提供商类型
             <select
               className="rounded-md border border-studio-line px-3 py-2 font-normal"
               onChange={(event) => setType(event.target.value as AiProvider["type"])}
@@ -85,7 +84,7 @@ export function ProviderManager({ api = studioApi }: { api?: ProviderApi }) {
           </label>
           <label className="flex items-center gap-2 text-sm font-medium">
             <input checked={enabled} onChange={(event) => setEnabled(event.target.checked)} type="checkbox" />
-            Enabled
+            启用
           </label>
           <label className="grid gap-1 text-sm font-medium">
             Config JSON
@@ -96,14 +95,14 @@ export function ProviderManager({ api = studioApi }: { api?: ProviderApi }) {
             />
           </label>
           <button className="rounded-md bg-studio-action px-4 py-2 text-sm font-semibold text-white" type="submit">
-            Create provider
+            创建提供商
           </button>
         </form>
         {error ? <p className="mt-3 text-sm text-red-600">{error}</p> : null}
       </div>
 
       <div className="rounded-md border border-studio-line bg-white p-5">
-        <h2 className="text-lg font-semibold">Providers</h2>
+        <h2 className="text-lg font-semibold">提供商列表</h2>
         <div className="mt-4 grid gap-3">
           {providers.map((provider) => (
             <article className="rounded-md border border-studio-line p-4" key={provider.id}>
@@ -111,33 +110,33 @@ export function ProviderManager({ api = studioApi }: { api?: ProviderApi }) {
                 <div>
                   <h3 className="font-semibold">{provider.name}</h3>
                   <p className="mt-1 text-sm text-studio-muted">
-                    {provider.type} / {provider.enabled ? "enabled" : "disabled"}
+                    {provider.type} / {provider.enabled ? "已启用" : "已禁用"}
                   </p>
                   <p className="mt-2 break-all font-mono text-xs text-studio-muted">{provider.config_json}</p>
                   {health[provider.id] ? (
                     <p className="mt-2 text-sm text-studio-muted">
-                      Health: {health[provider.id].status} / {health[provider.id].message}
+                      健康状态：{health[provider.id].status} / {health[provider.id].message}
                     </p>
                   ) : (
-                    <p className="mt-2 text-sm text-studio-muted">Health: not checked</p>
+                    <p className="mt-2 text-sm text-studio-muted">健康状态：未检查</p>
                   )}
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <button
-                    aria-label={`Toggle ${provider.name}`}
+                    aria-label={`切换 ${provider.name}`}
                     className="rounded-md border border-studio-line px-3 py-2 text-sm"
                     onClick={() => toggleProvider(provider)}
                     type="button"
                   >
-                    {provider.enabled ? "Disable" : "Enable"}
+                    {provider.enabled ? "禁用" : "启用"}
                   </button>
                   <button
-                    aria-label={`Health ${provider.name}`}
+                    aria-label={`检查健康状态 ${provider.name}`}
                     className="rounded-md border border-studio-line px-3 py-2 text-sm"
                     onClick={() => checkHealth(provider)}
                     type="button"
                   >
-                    Health
+                    健康检查
                   </button>
                 </div>
               </div>

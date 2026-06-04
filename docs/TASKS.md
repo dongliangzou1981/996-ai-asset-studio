@@ -258,3 +258,27 @@ Development priorities:
 - [x] Document that Sprint 8A is template-based, not intelligent visual recognition
 - [ ] Intelligent component detection
 - [ ] Transparent background optimization
+
+## Sprint 8A.1
+
+- [x] Apply Chinese-first wording to the main frontend navigation and task/material/provider surfaces
+- [x] Keep API fields, code identifiers, and internal component IDs in English where required for compatibility
+- [x] Add Chinese component display names:
+  - `main_bottom_bar` -> 主功能栏
+  - `left_status_panel` -> 左侧状态栏
+  - `right_menu_panel` -> 右侧菜单栏
+  - `minimap_area` -> 小地图区域
+  - `chat_panel` -> 聊天区域
+  - `skill_area` -> 技能区域
+- [x] Add Chinese-first fields to `annotation.json`
+- [x] Add Chinese component names and descriptions to `manifest.json`
+- [x] Render Chinese component names and annotation notes in `preview.html`
+- [x] Update tests for Chinese annotation fields, manifest names, preview HTML, and primary frontend buttons
+
+Chinese-first principle:
+
+- Pages default to Chinese.
+- Exported result text defaults to Chinese.
+- Annotation content defaults to Chinese.
+- Internal code identifiers may remain English.
+- API field names may remain English.

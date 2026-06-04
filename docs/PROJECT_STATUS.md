@@ -155,3 +155,28 @@ Limitations:
 - This is not intelligent visual recognition.
 - Transparent background optimization is not implemented yet.
 - The existing Mock Pipeline and Real Pipeline remain intact.
+
+## Sprint 8A.1
+
+Status: complete
+
+Chinese-first principle:
+
+- Pages default to Chinese user-facing copy.
+- Exported results default to Chinese text.
+- Annotation content defaults to Chinese.
+- Internal code identifiers may remain English.
+- API field names may remain English.
+
+Implemented:
+
+- Main navigation and key task/material/provider surfaces use Chinese labels.
+- Component display names are Chinese while internal `component_id` values remain English.
+- `annotation.json` now includes Chinese fields for component name, component type, coordinates, size, font, font size, font color, and notes.
+- `manifest.json` now includes Chinese component names and Chinese descriptions.
+- `preview.html` now shows Chinese component names and Chinese annotation notes.
+
+Remaining:
+
+- Some lower-level CRUD form fields still expose technical identifiers where the backend contract expects them.
+- Intelligent component detection and transparent background optimization remain future work.

@@ -9,7 +9,7 @@ export default function AssetsPage() {
         <header className="flex flex-col gap-3 border-b border-studio-line pb-5 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <h1 className="text-2xl font-semibold">素材管理</h1>
-            <p className="mt-2 text-sm text-studio-muted">上传、筛选和删除项目素材与参考图。</p>
+            <p className="mt-2 text-sm text-studio-muted">上传、筛选、预览和处理项目素材。</p>
           </div>
           <Link className="rounded-md border border-studio-line bg-white px-4 py-2 text-sm" href="/">
             返回首页
@@ -20,4 +20,3 @@ export default function AssetsPage() {
     </main>
   );
 }
-

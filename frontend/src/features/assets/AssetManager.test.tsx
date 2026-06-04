@@ -101,7 +101,7 @@ beforeEach(() => {
   });
 });
 
-test("filters, previews, uploads, shows details, and deletes assets", async () => {
+test("filters, previews, uploads, shows Chinese details, processes components, and deletes assets", async () => {
   const user = userEvent.setup();
   api.uploadAsset.mockResolvedValue({
     id: "asset-2",
@@ -131,16 +131,16 @@ test("filters, previews, uploads, shows details, and deletes assets", async () =
 
   expect(await screen.findByText("reference.png")).toBeInTheDocument();
   expect(screen.getByText("real-preview.png")).toBeInTheDocument();
-  expect(screen.getByText("Project: Asset Project")).toBeInTheDocument();
-  expect(screen.getByText("Style: Neon RPG")).toBeInTheDocument();
-  expect(screen.getByText("Panel: main_panel / mobile / 1080x1920")).toBeInTheDocument();
-  expect(screen.getByText("Prompt: Battle pass shop")).toBeInTheDocument();
+  expect(screen.getByText("项目：Asset Project")).toBeInTheDocument();
+  expect(screen.getByText("风格：Neon RPG")).toBeInTheDocument();
+  expect(screen.getByText("基础面板：main_panel / mobile / 1080x1920")).toBeInTheDocument();
+  expect(screen.getByText("Prompt：Battle pass shop")).toBeInTheDocument();
   expect(screen.getByAltText("Preview reference.png")).toHaveAttribute("src", "/assets/asset-1/thumbnail");
 
   await user.selectOptions(screen.getByLabelText("项目筛选"), "project-1");
   await user.selectOptions(screen.getByLabelText("类型筛选"), "reference_image");
   await user.selectOptions(screen.getByLabelText("设备筛选"), "mobile");
-  await user.type(screen.getByLabelText("Job ID 筛选"), "job-1");
+  await user.type(screen.getByLabelText("任务 ID 筛选"), "job-1");
   await user.click(screen.getByRole("button", { name: "应用筛选" }));
 
   expect(api.listAssets).toHaveBeenLastCalledWith("project-1", "reference_image", "mobile", "job-1");
@@ -160,7 +160,7 @@ test("filters, previews, uploads, shows details, and deletes assets", async () =
   expect(await screen.findByText("preview.png")).toBeInTheDocument();
 
   await user.click(screen.getByRole("button", { name: "查看 reference.png" }));
-  expect(screen.getByText("Asset Detail")).toBeInTheDocument();
+  expect(screen.getByText("素材详情")).toBeInTheDocument();
   expect(screen.getByAltText("Detail reference.png")).toHaveAttribute("src", "/assets/asset-1/file");
   expect(screen.getByText("uploaded")).toBeInTheDocument();
   expect(screen.getByText("assets/thumbs/reference.png")).toBeInTheDocument();
@@ -170,7 +170,7 @@ test("filters, previews, uploads, shows details, and deletes assets", async () =
   expect(api.processAssetComponents).toHaveBeenCalledWith("asset-real-1");
   expect(await screen.findByText("assets/uploads/996-ready/job-real-1/manifest.json")).toBeInTheDocument();
   expect(screen.getByText("assets/uploads/996-ready/job-real-1/annotation.json")).toBeInTheDocument();
-  expect(screen.getByText("Components: 6")).toBeInTheDocument();
+  expect(screen.getByText("组件数量：6")).toBeInTheDocument();
   expect(screen.getByRole("link", { name: "preview.html" })).toHaveAttribute(
     "href",
     "assets/uploads/996-ready/job-real-1/preview.html",

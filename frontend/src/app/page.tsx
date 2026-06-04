@@ -12,13 +12,7 @@ const tables = [
   "ai_providers",
 ];
 
-const milestones = [
-  "项目与风格 CRUD",
-  "Base Panel System",
-  "素材与参考图管理",
-  "Mock AI Pipeline",
-  "统一 Job Runner",
-];
+const milestones = ["项目与风格 CRUD", "基础面板系统", "素材与参考图管理", "Mock AI Pipeline", "统一 Job Runner"];
 
 export default function Home() {
   return (
@@ -28,7 +22,7 @@ export default function Home() {
           <div>
             <h1 className="text-2xl font-semibold leading-tight sm:text-3xl">996 AI Asset Studio</h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-studio-muted">
-              本地优先的 996 美术资产生成工作台，支持项目、风格、面板、素材、任务和 Provider 管理。
+              面向 996 美术资源生成的本地工作台，覆盖项目、风格、基础面板、素材、任务和提供商配置。
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -45,10 +39,10 @@ export default function Home() {
               素材管理
             </Link>
             <Link className="rounded-md border border-studio-line bg-white px-4 py-3 text-sm font-semibold" href="/job-center">
-              Job Center
+              任务中心
             </Link>
             <Link className="rounded-md border border-studio-line bg-white px-4 py-3 text-sm font-semibold" href="/providers">
-              Provider 管理
+              提供商管理
             </Link>
           </div>
         </header>
@@ -64,7 +58,7 @@ export default function Home() {
 
         <section className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
           <div className="rounded-md border border-studio-line bg-white p-5">
-            <h2 className="text-lg font-semibold">核心数据表</h2>
+            <h2 className="text-lg font-semibold">数据库表</h2>
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               {tables.map((table) => (
                 <div className="rounded-md border border-studio-line px-3 py-2 text-sm" key={table}>
@@ -79,11 +73,11 @@ export default function Home() {
             <dl className="mt-4 space-y-3 text-sm">
               <div>
                 <dt className="font-medium">GET /health</dt>
-                <dd className="text-studio-muted">服务健康检查</dd>
+                <dd className="text-studio-muted">健康检查</dd>
               </div>
               <div>
                 <dt className="font-medium">GET /schema/tables</dt>
-                <dd className="text-studio-muted">查看核心表清单</dd>
+                <dd className="text-studio-muted">查看数据库表</dd>
               </div>
               <div>
                 <dt className="font-medium">GET /docs</dt>

@@ -59,17 +59,17 @@ test("creates, toggles, and checks provider health", async () => {
   render(<ProviderManager api={api} />);
 
   expect(await screen.findByText("OpenAI Images")).toBeInTheDocument();
-  expect(screen.getByText(/Real API keys must live in local environment variables/)).toBeInTheDocument();
-  expect(screen.getByText("Health: not checked")).toBeInTheDocument();
+  expect(screen.getByText(/真实 API Key 必须配置在本地环境变量/)).toBeInTheDocument();
+  expect(screen.getByText("健康状态：未检查")).toBeInTheDocument();
 
-  await user.clear(screen.getByLabelText("Provider name"));
-  await user.type(screen.getByLabelText("Provider name"), "OpenRouter");
-  await user.selectOptions(screen.getByLabelText("Provider type"), "openrouter");
+  await user.clear(screen.getByLabelText("提供商名称"));
+  await user.type(screen.getByLabelText("提供商名称"), "OpenRouter");
+  await user.selectOptions(screen.getByLabelText("提供商类型"), "openrouter");
   await user.clear(screen.getByLabelText("Config JSON"));
   fireEvent.change(screen.getByLabelText("Config JSON"), {
     target: { value: "{\"api_key_env\":\"OPENROUTER_API_KEY\"}" },
   });
-  await user.click(screen.getByRole("button", { name: "Create provider" }));
+  await user.click(screen.getByRole("button", { name: "创建提供商" }));
 
   expect(api.createAiProvider).toHaveBeenCalledWith({
     name: "OpenRouter",
@@ -79,7 +79,7 @@ test("creates, toggles, and checks provider health", async () => {
   });
   expect(await screen.findByText("OpenRouter")).toBeInTheDocument();
 
-  await user.click(screen.getByRole("button", { name: "Toggle OpenAI Images" }));
+  await user.click(screen.getByRole("button", { name: "切换 OpenAI Images" }));
   expect(api.updateAiProvider).toHaveBeenCalledWith("provider-1", {
     name: "OpenAI Images",
     type: "openai",
@@ -87,6 +87,6 @@ test("creates, toggles, and checks provider health", async () => {
     config_json: "{\"api_key_env\":\"OPENAI_API_KEY\"}",
   });
 
-  await user.click(screen.getByRole("button", { name: "Health OpenAI Images" }));
-  expect(await screen.findByText(/Health: healthy/)).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "检查健康状态 OpenAI Images" }));
+  expect(await screen.findByText(/健康状态：healthy/)).toBeInTheDocument();
 });

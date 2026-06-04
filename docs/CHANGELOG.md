@@ -1,5 +1,14 @@
 # Changelog
 
+## Sprint 8A.1 - 2026-06-04
+
+- Added Chinese-first wording across the main navigation, Assets, Job Center, and Providers surfaces.
+- Added Chinese component names for the six Sprint 8A template regions while preserving English internal IDs.
+- Added Chinese-first fields to `annotation.json`, including component name, component type, coordinates, dimensions, font, font size, font color, and notes.
+- Added Chinese component names and Chinese descriptions to `manifest.json`.
+- Updated `preview.html` to display Chinese component names and annotation notes.
+- Documented the Chinese-first principle: pages, exports, and annotations default to Chinese; code internals and API fields may remain English.
+
 ## Sprint 8A - 2026-06-04
 
 - Added template-based Component Processing Service for `ui_preview` assets.

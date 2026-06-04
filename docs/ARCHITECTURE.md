@@ -251,4 +251,17 @@ Generated output:
 
 `annotation.json` includes `component_id`, `component_type`, `x`, `y`, `width`, `height`, `font_family`, `font_size`, `font_color`, and `notes`.
 
+## Sprint 8A.1 Chinese-First Principle
+
+Sprint 8A.1 keeps the existing component processing flow intact and adds Chinese-first presentation metadata.
+
+Chinese-first boundaries:
+
+- Frontend pages default to Chinese user-facing labels.
+- Exported `manifest.json`, `annotation.json`, and `preview.html` default to Chinese display text.
+- `annotation.json` keeps English helper fields and adds Chinese fields: `组件名称`, `组件类型`, `X坐标`, `Y坐标`, `宽度`, `高度`, `字体`, `字号`, `字体颜色`, and `说明`.
+- `manifest.json` keeps English file and component identifiers and adds Chinese component names and Chinese descriptions.
+- `preview.html` renders Chinese component names and Chinese annotation notes.
+- Code internals, component IDs, filenames, and API field names may remain English for compatibility.
+
 Generated slices are stored as `sliced_component` assets with `source = component_processing` and inherit the source UI preview's `generation_job_id`.

@@ -116,3 +116,17 @@
 11. Run `npm test -- --runInBand` in `frontend/`.
 12. Run `npm run build` in `frontend/`.
 13. Run `backend\.venv\Scripts\python -m alembic -c backend\alembic.ini upgrade head`.
+
+## Sprint 8A.1
+
+1. Check main frontend navigation shows 项目管理, 风格管理, 基础面板, 素材管理, 任务中心, and 提供商管理.
+2. Check Job Center shows 创建模拟UI任务, 创建真实UI任务, 运行模拟生成, 结果素材, and Chinese wizard steps.
+3. Check Assets detail shows 素材详情 and 生成组件切图与标注.
+4. Process a `ui_preview` asset and check `manifest.json` includes Chinese component names, including 主功能栏.
+5. Check `annotation.json` includes Chinese fields: `组件名称`, `组件类型`, `X坐标`, `Y坐标`, `宽度`, `高度`, `字体`, `字号`, `字体颜色`, and `说明`.
+6. Check `preview.html` contains Chinese component names and Chinese annotation notes.
+7. Confirm English internal fields such as `component_id`, `component_type`, `x`, `y`, `width`, and `height` remain available.
+8. Run `backend\.venv\Scripts\python -m pytest backend\tests -q`.
+9. Run `npm test -- --runInBand` in `frontend/`.
+10. Run `npm run build` in `frontend/`.
+11. Run `backend\.venv\Scripts\python -m alembic -c backend\alembic.ini upgrade head`.

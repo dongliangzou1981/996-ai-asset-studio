@@ -122,7 +122,7 @@ beforeEach(() => {
   api.listGenerationJobResults.mockResolvedValue({ items: [] });
 });
 
-test("creates, shows details, and retries failed generation jobs", async () => {
+test("creates, shows details, and retries failed generation jobs with Chinese labels", async () => {
   api.createGenerationJob.mockResolvedValue({
     id: "job-2",
     project_id: null,
@@ -163,12 +163,12 @@ test("creates, shows details, and retries failed generation jobs", async () => {
   expect(screen.getByText("failed")).toBeInTheDocument();
   expect(screen.getByText("45%")).toBeInTheDocument();
 
-  await user.click(screen.getByRole("button", { name: "View base_panel_preview" }));
+  await user.click(screen.getByRole("button", { name: "查看 base_panel_preview" }));
   expect(screen.getByText(/queued/)).toBeInTheDocument();
   expect(screen.getByText("mock failure")).toBeInTheDocument();
 
-  await user.type(screen.getByLabelText("Job type"), "asset_prepare");
-  await user.click(screen.getByRole("button", { name: "Create test job" }));
+  await user.type(screen.getByLabelText("任务类型"), "asset_prepare");
+  await user.click(screen.getByRole("button", { name: "创建测试任务" }));
   expect(api.createGenerationJob).toHaveBeenCalledWith({
     project_id: null,
     provider_id: "provider-1",
@@ -183,12 +183,12 @@ test("creates, shows details, and retries failed generation jobs", async () => {
   });
   expect(await screen.findByText("asset_prepare")).toBeInTheDocument();
 
-  await user.click(screen.getByRole("button", { name: "Retry base_panel_preview" }));
+  await user.click(screen.getByRole("button", { name: "重试 base_panel_preview" }));
   expect(api.retryGenerationJob).toHaveBeenCalledWith("job-1");
   expect(await screen.findByText(/Retry 1 queued/)).toBeInTheDocument();
 });
 
-test("creates a mock UI job, runs mock, and shows logs and result assets", async () => {
+test("creates a mock UI job, runs mock, and shows logs and result assets with Chinese labels", async () => {
   api.createMockUiGenerationJob.mockResolvedValue({
     id: "job-3",
     project_id: "project-1",
@@ -246,13 +246,13 @@ test("creates a mock UI job, runs mock, and shows logs and result assets", async
   render(<JobCenter api={api} />);
 
   await screen.findByText("base_panel_preview");
-  await user.selectOptions(screen.getByLabelText("Mock 项目"), "project-1");
-  await user.selectOptions(screen.getByLabelText("Mock device"), "desktop");
-  await user.clear(screen.getByLabelText("Mock width"));
-  await user.type(screen.getByLabelText("Mock width"), "640");
-  await user.clear(screen.getByLabelText("Mock height"));
-  await user.type(screen.getByLabelText("Mock height"), "360");
-  await user.click(screen.getByRole("button", { name: "Create mock UI job" }));
+  await user.selectOptions(screen.getByLabelText("模拟项目"), "project-1");
+  await user.selectOptions(screen.getByLabelText("模拟设备"), "desktop");
+  await user.clear(screen.getByLabelText("模拟宽度"));
+  await user.type(screen.getByLabelText("模拟宽度"), "640");
+  await user.clear(screen.getByLabelText("模拟高度"));
+  await user.type(screen.getByLabelText("模拟高度"), "360");
+  await user.click(screen.getByRole("button", { name: "创建模拟UI任务" }));
 
   expect(api.createMockUiGenerationJob).toHaveBeenCalledWith({
     project_id: "project-1",
@@ -262,7 +262,7 @@ test("creates a mock UI job, runs mock, and shows logs and result assets", async
   });
   expect(await screen.findByText("mock_ui_generation")).toBeInTheDocument();
 
-  await user.click(screen.getByRole("button", { name: "Run Mock mock_ui_generation" }));
+  await user.click(screen.getByRole("button", { name: "运行模拟生成 mock_ui_generation" }));
 
   expect(api.runMockGenerationJob).toHaveBeenCalledWith("job-3");
   expect(api.listGenerationJobResults).toHaveBeenCalledWith("job-3");
@@ -272,7 +272,7 @@ test("creates a mock UI job, runs mock, and shows logs and result assets", async
   expect(screen.getByAltText("Result ui_preview")).toHaveAttribute("src", "/assets/asset-result-1/file");
 });
 
-test("creates a real UI generation placeholder job from the job center", async () => {
+test("creates a real UI generation placeholder job from the Chinese generation wizard", async () => {
   api.createGenerationJob.mockResolvedValue({
     id: "job-4",
     project_id: "project-1",
@@ -295,26 +295,26 @@ test("creates a real UI generation placeholder job from the job center", async (
   render(<JobCenter api={api} />);
 
   await screen.findByText("base_panel_preview");
-  expect(screen.getByText("Step 1: Project")).toBeInTheDocument();
-  expect(screen.getByText("Step 2: Style Profile")).toBeInTheDocument();
-  expect(screen.getByText("Step 3: Base Panel")).toBeInTheDocument();
-  expect(screen.getByText("Step 4: Reference Image")).toBeInTheDocument();
-  expect(screen.getByText("Step 5: Prompt")).toBeInTheDocument();
-  expect(screen.getByText("Step 6: Create Real UI Job")).toBeInTheDocument();
+  expect(screen.getByText("步骤 1：选择项目")).toBeInTheDocument();
+  expect(screen.getByText("步骤 2：选择风格")).toBeInTheDocument();
+  expect(screen.getByText("步骤 3：选择基础面板")).toBeInTheDocument();
+  expect(screen.getByText("步骤 4：选择参考图")).toBeInTheDocument();
+  expect(screen.getByText("步骤 5：输入 Prompt")).toBeInTheDocument();
+  expect(screen.getByText("步骤 6：创建真实UI任务")).toBeInTheDocument();
 
-  await user.selectOptions(screen.getByLabelText("Real project"), "project-1");
-  await user.selectOptions(screen.getByLabelText("Real style profile"), "style-1");
-  await user.selectOptions(screen.getByLabelText("Real base panel"), "panel-1");
-  await user.selectOptions(screen.getByLabelText("Real reference image"), "reference-1");
-  await user.selectOptions(screen.getByLabelText("Real provider"), "provider-1");
+  await user.selectOptions(screen.getByLabelText("真实项目"), "project-1");
+  await user.selectOptions(screen.getByLabelText("真实风格"), "style-1");
+  await user.selectOptions(screen.getByLabelText("真实基础面板"), "panel-1");
+  await user.selectOptions(screen.getByLabelText("真实参考图"), "reference-1");
+  await user.selectOptions(screen.getByLabelText("真实提供商"), "provider-1");
   await user.clear(screen.getByLabelText("Prompt"));
   await user.type(screen.getByLabelText("Prompt"), "Battle pass shop");
-  await user.selectOptions(screen.getByLabelText("Real device"), "mobile");
-  await user.clear(screen.getByLabelText("Real width"));
-  await user.type(screen.getByLabelText("Real width"), "1080");
-  await user.clear(screen.getByLabelText("Real height"));
-  await user.type(screen.getByLabelText("Real height"), "1920");
-  await user.click(screen.getByRole("button", { name: "Create Real UI Job" }));
+  await user.selectOptions(screen.getByLabelText("真实设备"), "mobile");
+  await user.clear(screen.getByLabelText("真实宽度"));
+  await user.type(screen.getByLabelText("真实宽度"), "1080");
+  await user.clear(screen.getByLabelText("真实高度"));
+  await user.type(screen.getByLabelText("真实高度"), "1920");
+  await user.click(screen.getByRole("button", { name: "创建真实UI任务" }));
 
   expect(api.createGenerationJob).toHaveBeenCalledWith({
     project_id: "project-1",
@@ -341,5 +341,5 @@ test("creates a real UI generation placeholder job from the job center", async (
   expect(screen.getByText("Neon RPG")).toBeInTheDocument();
   expect(screen.getByText("main_panel / mobile / 1080x1920")).toBeInTheDocument();
   expect(screen.getByText("reference.png")).toBeInTheDocument();
-  expect(screen.getByText("Prompt: Battle pass shop")).toBeInTheDocument();
+  expect(screen.getByText("Prompt：Battle pass shop")).toBeInTheDocument();
 });

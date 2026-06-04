@@ -76,7 +76,7 @@ export function JobCenter({ api = studioApi }: { api?: JobApi }) {
         setProviderId(enabledProviderId);
         setRealProviderId(enabledProviderId);
       })
-      .catch(() => setError("Jobs failed to load"));
+      .catch(() => setError("任务加载失败"));
   }, [api]);
 
   async function createJob(event: FormEvent<HTMLFormElement>) {
@@ -191,20 +191,20 @@ export function JobCenter({ api = studioApi }: { api?: JobApi }) {
   }
 
   function projectName(projectId: unknown) {
-    return projects.find((project) => project.id === projectId)?.name ?? String(projectId || "None");
+    return projects.find((project) => project.id === projectId)?.name ?? String(projectId || "无");
   }
 
   function styleName(styleProfileId: unknown) {
-    return styleProfiles.find((style) => style.id === styleProfileId)?.name ?? String(styleProfileId || "None");
+    return styleProfiles.find((style) => style.id === styleProfileId)?.name ?? String(styleProfileId || "无");
   }
 
   function panelName(basePanelId: unknown) {
     const panel = basePanels.find((item) => item.id === basePanelId);
-    return panel ? `${panel.panel_type} / ${panel.device_type} / ${panel.width}x${panel.height}` : String(basePanelId || "None");
+    return panel ? `${panel.panel_type} / ${panel.device_type} / ${panel.width}x${panel.height}` : String(basePanelId || "无");
   }
 
   function referenceName(referenceImageId: unknown) {
-    return referenceImages.find((asset) => asset.id === referenceImageId)?.original_filename ?? String(referenceImageId || "None");
+    return referenceImages.find((asset) => asset.id === referenceImageId)?.original_filename ?? String(referenceImageId || "无");
   }
 
   const filteredStyles = styleProfiles.filter((style) => !realProjectId || style.project_id === realProjectId);
@@ -215,18 +215,18 @@ export function JobCenter({ api = studioApi }: { api?: JobApi }) {
   return (
     <section className="grid gap-6 lg:grid-cols-[0.75fr_1.25fr]">
       <div className="rounded-md border border-studio-line bg-white p-5">
-        <h2 className="text-lg font-semibold">Job Center</h2>
-        <p className="mt-2 text-sm text-studio-muted">Sprint 5 runs a local mock pipeline. No real AI model is connected.</p>
+        <h2 className="text-lg font-semibold">任务中心</h2>
+        <p className="mt-2 text-sm text-studio-muted">Sprint 5 使用本地模拟流水线，当前不会连接真实 AI 模型。</p>
 
         <form className="mt-5 grid gap-3" onSubmit={createMockJob}>
           <label className="grid gap-1 text-sm font-medium">
-            Mock 项目
+            模拟项目
             <select
               className="rounded-md border border-studio-line px-3 py-2 font-normal"
               onChange={(event) => setMockProjectId(event.target.value || null)}
               value={mockProjectId ?? ""}
             >
-              <option value="">Loose mock</option>
+              <option value="">零散模拟任务</option>
               {projects.map((project) => (
                 <option key={project.id} value={project.id}>
                   {project.name}
@@ -235,7 +235,7 @@ export function JobCenter({ api = studioApi }: { api?: JobApi }) {
             </select>
           </label>
           <label className="grid gap-1 text-sm font-medium">
-            Mock device
+            模拟设备
             <select
               className="rounded-md border border-studio-line px-3 py-2 font-normal"
               onChange={(event) => setMockDevice(event.target.value)}
@@ -248,7 +248,7 @@ export function JobCenter({ api = studioApi }: { api?: JobApi }) {
           </label>
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="grid gap-1 text-sm font-medium">
-              Mock width
+              模拟宽度
               <input
                 className="rounded-md border border-studio-line px-3 py-2 font-normal"
                 min={1}
@@ -258,7 +258,7 @@ export function JobCenter({ api = studioApi }: { api?: JobApi }) {
               />
             </label>
             <label className="grid gap-1 text-sm font-medium">
-              Mock height
+              模拟高度
               <input
                 className="rounded-md border border-studio-line px-3 py-2 font-normal"
                 min={1}
@@ -269,22 +269,22 @@ export function JobCenter({ api = studioApi }: { api?: JobApi }) {
             </label>
           </div>
           <button className="rounded-md bg-studio-action px-4 py-2 text-sm font-semibold text-white" type="submit">
-            Create mock UI job
+            创建模拟UI任务
           </button>
         </form>
 
         <form className="mt-6 grid gap-3 border-t border-studio-line pt-5" onSubmit={createRealJob}>
-          <h3 className="text-sm font-semibold">Generation Wizard</h3>
+          <h3 className="text-sm font-semibold">生成向导</h3>
           <label className="grid gap-1 text-sm font-medium">
-            <span>Step 1: Project</span>
-            Real project
+            <span>步骤 1：选择项目</span>
+            真实项目
             <select
-              aria-label="Real project"
+              aria-label="真实项目"
               className="rounded-md border border-studio-line px-3 py-2 font-normal"
               onChange={(event) => updateRealProject(event.target.value || null)}
               value={realProjectId ?? ""}
             >
-              <option value="">Loose real job</option>
+              <option value="">零散真实任务</option>
               {projects.map((project) => (
                 <option key={project.id} value={project.id}>
                   {project.name}
@@ -293,15 +293,15 @@ export function JobCenter({ api = studioApi }: { api?: JobApi }) {
             </select>
           </label>
           <label className="grid gap-1 text-sm font-medium">
-            <span>Step 2: Style Profile</span>
-            Real style profile
+            <span>步骤 2：选择风格</span>
+            真实风格
             <select
-              aria-label="Real style profile"
+              aria-label="真实风格"
               className="rounded-md border border-studio-line px-3 py-2 font-normal"
               onChange={(event) => setRealStyleProfileId(event.target.value || null)}
               value={realStyleProfileId ?? ""}
             >
-              <option value="">No style profile</option>
+              <option value="">不选择风格</option>
               {filteredStyles.map((style) => (
                 <option key={style.id} value={style.id}>
                   {style.name}
@@ -310,15 +310,15 @@ export function JobCenter({ api = studioApi }: { api?: JobApi }) {
             </select>
           </label>
           <label className="grid gap-1 text-sm font-medium">
-            <span>Step 3: Base Panel</span>
-            Real base panel
+            <span>步骤 3：选择基础面板</span>
+            真实基础面板
             <select
-              aria-label="Real base panel"
+              aria-label="真实基础面板"
               className="rounded-md border border-studio-line px-3 py-2 font-normal"
               onChange={(event) => setRealBasePanelId(event.target.value || null)}
               value={realBasePanelId ?? ""}
             >
-              <option value="">No base panel</option>
+              <option value="">不选择基础面板</option>
               {filteredPanels.map((panel) => (
                 <option key={panel.id} value={panel.id}>
                   {panel.panel_type} / {panel.device_type} / {panel.width}x{panel.height}
@@ -327,15 +327,15 @@ export function JobCenter({ api = studioApi }: { api?: JobApi }) {
             </select>
           </label>
           <label className="grid gap-1 text-sm font-medium">
-            <span>Step 4: Reference Image</span>
-            Real reference image
+            <span>步骤 4：选择参考图</span>
+            真实参考图
             <select
-              aria-label="Real reference image"
+              aria-label="真实参考图"
               className="rounded-md border border-studio-line px-3 py-2 font-normal"
               onChange={(event) => setRealReferenceImageId(event.target.value || null)}
               value={realReferenceImageId ?? ""}
             >
-              <option value="">No reference image</option>
+              <option value="">不选择参考图</option>
               {filteredReferences.map((asset) => (
                 <option key={asset.id} value={asset.id}>
                   {asset.original_filename}
@@ -344,13 +344,14 @@ export function JobCenter({ api = studioApi }: { api?: JobApi }) {
             </select>
           </label>
           <label className="grid gap-1 text-sm font-medium">
-            Real provider
+            真实提供商
             <select
+              aria-label="真实提供商"
               className="rounded-md border border-studio-line px-3 py-2 font-normal"
               onChange={(event) => setRealProviderId(event.target.value || null)}
               value={realProviderId ?? ""}
             >
-              <option value="">Default provider</option>
+              <option value="">默认提供商</option>
               {providers.map((provider) => (
                 <option key={provider.id} value={provider.id}>
                   {provider.name} / {provider.type}
@@ -359,7 +360,7 @@ export function JobCenter({ api = studioApi }: { api?: JobApi }) {
             </select>
           </label>
           <label className="grid gap-1 text-sm font-medium">
-            <span>Step 5: Prompt</span>
+            <span>步骤 5：输入 Prompt</span>
             Prompt
             <textarea
               aria-label="Prompt"
@@ -369,9 +370,9 @@ export function JobCenter({ api = studioApi }: { api?: JobApi }) {
             />
           </label>
           <label className="grid gap-1 text-sm font-medium">
-            Real device
+            真实设备
             <select
-              aria-label="Real device"
+              aria-label="真实设备"
               className="rounded-md border border-studio-line px-3 py-2 font-normal"
               onChange={(event) => setRealDevice(event.target.value)}
               value={realDevice}
@@ -383,9 +384,9 @@ export function JobCenter({ api = studioApi }: { api?: JobApi }) {
           </label>
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="grid gap-1 text-sm font-medium">
-              Real width
+              真实宽度
               <input
-                aria-label="Real width"
+                aria-label="真实宽度"
                 className="rounded-md border border-studio-line px-3 py-2 font-normal"
                 min={1}
                 onChange={(event) => setRealWidth(Number(event.target.value))}
@@ -394,9 +395,9 @@ export function JobCenter({ api = studioApi }: { api?: JobApi }) {
               />
             </label>
             <label className="grid gap-1 text-sm font-medium">
-              Real height
+              真实高度
               <input
-                aria-label="Real height"
+                aria-label="真实高度"
                 className="rounded-md border border-studio-line px-3 py-2 font-normal"
                 min={1}
                 onChange={(event) => setRealHeight(Number(event.target.value))}
@@ -406,20 +407,20 @@ export function JobCenter({ api = studioApi }: { api?: JobApi }) {
             </label>
           </div>
           <button className="rounded-md bg-studio-action px-4 py-2 text-sm font-semibold text-white" type="submit">
-            Create Real UI Job
+            创建真实UI任务
           </button>
-          <p className="text-sm font-semibold">Step 6: Create Real UI Job</p>
+          <p className="text-sm font-semibold">步骤 6：创建真实UI任务</p>
         </form>
 
         <form className="mt-6 grid gap-3 border-t border-studio-line pt-5" onSubmit={createJob}>
           <label className="grid gap-1 text-sm font-medium">
-            Provider
+            提供商
             <select
               className="rounded-md border border-studio-line px-3 py-2 font-normal"
               onChange={(event) => setProviderId(event.target.value || null)}
               value={providerId ?? ""}
             >
-              <option value="">Default provider</option>
+              <option value="">默认提供商</option>
               {providers.map((provider) => (
                 <option key={provider.id} value={provider.id}>
                   {provider.name} / {provider.type}
@@ -428,7 +429,7 @@ export function JobCenter({ api = studioApi }: { api?: JobApi }) {
             </select>
           </label>
           <label className="grid gap-1 text-sm font-medium">
-            Job type
+            任务类型
             <input
               className="rounded-md border border-studio-line px-3 py-2 font-normal"
               onChange={(event) => setJobType(event.target.value)}
@@ -445,14 +446,14 @@ export function JobCenter({ api = studioApi }: { api?: JobApi }) {
             />
           </label>
           <button className="rounded-md border border-studio-line px-4 py-2 text-sm font-semibold" type="submit">
-            Create test job
+            创建测试任务
           </button>
         </form>
         {error ? <p className="mt-3 text-sm text-red-600">{error}</p> : null}
       </div>
 
       <div className="rounded-md border border-studio-line bg-white p-5">
-        <h2 className="text-lg font-semibold">Job List</h2>
+        <h2 className="text-lg font-semibold">任务列表</h2>
         <div className="mt-4 grid gap-3">
           {jobs.map((job) => (
             <article className="rounded-md border border-studio-line p-4" key={job.id}>
@@ -465,26 +466,26 @@ export function JobCenter({ api = studioApi }: { api?: JobApi }) {
                 <div className="text-sm font-semibold">{job.progress}%</div>
                 <div className="flex flex-wrap gap-2">
                   <button
-                    aria-label={`View ${job.job_type}`}
+                    aria-label={`查看 ${job.job_type}`}
                     className="rounded-md border border-studio-line px-3 py-2 text-sm"
                     onClick={() => viewJob(job)}
                     type="button"
                   >
-                    View
+                    查看
                   </button>
                   {job.job_type === "mock_ui_generation" && job.status !== "completed" ? (
                     <button
-                      aria-label={`Run Mock ${job.job_type}`}
+                      aria-label={`运行模拟生成 ${job.job_type}`}
                       className="rounded-md border border-studio-line px-3 py-2 text-sm"
                       onClick={() => runMock(job)}
                       type="button"
                     >
-                      运行 Mock
+                      运行模拟生成
                     </button>
                   ) : null}
                   {job.job_type !== "mock_ui_generation" && job.status !== "completed" ? (
                     <button
-                      aria-label={`Run Job ${job.job_type}`}
+                      aria-label={`运行任务 ${job.job_type}`}
                       className="rounded-md border border-studio-line px-3 py-2 text-sm"
                       onClick={() => runJob(job)}
                       type="button"
@@ -494,67 +495,67 @@ export function JobCenter({ api = studioApi }: { api?: JobApi }) {
                   ) : null}
                   {job.status === "failed" ? (
                     <button
-                      aria-label={`Retry ${job.job_type}`}
+                      aria-label={`重试 ${job.job_type}`}
                       className="rounded-md border border-studio-line px-3 py-2 text-sm"
                       onClick={() => retryJob(job)}
                       type="button"
                     >
-                      Retry
+                      重试
                     </button>
                   ) : null}
                 </div>
               </div>
             </article>
           ))}
-          {jobs.length === 0 ? <p className="text-sm text-studio-muted">No jobs yet.</p> : null}
+          {jobs.length === 0 ? <p className="text-sm text-studio-muted">暂无任务。</p> : null}
         </div>
 
         {selectedJob ? (
           <aside className="mt-5 rounded-md border border-studio-line p-4">
-            <h3 className="font-semibold">Job Detail</h3>
+            <h3 className="font-semibold">任务详情</h3>
             <dl className="mt-3 grid gap-3 text-sm sm:grid-cols-2">
               <div>
-                <dt className="font-medium">Status</dt>
+                <dt className="font-medium">状态</dt>
                 <dd className="text-studio-muted">{selectedJob.status}</dd>
               </div>
               <div>
-                <dt className="font-medium">Retry count</dt>
+                <dt className="font-medium">重试次数</dt>
                 <dd className="text-studio-muted">{selectedJob.retry_count}</dd>
               </div>
               <div>
-                <dt className="font-medium">Error</dt>
-                <dd className="text-studio-muted">{selectedJob.error_message || "None"}</dd>
+                <dt className="font-medium">错误</dt>
+                <dd className="text-studio-muted">{selectedJob.error_message || "无"}</dd>
               </div>
               <div>
-                <dt className="font-medium">Input</dt>
+                <dt className="font-medium">输入</dt>
                 <dd className="break-all text-studio-muted">{selectedJob.input_json || "{}"}</dd>
               </div>
               <div>
-                <dt className="font-medium">Project</dt>
-                <dd className="text-studio-muted">Project: {projectName(selectedJobInput.project_id)}</dd>
+                <dt className="font-medium">项目</dt>
+                <dd className="text-studio-muted">项目：{projectName(selectedJobInput.project_id)}</dd>
               </div>
               <div>
-                <dt className="font-medium">Style</dt>
-                <dd className="text-studio-muted">Style: {styleName(selectedJobInput.style_profile_id)}</dd>
+                <dt className="font-medium">风格</dt>
+                <dd className="text-studio-muted">风格：{styleName(selectedJobInput.style_profile_id)}</dd>
               </div>
               <div>
-                <dt className="font-medium">Base Panel</dt>
-                <dd className="text-studio-muted">Panel: {panelName(selectedJobInput.base_panel_id)}</dd>
+                <dt className="font-medium">基础面板</dt>
+                <dd className="text-studio-muted">基础面板：{panelName(selectedJobInput.base_panel_id)}</dd>
               </div>
               <div>
-                <dt className="font-medium">Reference Image</dt>
-                <dd className="text-studio-muted">Reference: {referenceName(selectedJobInput.reference_image_id)}</dd>
+                <dt className="font-medium">参考图</dt>
+                <dd className="text-studio-muted">参考图：{referenceName(selectedJobInput.reference_image_id)}</dd>
               </div>
               <div>
                 <dt className="font-medium">Prompt</dt>
-                <dd className="text-studio-muted">Prompt: {String(selectedJobInput.prompt || "None")}</dd>
+                <dd className="text-studio-muted">Prompt：{String(selectedJobInput.prompt || "无")}</dd>
               </div>
             </dl>
-            <h4 className="mt-4 text-sm font-semibold">Log Timeline</h4>
+            <h4 className="mt-4 text-sm font-semibold">日志时间线</h4>
             <pre className="mt-2 whitespace-pre-wrap rounded-md bg-slate-50 p-3 text-xs text-studio-ink">
-              {selectedJob.logs || "No logs"}
+              {selectedJob.logs || "暂无日志"}
             </pre>
-            <h4 className="mt-4 text-sm font-semibold">Result Assets</h4>
+            <h4 className="mt-4 text-sm font-semibold">结果素材</h4>
             <div className="mt-2 grid gap-3 sm:grid-cols-3">
               {results.map((asset) => (
                 <figure className="rounded-md border border-studio-line p-3" key={asset.id}>
@@ -568,7 +569,7 @@ export function JobCenter({ api = studioApi }: { api?: JobApi }) {
                   </figcaption>
                 </figure>
               ))}
-              {results.length === 0 ? <p className="text-sm text-studio-muted">No result assets.</p> : null}
+              {results.length === 0 ? <p className="text-sm text-studio-muted">暂无结果素材。</p> : null}
             </div>
           </aside>
         ) : null}

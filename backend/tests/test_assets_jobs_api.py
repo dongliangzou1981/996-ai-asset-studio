@@ -183,6 +183,15 @@ def test_process_ui_preview_generates_components_and_annotations(tmp_path: Path)
         "chat_panel",
         "skill_area",
     ]
+    assert [component["component_name_zh"] for component in manifest["components"]] == [
+        "主功能栏",
+        "左侧状态栏",
+        "右侧菜单栏",
+        "小地图区域",
+        "聊天区域",
+        "技能区域",
+    ]
+    assert "中文说明" in manifest["components"][0]
     annotations = json.loads(Path(payload["annotation_path"]).read_text(encoding="utf-8"))
     assert len(annotations["components"]) == 6
     first_annotation = annotations["components"][0]
@@ -190,6 +199,19 @@ def test_process_ui_preview_generates_components_and_annotations(tmp_path: Path)
     assert first_annotation["font_family"] == "Microsoft YaHei"
     assert first_annotation["font_color"] == "#F5D78E"
     assert {"x", "y", "width", "height", "font_size", "notes"} <= set(first_annotation)
+    assert first_annotation["组件名称"] == "主功能栏"
+    assert first_annotation["组件类型"] == "主功能栏"
+    assert first_annotation["X坐标"] == first_annotation["x"]
+    assert first_annotation["Y坐标"] == first_annotation["y"]
+    assert first_annotation["宽度"] == first_annotation["width"]
+    assert first_annotation["高度"] == first_annotation["height"]
+    assert first_annotation["字体"] == "Microsoft YaHei"
+    assert first_annotation["字号"] == 16
+    assert first_annotation["字体颜色"] == "#F5D78E"
+    assert "模板化" in first_annotation["说明"]
+    preview_html = Path(payload["preview_html_path"]).read_text(encoding="utf-8")
+    assert "主功能栏" in preview_html
+    assert "模板化组件标注" in preview_html
 
     components = client.get(f"/generation_jobs/{job['id']}/results").json()["items"]
     sliced = [item for item in components if item["asset_type"] == "sliced_component"]

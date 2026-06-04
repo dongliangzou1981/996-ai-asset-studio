@@ -52,7 +52,7 @@ export function AssetManager({ api = studioApi }: { api?: AssetApi }) {
         setAssets(assetResult.items);
         setUploadProjectId(projectResult.items[0]?.id ?? null);
       })
-      .catch(() => setError("Assets failed to load"));
+      .catch(() => setError("素材加载失败"));
   }, [api]);
 
   async function applyFilters() {
@@ -70,7 +70,7 @@ export function AssetManager({ api = studioApi }: { api?: AssetApi }) {
   async function upload(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!file) {
-      setError("Select a file first");
+      setError("请先选择文件");
       return;
     }
     setError("");
@@ -103,7 +103,7 @@ export function AssetManager({ api = studioApi }: { api?: AssetApi }) {
 
   function projectName(projectId: string | null) {
     if (!projectId) {
-      return "Loose asset";
+      return "零散素材";
     }
     return projects.find((project) => project.id === projectId)?.name ?? projectId;
   }
@@ -118,12 +118,12 @@ export function AssetManager({ api = studioApi }: { api?: AssetApi }) {
   }
 
   function styleName(styleProfileId: unknown) {
-    return styleProfiles.find((style) => style.id === styleProfileId)?.name ?? String(styleProfileId || "None");
+    return styleProfiles.find((style) => style.id === styleProfileId)?.name ?? String(styleProfileId || "无");
   }
 
   function panelName(basePanelId: unknown) {
     const panel = basePanels.find((item) => item.id === basePanelId);
-    return panel ? `${panel.panel_type} / ${panel.device_type} / ${panel.width}x${panel.height}` : String(basePanelId || "None");
+    return panel ? `${panel.panel_type} / ${panel.device_type} / ${panel.width}x${panel.height}` : String(basePanelId || "无");
   }
 
   function sourceDetails(asset: Asset) {
@@ -132,14 +132,14 @@ export function AssetManager({ api = studioApi }: { api?: AssetApi }) {
       project: projectName(String(data.project_id || asset.project_id || "")),
       style: styleName(data.style_profile_id),
       panel: panelName(data.base_panel_id),
-      prompt: String(data.prompt || "None"),
+      prompt: String(data.prompt || "无"),
     };
   }
 
   return (
     <section className="grid gap-6 xl:grid-cols-[0.8fr_1.2fr]">
       <div className="rounded-md border border-studio-line bg-white p-5">
-        <h2 className="text-lg font-semibold">Asset Upload</h2>
+        <h2 className="text-lg font-semibold">素材上传</h2>
         <div className="mt-4 grid gap-3">
           <label className="grid gap-1 text-sm font-medium">
             项目筛选
@@ -148,7 +148,7 @@ export function AssetManager({ api = studioApi }: { api?: AssetApi }) {
               onChange={(event) => setProjectFilter(event.target.value)}
               value={projectFilter}
             >
-              <option value="">All projects</option>
+              <option value="">全部项目</option>
               {projects.map((project) => (
                 <option key={project.id} value={project.id}>
                   {project.name}
@@ -163,7 +163,7 @@ export function AssetManager({ api = studioApi }: { api?: AssetApi }) {
               onChange={(event) => setTypeFilter(event.target.value)}
               value={typeFilter}
             >
-              <option value="">All types</option>
+              <option value="">全部类型</option>
               {assetTypes.map((assetType) => (
                 <option key={assetType} value={assetType}>
                   {assetType}
@@ -172,7 +172,7 @@ export function AssetManager({ api = studioApi }: { api?: AssetApi }) {
             </select>
           </label>
           <label className="grid gap-1 text-sm font-medium">
-            Job ID 筛选
+            任务 ID 筛选
             <input
               className="rounded-md border border-studio-line px-3 py-2 font-normal"
               onChange={(event) => setJobFilter(event.target.value)}
@@ -187,7 +187,7 @@ export function AssetManager({ api = studioApi }: { api?: AssetApi }) {
               onChange={(event) => setDeviceFilter(event.target.value)}
               value={deviceFilter}
             >
-              <option value="">All devices</option>
+              <option value="">全部设备</option>
               <option value="pc">pc</option>
               <option value="mobile">mobile</option>
               <option value="both">both</option>
@@ -221,7 +221,7 @@ export function AssetManager({ api = studioApi }: { api?: AssetApi }) {
               onChange={(event) => setUploadProjectId(event.target.value || null)}
               value={uploadProjectId ?? ""}
             >
-              <option value="">Loose asset</option>
+              <option value="">零散素材</option>
               {projects.map((project) => (
                 <option key={project.id} value={project.id}>
                   {project.name}
@@ -263,80 +263,78 @@ export function AssetManager({ api = studioApi }: { api?: AssetApi }) {
       </div>
 
       <div className="rounded-md border border-studio-line bg-white p-5">
-        <h2 className="text-lg font-semibold">Asset List</h2>
+        <h2 className="text-lg font-semibold">素材列表</h2>
         <div className="mt-4 grid gap-3">
-          {assets.map((asset) => (
-            <article className="rounded-md border border-studio-line p-4" key={asset.id}>
-              {(() => {
-                const details = sourceDetails(asset);
-                return (
-              <div className="grid gap-3 lg:grid-cols-[96px_1fr_auto] lg:items-start">
-                <img
-                  alt={`Preview ${asset.original_filename}`}
-                  className="h-24 w-24 rounded-md border border-studio-line object-cover"
-                  src={api.getAssetThumbnailUrl(asset.id)}
-                />
-                <div>
-                  <h3 className="font-semibold">{asset.original_filename}</h3>
-                  <p className="mt-1 text-sm text-studio-muted">
-                    {asset.asset_type} / {asset.device_type || "unknown"} / {asset.width}x{asset.height}
-                  </p>
-                  <p className="mt-1 text-sm text-studio-muted">{projectName(asset.project_id)}</p>
-                  <p className="mt-1 text-sm text-studio-muted">
-                    Source: {asset.source} / Job: {asset.generation_job_id || "none"}
-                  </p>
-                  {asset.source === "real_pipeline_placeholder" || asset.source === "ai_generated" ? (
-                    <div className="mt-2 grid gap-1 text-sm text-studio-muted">
-                      <p>Project: {details.project}</p>
-                      <p>Style: {details.style}</p>
-                      <p>Panel: {details.panel}</p>
-                      <p>Prompt: {details.prompt}</p>
-                    </div>
-                  ) : null}
-                  <p className="mt-2 break-all font-mono text-xs text-studio-muted">{asset.file_path}</p>
+          {assets.map((asset) => {
+            const details = sourceDetails(asset);
+            return (
+              <article className="rounded-md border border-studio-line p-4" key={asset.id}>
+                <div className="grid gap-3 lg:grid-cols-[96px_1fr_auto] lg:items-start">
+                  <img
+                    alt={`Preview ${asset.original_filename}`}
+                    className="h-24 w-24 rounded-md border border-studio-line object-cover"
+                    src={api.getAssetThumbnailUrl(asset.id)}
+                  />
+                  <div>
+                    <h3 className="font-semibold">{asset.original_filename}</h3>
+                    <p className="mt-1 text-sm text-studio-muted">
+                      {asset.asset_type} / {asset.device_type || "unknown"} / {asset.width}x{asset.height}
+                    </p>
+                    <p className="mt-1 text-sm text-studio-muted">{projectName(asset.project_id)}</p>
+                    <p className="mt-1 text-sm text-studio-muted">
+                      来源：{asset.source} / 任务：{asset.generation_job_id || "无"}
+                    </p>
+                    {asset.source === "real_pipeline_placeholder" || asset.source === "ai_generated" ? (
+                      <div className="mt-2 grid gap-1 text-sm text-studio-muted">
+                        <p>项目：{details.project}</p>
+                        <p>风格：{details.style}</p>
+                        <p>基础面板：{details.panel}</p>
+                        <p>Prompt：{details.prompt}</p>
+                      </div>
+                    ) : null}
+                    <p className="mt-2 break-all font-mono text-xs text-studio-muted">{asset.file_path}</p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      aria-label={`查看 ${asset.original_filename}`}
+                      className="rounded-md border border-studio-line px-3 py-2 text-sm"
+                      onClick={() => {
+                        setSelectedAsset(asset);
+                        setComponentResult(null);
+                      }}
+                      type="button"
+                    >
+                      查看
+                    </button>
+                    <a
+                      className="rounded-md border border-studio-line px-3 py-2 text-sm"
+                      download={asset.original_filename}
+                      href={api.getAssetFileUrl(asset.id)}
+                    >
+                      下载
+                    </a>
+                    <button
+                      aria-label={`复制路径 ${asset.original_filename}`}
+                      className="rounded-md border border-studio-line px-3 py-2 text-sm"
+                      onClick={() => copyPath(asset)}
+                      type="button"
+                    >
+                      复制路径
+                    </button>
+                    <button
+                      aria-label={`删除 ${asset.original_filename}`}
+                      className="rounded-md border border-red-200 px-3 py-2 text-sm text-red-700"
+                      onClick={() => deleteAsset(asset)}
+                      type="button"
+                    >
+                      删除
+                    </button>
+                  </div>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    aria-label={`查看 ${asset.original_filename}`}
-                    className="rounded-md border border-studio-line px-3 py-2 text-sm"
-                    onClick={() => {
-                      setSelectedAsset(asset);
-                      setComponentResult(null);
-                    }}
-                    type="button"
-                  >
-                    查看
-                  </button>
-                  <a
-                    className="rounded-md border border-studio-line px-3 py-2 text-sm"
-                    download={asset.original_filename}
-                    href={api.getAssetFileUrl(asset.id)}
-                  >
-                    下载
-                  </a>
-                  <button
-                    aria-label={`复制路径 ${asset.original_filename}`}
-                    className="rounded-md border border-studio-line px-3 py-2 text-sm"
-                    onClick={() => copyPath(asset)}
-                    type="button"
-                  >
-                    复制路径
-                  </button>
-                  <button
-                    aria-label={`删除 ${asset.original_filename}`}
-                    className="rounded-md border border-red-200 px-3 py-2 text-sm text-red-700"
-                    onClick={() => deleteAsset(asset)}
-                    type="button"
-                  >
-                    删除
-                  </button>
-                </div>
-              </div>
-                );
-              })()}
-            </article>
-          ))}
-          {assets.length === 0 ? <p className="text-sm text-studio-muted">No assets yet.</p> : null}
+              </article>
+            );
+          })}
+          {assets.length === 0 ? <p className="text-sm text-studio-muted">暂无素材。</p> : null}
         </div>
 
         {selectedAsset ? (
@@ -344,71 +342,71 @@ export function AssetManager({ api = studioApi }: { api?: AssetApi }) {
             {(() => {
               const details = sourceDetails(selectedAsset);
               return (
-            <>
-            <h3 className="font-semibold">Asset Detail</h3>
-            <img
-              alt={`Detail ${selectedAsset.original_filename}`}
-              className="mt-3 max-h-80 w-full rounded-md border border-studio-line object-contain"
-              src={api.getAssetFileUrl(selectedAsset.id)}
-            />
-            {selectedAsset.asset_type === "ui_preview" ? (
-              <button
-                className="mt-3 rounded-md bg-studio-action px-4 py-2 text-sm font-semibold text-white"
-                onClick={() => processComponents(selectedAsset)}
-                type="button"
-              >
-                生成组件切图与标注
-              </button>
-            ) : null}
-            {componentResult ? (
-              <div className="mt-3 grid gap-2 rounded-md border border-studio-line p-3 text-sm text-studio-muted">
-                <p className="break-all">{componentResult.manifest_path}</p>
-                <p className="break-all">{componentResult.annotation_path}</p>
-                <p>Components: {componentResult.component_asset_ids.length}</p>
-                <a className="font-semibold text-studio-action" href={componentResult.preview_html_path}>
-                  preview.html
-                </a>
-              </div>
-            ) : null}
-            <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
-              <div>
-                <dt className="font-medium">Source</dt>
-                <dd className="text-studio-muted">{selectedAsset.source}</dd>
-              </div>
-              <div>
-                <dt className="font-medium">Generation Job</dt>
-                <dd className="break-all text-studio-muted">{selectedAsset.generation_job_id || "none"}</dd>
-              </div>
-              <div>
-                <dt className="font-medium">Thumbnail</dt>
-                <dd className="break-all text-studio-muted">{selectedAsset.thumbnail_path || "none"}</dd>
-              </div>
-              <div>
-                <dt className="font-medium">Type</dt>
-                <dd className="text-studio-muted">{selectedAsset.asset_type}</dd>
-              </div>
-              <div>
-                <dt className="font-medium">Metadata</dt>
-                <dd className="break-all text-studio-muted">{selectedAsset.metadata_json || "{}"}</dd>
-              </div>
-              <div>
-                <dt className="font-medium">Project</dt>
-                <dd className="text-studio-muted">Project: {details.project}</dd>
-              </div>
-              <div>
-                <dt className="font-medium">Style</dt>
-                <dd className="text-studio-muted">Style: {details.style}</dd>
-              </div>
-              <div>
-                <dt className="font-medium">Panel</dt>
-                <dd className="text-studio-muted">Panel: {details.panel}</dd>
-              </div>
-              <div>
-                <dt className="font-medium">Prompt</dt>
-                <dd className="text-studio-muted">Prompt: {details.prompt}</dd>
-              </div>
-            </dl>
-            </>
+                <>
+                  <h3 className="font-semibold">素材详情</h3>
+                  <img
+                    alt={`Detail ${selectedAsset.original_filename}`}
+                    className="mt-3 max-h-80 w-full rounded-md border border-studio-line object-contain"
+                    src={api.getAssetFileUrl(selectedAsset.id)}
+                  />
+                  {selectedAsset.asset_type === "ui_preview" ? (
+                    <button
+                      className="mt-3 rounded-md bg-studio-action px-4 py-2 text-sm font-semibold text-white"
+                      onClick={() => processComponents(selectedAsset)}
+                      type="button"
+                    >
+                      生成组件切图与标注
+                    </button>
+                  ) : null}
+                  {componentResult ? (
+                    <div className="mt-3 grid gap-2 rounded-md border border-studio-line p-3 text-sm text-studio-muted">
+                      <p className="break-all">{componentResult.manifest_path}</p>
+                      <p className="break-all">{componentResult.annotation_path}</p>
+                      <p>组件数量：{componentResult.component_asset_ids.length}</p>
+                      <a className="font-semibold text-studio-action" href={componentResult.preview_html_path}>
+                        preview.html
+                      </a>
+                    </div>
+                  ) : null}
+                  <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
+                    <div>
+                      <dt className="font-medium">来源</dt>
+                      <dd className="text-studio-muted">{selectedAsset.source}</dd>
+                    </div>
+                    <div>
+                      <dt className="font-medium">生成任务</dt>
+                      <dd className="break-all text-studio-muted">{selectedAsset.generation_job_id || "无"}</dd>
+                    </div>
+                    <div>
+                      <dt className="font-medium">缩略图</dt>
+                      <dd className="break-all text-studio-muted">{selectedAsset.thumbnail_path || "无"}</dd>
+                    </div>
+                    <div>
+                      <dt className="font-medium">类型</dt>
+                      <dd className="text-studio-muted">{selectedAsset.asset_type}</dd>
+                    </div>
+                    <div>
+                      <dt className="font-medium">元数据</dt>
+                      <dd className="break-all text-studio-muted">{selectedAsset.metadata_json || "{}"}</dd>
+                    </div>
+                    <div>
+                      <dt className="font-medium">项目</dt>
+                      <dd className="text-studio-muted">项目：{details.project}</dd>
+                    </div>
+                    <div>
+                      <dt className="font-medium">风格</dt>
+                      <dd className="text-studio-muted">风格：{details.style}</dd>
+                    </div>
+                    <div>
+                      <dt className="font-medium">基础面板</dt>
+                      <dd className="text-studio-muted">基础面板：{details.panel}</dd>
+                    </div>
+                    <div>
+                      <dt className="font-medium">Prompt</dt>
+                      <dd className="text-studio-muted">Prompt：{details.prompt}</dd>
+                    </div>
+                  </dl>
+                </>
               );
             })()}
           </aside>
