@@ -243,10 +243,12 @@ Verified:
 - Automated tests mock Ofox's OpenAI Compatible response.
 - Health checks validate `OFOX_API_KEY` presence without exposing the key.
 - The Ofox path creates six `component_processing` sliced component assets.
+- Local real E2E reached the external Ofox Images API with `OFOX_API_KEY` loaded by the backend.
+- Real image generation is blocked by Ofox API `402` billing/quota response and should be re-verified after recharge.
 
 Remaining:
 
-- Manual real-key acceptance with local `OFOX_API_KEY`.
+- Real image generation after Ofox billing/quota is available.
 - If `gpt-image-2` is unsupported by the local Ofox account, rerun the scripts with a supported image model.
 - Template detection still needs intelligent visual recognition.
 - Transparent PNG slicing is not optimized yet.

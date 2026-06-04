@@ -314,4 +314,5 @@ Chinese-first principle:
 - [x] Add default local Ofox provider setup script
 - [x] Add local real Ofox E2E verification script
 - [x] Document that only `OFOX_API_KEY` is required locally
-- [ ] Manual real-key acceptance with local `OFOX_API_KEY`
+- [x] Confirm local real E2E reaches the external Ofox Images API with backend-loaded `OFOX_API_KEY`
+- [ ] Re-verify real image generation after Ofox `402` billing/quota limit is resolved

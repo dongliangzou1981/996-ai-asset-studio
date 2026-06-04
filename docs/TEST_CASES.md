@@ -178,5 +178,7 @@
 2. Start the backend on `http://127.0.0.1:8000`.
 3. Run `backend\.venv\Scripts\python scripts\setup_ofox_provider.py`.
 4. Run `backend\.venv\Scripts\python scripts\verify_ofox_e2e.py`.
-5. Check the script reports `ui_preview`, `manifest`, `annotation`, `preview_html`, and `component_count`.
-6. If `gpt-image-2` is unsupported, rerun both scripts with `--model`.
+5. Current local result: the real request reaches Ofox, but Ofox returns `402`.
+6. Treat `402` as a billing/quota limitation, not a local code failure.
+7. After recharge, rerun the script and check it reports `ui_preview`, `manifest`, `annotation`, `preview_html`, and `component_count`.
+8. If `gpt-image-2` is unsupported, rerun both scripts with `--model`.
