@@ -91,3 +91,30 @@ Next architecture priorities:
 - P0: Real AI UI generation loop, `Prompt -> Provider -> Image -> Asset -> Preview`.
 - P1: 996 package export, slicing, and manifest generation.
 - P2: Provider security hardening, audit trail, concurrency control, and batch jobs.
+
+## Sprint 7C Phase 1 Scope
+
+Sprint 7C Phase 1 adds the real generation pipeline skeleton without connecting real model providers.
+
+The new skeleton flow is:
+
+`Prompt -> Provider -> RealJobRunner -> Asset -> Preview`
+
+Key boundaries:
+
+- `real_ui_generation` identifies future real UI generation jobs.
+- Job Center creates `real_ui_generation` jobs from prompt, provider, project, device, width, and height fields.
+- `RealJobRunner` currently renders one local placeholder PNG.
+- The placeholder output creates one `ui_preview` asset.
+- Placeholder assets use `source = real_pipeline_placeholder`.
+- Generated placeholder assets are linked through `assets.generation_job_id`.
+- Job logs and `output_json` record the placeholder execution result.
+
+Out of scope for Phase 1:
+
+- Real OpenAI calls
+- OpenRouter calls
+- ComfyUI calls
+- ZIP export
+- Production slicing
+- Mock Pipeline changes

@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.7C-phase1.0 - 2026-06-04
+
+- Added `real_ui_generation` job creation support in Job Center.
+- Added a `RealJobRunner` skeleton for `Prompt -> Provider -> RealJobRunner -> Asset -> Preview`.
+- Added placeholder PNG generation for real pipeline jobs without connecting OpenAI, OpenRouter, or ComfyUI.
+- Added `real_pipeline_placeholder` asset source for Phase 1 placeholder outputs.
+- Added tests for real pipeline placeholder completion and existing mock pipeline coverage.
+- Updated project status and architecture docs for Sprint 7C Phase 1 scope.
+
 ## 2026-06-04 Acceptance Update
 
 - Verified Project CRUD, Job Center, Mock UI Job Creation, Mock Job Runner, Mock Pipeline Complete Flow, Asset Record Creation, and Asset Binding To Generation Job.

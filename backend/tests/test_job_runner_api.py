@@ -93,6 +93,66 @@ def test_provider_health_update_and_unified_job_runner_outputs(tmp_path: Path) -
     assert client.get(f"/ai_providers/{provider_id}/health").json()["status"] == "healthy"
 
 
+def test_real_ui_generation_runner_creates_placeholder_asset(tmp_path: Path) -> None:
+    client = make_client(tmp_path)
+    project_id = seed_project(client)
+    provider = client.post(
+        "/ai_providers",
+        json={"name": "Future Real Provider", "type": "custom", "enabled": True, "config_json": "{}"},
+    ).json()
+    prompt = "Create a cinematic mobile battle pass screen"
+    job = client.post(
+        "/generation_jobs",
+        json={
+            "project_id": project_id,
+            "provider_id": provider["id"],
+            "job_type": "real_ui_generation",
+            "status": "pending",
+            "progress": 0,
+            "input_json": json.dumps(
+                {
+                    "prompt": prompt,
+                    "device_type": "mobile",
+                    "width": 480,
+                    "height": 720,
+                }
+            ),
+            "output_json": "",
+            "output_preview_path": "",
+            "error_message": "",
+            "logs": "queued",
+        },
+    )
+    assert job.status_code == 201
+
+    run = client.post(f"/generation_jobs/{job.json()['id']}/run")
+
+    assert run.status_code == 200
+    completed = run.json()
+    assert completed["status"] == "completed"
+    assert completed["progress"] == 100
+    assert "Real UI generation started" in completed["logs"]
+    assert "Real UI generation placeholder completed" in completed["logs"]
+    assert Path(completed["output_preview_path"]).exists()
+    output = json.loads(completed["output_json"])
+    assert output["job_type"] == "real_ui_generation"
+    assert output["prompt"] == prompt
+    assert output["provider_id"] == provider["id"]
+    assert output["asset_id"]
+
+    results = client.get(f"/generation_jobs/{job.json()['id']}/results").json()["items"]
+    assert len(results) == 1
+    asset = results[0]
+    assert asset["asset_type"] == "ui_preview"
+    assert asset["source"] == "real_pipeline_placeholder"
+    assert asset["generation_job_id"] == job.json()["id"]
+    assert asset["project_id"] == project_id
+    assert asset["device_type"] == "mobile"
+    assert asset["width"] == 480
+    assert asset["height"] == 720
+    assert Path(asset["thumbnail_path"]).exists()
+
+
 def test_auto_run_and_openai_health_without_secret(tmp_path: Path, monkeypatch) -> None:
     client = make_client(tmp_path)
 

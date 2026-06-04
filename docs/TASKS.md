@@ -146,3 +146,24 @@ Development priorities:
 - P0: Real AI UI generation loop, `Prompt -> Provider -> Image -> Asset -> Preview`
 - P1: 996 package export, slicing, manifest
 - P2: Provider security hardening, audit, concurrency control, batch jobs
+
+## Sprint 7C Phase 1
+
+- [x] Add `real_ui_generation` job type usage
+- [x] Add Job Center real generation entry form
+- [x] Capture prompt, provider, device type, width, height, and project id
+- [x] Add `RealJobRunner` skeleton
+- [x] Run `Prompt -> Provider -> RealJobRunner -> Asset -> Preview`
+- [x] Generate placeholder PNG output only
+- [x] Write real pipeline logs to `generation_jobs.logs`
+- [x] Write placeholder result metadata to `generation_jobs.output_json`
+- [x] Create `ui_preview` asset with `source = real_pipeline_placeholder`
+- [x] Link placeholder asset to `generation_job_id`
+- [x] Keep Mock Pipeline unchanged
+- [ ] Connect real OpenAI provider
+- [ ] Connect OpenRouter
+- [ ] Connect ComfyUI
+- [ ] 996 ZIP export
+- [ ] Production slicing
+
+Sprint 7C Phase 1 only establishes the real generation pipeline skeleton. It does not connect any real model.

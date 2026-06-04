@@ -338,6 +338,112 @@ class CustomJobRunner(MockJobRunner):
         return preview_path
 
 
+class RealJobRunner(BaseJobRunner):
+    def __init__(
+        self,
+        database: StudioDatabase,
+        upload_root: Path,
+        job: GenerationJob,
+        provider: AiProvider | None,
+    ) -> None:
+        super().__init__(database, upload_root, job)
+        self.provider = provider
+
+    @property
+    def source(self) -> str:
+        return "real_pipeline_placeholder"
+
+    def generate_preview(self, input_data: dict[str, Any], project_name: str, ready_dir: Path) -> Path:
+        prompt = str(input_data.get("prompt") or "No prompt supplied")
+        device_type = str(input_data.get("device_type") or "mobile")
+        width = int(input_data.get("width") or 1080)
+        height = int(input_data.get("height") or 1920)
+        preview_path = ready_dir / "previews" / "ui_preview.png"
+        render_placeholder_png(
+            preview_path,
+            title=f"REAL PIPELINE PLACEHOLDER: {prompt[:72]}",
+            project_name=project_name,
+            device_type=device_type,
+            width=width,
+            height=height,
+            job_type=self.job.job_type,
+            asset_type="ui_preview",
+        )
+        return preview_path
+
+    def run(self) -> GenerationJob | None:
+        running_logs = append_log(self.job.logs, "Real UI generation started")
+        running = self.database.update_generation_job(
+            self.job.id,
+            GenerationJobPatch(status="running", progress=35, logs=running_logs, error_message=""),
+        )
+        if running is None:
+            return None
+        self.job = running
+
+        try:
+            input_data = parse_json_object(running.input_json, "input_json")
+            prompt = str(input_data.get("prompt") or "")
+            project = self.database.get_project(running.project_id) if running.project_id else None
+            project_name = project.name if project else "Loose Project"
+            device_type = str(input_data.get("device_type") or "mobile")
+            ready_dir = self.upload_root / "real-pipeline" / running.id
+            preview_dir = ready_dir / "previews"
+            thumbnail_dir = ready_dir / "thumbnails"
+            preview_dir.mkdir(parents=True, exist_ok=True)
+            thumbnail_dir.mkdir(parents=True, exist_ok=True)
+
+            preview_path = self.generate_preview(input_data, project_name, ready_dir)
+            asset = self.create_asset_with_thumbnail(
+                asset_type="ui_preview",
+                file_path=preview_path,
+                thumbnail_dir=thumbnail_dir,
+                device_type=device_type,
+                metadata={
+                    "placeholder": True,
+                    "prompt": prompt,
+                    "project_name": project_name,
+                    "job_type": running.job_type,
+                    "generation_job_id": running.id,
+                    "provider_id": self.provider.id if self.provider else None,
+                    "provider_type": self.provider.type if self.provider else "default",
+                },
+            )
+            output = {
+                "placeholder": True,
+                "job_type": running.job_type,
+                "prompt": prompt,
+                "provider_id": self.provider.id if self.provider else None,
+                "provider_type": self.provider.type if self.provider else "default",
+                "preview_path": str(preview_path),
+                "thumbnail_path": asset.thumbnail_path,
+                "asset_id": asset.id,
+            }
+            completed_logs = append_log(running.logs, "Real UI generation placeholder completed")
+            return self.database.update_generation_job(
+                running.id,
+                GenerationJobPatch(
+                    status="completed",
+                    progress=100,
+                    output_json=json.dumps(output, ensure_ascii=False),
+                    output_preview_path=str(preview_path),
+                    error_message="",
+                    logs=completed_logs,
+                ),
+            )
+        except Exception as exc:
+            failed_logs = append_log(running.logs, "Real UI generation failed")
+            return self.database.update_generation_job(
+                running.id,
+                GenerationJobPatch(
+                    status="failed",
+                    progress=100,
+                    error_message=sanitize_error(str(exc)),
+                    logs=failed_logs,
+                ),
+            )
+
+
 class OpenAIJobRunner(BaseJobRunner):
     def __init__(self, database: StudioDatabase, upload_root: Path, job: GenerationJob, provider: AiProvider) -> None:
         super().__init__(database, upload_root, job)
@@ -445,6 +551,8 @@ class JobRunnerService:
 
     def create_runner(self, job: GenerationJob, provider: AiProvider | None) -> BaseJobRunner:
         provider_type = provider.type if provider else "mock"
+        if job.job_type == "real_ui_generation":
+            return RealJobRunner(self.database, self.upload_root, job, provider)
         if job.job_type == "mock_ui_generation" or provider_type == "mock":
             return MockJobRunner(self.database, self.upload_root, job)
         if provider_type == "openai":

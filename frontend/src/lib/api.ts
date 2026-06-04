@@ -111,7 +111,7 @@ export type Asset = {
   file_path: string;
   original_filename: string;
   metadata_json: string;
-  source: "uploaded" | "mock_generated" | "ai_generated";
+  source: "uploaded" | "mock_generated" | "ai_generated" | "real_pipeline_placeholder";
   generation_job_id: string | null;
   thumbnail_path: string;
   created_at: string;

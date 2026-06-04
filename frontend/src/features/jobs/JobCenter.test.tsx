@@ -215,3 +215,56 @@ test("creates a mock UI job, runs mock, and shows logs and result assets", async
   expect(screen.getByText(/ui_preview\s*\/\s*mock_generated/)).toBeInTheDocument();
   expect(screen.getByAltText("Result ui_preview")).toHaveAttribute("src", "/assets/asset-result-1/file");
 });
+
+test("creates a real UI generation placeholder job from the job center", async () => {
+  api.createGenerationJob.mockResolvedValue({
+    id: "job-4",
+    project_id: "project-1",
+    provider_id: "provider-1",
+    job_type: "real_ui_generation",
+    status: "pending",
+    progress: 0,
+    input_json: "{\"prompt\":\"Battle pass shop\",\"device_type\":\"mobile\",\"width\":1080,\"height\":1920}",
+    output_json: "",
+    output_preview_path: "",
+    error_message: "",
+    retry_count: 0,
+    logs: "queued",
+    created_at: "2026-06-04 10:00:00",
+    updated_at: "2026-06-04 10:00:00",
+  });
+
+  const user = userEvent.setup();
+  render(<JobCenter api={api} />);
+
+  await screen.findByText("base_panel_preview");
+  await user.selectOptions(screen.getByLabelText("Real project"), "project-1");
+  await user.selectOptions(screen.getByLabelText("Real provider"), "provider-1");
+  await user.clear(screen.getByLabelText("Prompt"));
+  await user.type(screen.getByLabelText("Prompt"), "Battle pass shop");
+  await user.selectOptions(screen.getByLabelText("Real device"), "mobile");
+  await user.clear(screen.getByLabelText("Real width"));
+  await user.type(screen.getByLabelText("Real width"), "1080");
+  await user.clear(screen.getByLabelText("Real height"));
+  await user.type(screen.getByLabelText("Real height"), "1920");
+  await user.click(screen.getByRole("button", { name: "Create Real UI Job" }));
+
+  expect(api.createGenerationJob).toHaveBeenCalledWith({
+    project_id: "project-1",
+    provider_id: "provider-1",
+    job_type: "real_ui_generation",
+    status: "pending",
+    progress: 0,
+    input_json: JSON.stringify({
+      prompt: "Battle pass shop",
+      device_type: "mobile",
+      width: 1080,
+      height: 1920,
+    }),
+    output_json: "",
+    output_preview_path: "",
+    error_message: "",
+    logs: "queued",
+  });
+  expect(await screen.findByText("real_ui_generation")).toBeInTheDocument();
+});

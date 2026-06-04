@@ -29,6 +29,12 @@ export function JobCenter({ api = studioApi }: { api?: JobApi }) {
   const [mockDevice, setMockDevice] = useState("mobile");
   const [mockWidth, setMockWidth] = useState(1080);
   const [mockHeight, setMockHeight] = useState(1920);
+  const [realProjectId, setRealProjectId] = useState<string | null>(null);
+  const [realProviderId, setRealProviderId] = useState<string | null>(null);
+  const [realPrompt, setRealPrompt] = useState("Create a polished game UI screen");
+  const [realDevice, setRealDevice] = useState("mobile");
+  const [realWidth, setRealWidth] = useState(1080);
+  const [realHeight, setRealHeight] = useState(1920);
   const [providerId, setProviderId] = useState<string | null>(null);
   const [inputJson, setInputJson] = useState("{\"device_type\":\"mobile\",\"width\":1080,\"height\":1920}");
   const [error, setError] = useState("");
@@ -40,7 +46,10 @@ export function JobCenter({ api = studioApi }: { api?: JobApi }) {
         setProjects(projectResult.items);
         setProviders(providerResult.items);
         setMockProjectId(projectResult.items[0]?.id ?? null);
-        setProviderId(providerResult.items.find((provider) => provider.enabled)?.id ?? null);
+        setRealProjectId(projectResult.items[0]?.id ?? null);
+        const enabledProviderId = providerResult.items.find((provider) => provider.enabled)?.id ?? null;
+        setProviderId(enabledProviderId);
+        setRealProviderId(enabledProviderId);
       })
       .catch(() => setError("Jobs failed to load"));
   }, [api]);
@@ -70,6 +79,30 @@ export function JobCenter({ api = studioApi }: { api?: JobApi }) {
       device_type: mockDevice,
       width: mockWidth,
       height: mockHeight,
+    });
+    setJobs((items) => [created, ...items]);
+    setSelectedJob(created);
+    setResults([]);
+  }
+
+  async function createRealJob(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const created = await api.createGenerationJob({
+      project_id: realProjectId,
+      provider_id: realProviderId,
+      job_type: "real_ui_generation",
+      status: "pending",
+      progress: 0,
+      input_json: JSON.stringify({
+        prompt: realPrompt,
+        device_type: realDevice,
+        width: realWidth,
+        height: realHeight,
+      }),
+      output_json: "",
+      output_preview_path: "",
+      error_message: "",
+      logs: "queued",
     });
     setJobs((items) => [created, ...items]);
     setSelectedJob(created);
@@ -167,6 +200,84 @@ export function JobCenter({ api = studioApi }: { api?: JobApi }) {
           </div>
           <button className="rounded-md bg-studio-action px-4 py-2 text-sm font-semibold text-white" type="submit">
             Create mock UI job
+          </button>
+        </form>
+
+        <form className="mt-6 grid gap-3 border-t border-studio-line pt-5" onSubmit={createRealJob}>
+          <label className="grid gap-1 text-sm font-medium">
+            Real project
+            <select
+              className="rounded-md border border-studio-line px-3 py-2 font-normal"
+              onChange={(event) => setRealProjectId(event.target.value || null)}
+              value={realProjectId ?? ""}
+            >
+              <option value="">Loose real job</option>
+              {projects.map((project) => (
+                <option key={project.id} value={project.id}>
+                  {project.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="grid gap-1 text-sm font-medium">
+            Real provider
+            <select
+              className="rounded-md border border-studio-line px-3 py-2 font-normal"
+              onChange={(event) => setRealProviderId(event.target.value || null)}
+              value={realProviderId ?? ""}
+            >
+              <option value="">Default provider</option>
+              {providers.map((provider) => (
+                <option key={provider.id} value={provider.id}>
+                  {provider.name} / {provider.type}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="grid gap-1 text-sm font-medium">
+            Prompt
+            <textarea
+              className="min-h-20 rounded-md border border-studio-line px-3 py-2 text-sm font-normal"
+              onChange={(event) => setRealPrompt(event.target.value)}
+              value={realPrompt}
+            />
+          </label>
+          <label className="grid gap-1 text-sm font-medium">
+            Real device
+            <select
+              className="rounded-md border border-studio-line px-3 py-2 font-normal"
+              onChange={(event) => setRealDevice(event.target.value)}
+              value={realDevice}
+            >
+              <option value="mobile">mobile</option>
+              <option value="tablet">tablet</option>
+              <option value="desktop">desktop</option>
+            </select>
+          </label>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="grid gap-1 text-sm font-medium">
+              Real width
+              <input
+                className="rounded-md border border-studio-line px-3 py-2 font-normal"
+                min={1}
+                onChange={(event) => setRealWidth(Number(event.target.value))}
+                type="number"
+                value={realWidth}
+              />
+            </label>
+            <label className="grid gap-1 text-sm font-medium">
+              Real height
+              <input
+                className="rounded-md border border-studio-line px-3 py-2 font-normal"
+                min={1}
+                onChange={(event) => setRealHeight(Number(event.target.value))}
+                type="number"
+                value={realHeight}
+              />
+            </label>
+          </div>
+          <button className="rounded-md bg-studio-action px-4 py-2 text-sm font-semibold text-white" type="submit">
+            Create Real UI Job
           </button>
         </form>
 
