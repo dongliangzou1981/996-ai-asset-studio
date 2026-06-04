@@ -5,6 +5,7 @@ from datetime import datetime, timezone
 import base64
 import json
 import os
+import re
 from pathlib import Path
 from typing import Any
 
@@ -33,6 +34,24 @@ def parse_json_object(value: str, label: str) -> dict[str, Any]:
     if not isinstance(data, dict):
         raise ValueError(f"{label} must be an object")
     return data
+
+
+def sanitize_error(message: str) -> str:
+    sanitized = message
+    for key, value in os.environ.items():
+        if key.endswith("_API_KEY") and value:
+            sanitized = sanitized.replace(value, "[redacted]")
+    return re.sub(r"sk-[A-Za-z0-9_-]+", "[redacted]", sanitized)
+
+
+def openai_image_size(input_data: dict[str, Any]) -> str:
+    width = int(input_data.get("width") or 1024)
+    height = int(input_data.get("height") or 1024)
+    if width > height:
+        return "1536x1024"
+    if height > width:
+        return "1024x1536"
+    return "1024x1024"
 
 
 def render_placeholder_png(
@@ -232,7 +251,7 @@ class BaseJobRunner(ABC):
             )
         except Exception as exc:
             failed_logs = append_log(running.logs, self.fail_message)
-            error_message = str(exc)
+            error_message = sanitize_error(str(exc))
             if isinstance(self, MockJobRunner) and error_message.startswith("Invalid input_json"):
                 error_message = error_message.replace("Invalid input_json", "Invalid mock input_json", 1)
             return self.database.update_generation_job(
@@ -328,48 +347,80 @@ class OpenAIJobRunner(BaseJobRunner):
     def source(self) -> str:
         return "ai_generated"
 
+    @property
+    def start_message(self) -> str:
+        return "OpenAI run started"
+
+    @property
+    def complete_message(self) -> str:
+        return "OpenAI run completed"
+
+    @property
+    def fail_message(self) -> str:
+        return "OpenAI run failed"
+
     def generate_preview(self, input_data: dict[str, Any], project_name: str, ready_dir: Path) -> Path:
         config = parse_json_object(self.provider.config_json, "provider config_json")
-        api_key = str(config.get("api_key") or "")
         api_key_env = str(config.get("api_key_env") or "")
-        if not api_key and api_key_env:
-            api_key = os.getenv(api_key_env, "")
+        if not api_key_env:
+            raise RuntimeError("OpenAI provider requires config_json.api_key_env")
+        api_key = os.getenv(api_key_env, "")
         if not api_key:
-            raise RuntimeError("OpenAI provider is missing api_key or api_key_env")
+            raise RuntimeError(f"Environment variable {api_key_env} is not set")
 
-        model = str(config.get("model") or "gpt-image-1")
-        output_format = str(config.get("output_format") or "png")
-        size = str(config.get("size") or f"{input_data.get('width', 1024)}x{input_data.get('height', 1024)}")
+        model = "gpt-image-1"
+        output_format = "png"
+        size = openai_image_size(input_data)
         prompt = str(
             input_data.get("prompt")
-            or config.get("prompt")
             or f"Create a polished game UI preview for {project_name}."
         )
 
-        response = httpx.post(
-            str(config.get("api_url") or "https://api.openai.com/v1/images/generations"),
-            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
-            json={
-                "model": model,
-                "prompt": prompt,
-                "size": size,
-                "n": 1,
-                "output_format": output_format,
-            },
-            timeout=180,
-        )
-        response.raise_for_status()
-        payload = response.json()
-        image_data = payload.get("data", [{}])[0]
+        try:
+            response = httpx.post(
+                "https://api.openai.com/v1/images/generations",
+                headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+                json={
+                    "model": model,
+                    "prompt": prompt,
+                    "size": size,
+                    "n": 1,
+                    "output_format": output_format,
+                },
+                timeout=180,
+            )
+            response.raise_for_status()
+        except httpx.HTTPStatusError as exc:
+            raise RuntimeError(f"OpenAI API request failed: {exc.response.status_code}") from exc
+        except httpx.HTTPError as exc:
+            raise RuntimeError("OpenAI API request failed") from exc
+
+        try:
+            payload = response.json()
+        except ValueError as exc:
+            raise RuntimeError("OpenAI API response was not valid JSON") from exc
+
+        data = payload.get("data")
+        if not isinstance(data, list) or not data:
+            raise RuntimeError("OpenAI response did not include image data")
+        image_data = data[0]
+        if not isinstance(image_data, dict):
+            raise RuntimeError("OpenAI response did not include image data")
+
         preview_path = ready_dir / "previews" / f"ui_preview.{output_format}"
-        if image_data.get("b64_json"):
-            preview_path.write_bytes(base64.b64decode(image_data["b64_json"]))
-        elif image_data.get("url"):
-            image_response = httpx.get(image_data["url"], timeout=180)
-            image_response.raise_for_status()
-            preview_path.write_bytes(image_response.content)
-        else:
-            raise RuntimeError("OpenAI image response did not include b64_json or url")
+        try:
+            if image_data.get("b64_json"):
+                preview_path.write_bytes(base64.b64decode(image_data["b64_json"]))
+            elif image_data.get("url"):
+                image_response = httpx.get(image_data["url"], timeout=180)
+                image_response.raise_for_status()
+                preview_path.write_bytes(image_response.content)
+            else:
+                raise RuntimeError("OpenAI response did not include image data")
+        except RuntimeError:
+            raise
+        except Exception as exc:
+            raise RuntimeError(f"Failed to save OpenAI image: {exc}") from exc
         return preview_path
 
 
@@ -404,22 +455,13 @@ class JobRunnerService:
 
 
 def provider_health(provider: AiProvider) -> dict[str, str | bool]:
-    if not provider.enabled:
-        return {
-            "id": provider.id,
-            "name": provider.name,
-            "type": provider.type,
-            "enabled": provider.enabled,
-            "status": "disabled",
-            "message": "Provider is disabled",
-        }
     if provider.type in {"mock", "custom"}:
         return {
             "id": provider.id,
             "name": provider.name,
             "type": provider.type,
             "enabled": provider.enabled,
-            "status": "ok",
+            "status": "healthy",
             "message": "Local provider is ready",
         }
     if provider.type == "openai":
@@ -431,35 +473,41 @@ def provider_health(provider: AiProvider) -> dict[str, str | bool]:
                 "name": provider.name,
                 "type": provider.type,
                 "enabled": provider.enabled,
-                "status": "error",
+                "status": "unhealthy",
                 "message": str(exc),
             }
-        api_key = str(config.get("api_key") or "")
         api_key_env = str(config.get("api_key_env") or "")
-        if not api_key and api_key_env:
-            api_key = os.getenv(api_key_env, "")
-        if not api_key:
+        if not api_key_env:
             return {
                 "id": provider.id,
                 "name": provider.name,
                 "type": provider.type,
                 "enabled": provider.enabled,
-                "status": "missing_config",
-                "message": "OpenAI provider requires api_key or api_key_env",
+                "status": "unhealthy",
+                "message": "OpenAI provider requires config_json.api_key_env",
+            }
+        if not os.getenv(api_key_env):
+            return {
+                "id": provider.id,
+                "name": provider.name,
+                "type": provider.type,
+                "enabled": provider.enabled,
+                "status": "unhealthy",
+                "message": f"Environment variable {api_key_env} is not set",
             }
         return {
             "id": provider.id,
             "name": provider.name,
             "type": provider.type,
             "enabled": provider.enabled,
-            "status": "configured",
-            "message": "OpenAI provider has credentials configured",
+            "status": "healthy",
+            "message": f"Environment variable {api_key_env} is configured",
         }
     return {
         "id": provider.id,
         "name": provider.name,
         "type": provider.type,
         "enabled": provider.enabled,
-        "status": "error",
+        "status": "unhealthy",
         "message": "Unknown provider type",
     }

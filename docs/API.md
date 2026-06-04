@@ -192,6 +192,12 @@ Runs a job through the unified Job Runner. Supported provider types are `mock`, 
 
 Successful runs create a 996-ready output directory under `assets/uploads/996-ready/{generation_job_id}` with previews, components, thumbnails, and `package/manifest.json`.
 
+For `openai` providers, the runner reads the API key only from the environment variable named by `ai_providers.config_json.api_key_env`. The key is not saved to the database and is not returned in job responses.
+
+OpenAI success writes `ai_generated` result assets, stores thumbnail paths, links assets to `generation_job_id`, and writes generated paths plus asset ids to `output_json`.
+
+OpenAI failures set the job to `failed`, append logs, and write a concise `error_message` for missing `api_key_env`, missing environment variables, API failures, empty image responses, or image save failures.
+
 ### POST /generation_jobs/mock-ui
 
 Creates a `mock_ui_generation` job. This endpoint does not call a real AI model.

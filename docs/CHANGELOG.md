@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.7B.0 - 2026-06-04
+
+- Hardened the real OpenAI Job Runner path to read keys only from `config_json.api_key_env`.
+- Added safe OpenAI run failure handling for missing config, missing environment variables, API errors, empty image responses, and image save failures.
+- Added `ai_generated` asset output handling with thumbnails and job result linkage.
+- Added mocked OpenAI runner tests without external network access.
+- Expanded provider setup and real generation acceptance guidance in `PROVIDERS.md`.
+
 ## 0.7A.0 - 2026-06-03
 
 - Hardened provider `config_json` so only `api_key_env` is accepted.

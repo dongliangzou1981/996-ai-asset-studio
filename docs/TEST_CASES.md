@@ -83,3 +83,20 @@
 7. Run `npm test -- --runInBand` in `frontend/`.
 8. Run `npm run build` in `frontend/`.
 9. Run `backend\.venv\Scripts\python -m alembic -c backend\alembic.ini upgrade head`.
+
+## Sprint 7B
+
+1. Check OpenAI runner reads the API key from `config_json.api_key_env`.
+2. Check missing `api_key_env` fails the job without crashing.
+3. Check missing local environment variable fails the job without exposing a key.
+4. Check mocked OpenAI API failure fails the job with a concise error.
+5. Check mocked OpenAI response without image data fails the job.
+6. Check image save failure fails the job and appends logs.
+7. Check mocked OpenAI success writes `ai_generated` assets with thumbnails and `generation_job_id`.
+8. Check job `output_json` includes generated paths and asset ids.
+9. Check mock provider runner tests still pass.
+10. Run `backend\.venv\Scripts\python -m pytest backend\tests -q`.
+11. Run `npm test -- --runInBand` in `frontend/`.
+12. Run `npm run build` in `frontend/`.
+13. Run `backend\.venv\Scripts\python -m alembic -c backend\alembic.ini upgrade head`.
+14. Start the backend and check `GET /health`.

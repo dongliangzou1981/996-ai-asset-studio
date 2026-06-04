@@ -103,3 +103,17 @@ AI generation is not part of Sprint 5.
 - [x] Add `/providers` safety guidance
 - [x] Add `PROVIDERS.md`
 - [x] Add backend and frontend tests
+
+## Sprint 7B
+
+- [x] Read OpenAI API keys only through `config_json.api_key_env`
+- [x] Keep real keys out of database records and job responses
+- [x] Mark failed OpenAI runs as `failed` with concise `error_message`
+- [x] Append OpenAI run success and failure logs
+- [x] Save successful OpenAI images as `ai_generated` assets
+- [x] Generate thumbnails and link assets to `generation_job_id`
+- [x] Write result paths and asset ids to `output_json`
+- [x] Cover missing config, missing env var, API failure, empty response, image save failure, and success with mocked tests
+- [x] Preserve mock provider runner behavior
+- [x] Update provider acceptance documentation
+- [ ] Manual real OpenAI smoke test with a local `OPENAI_API_KEY`
