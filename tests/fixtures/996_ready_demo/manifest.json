@@ -1,0 +1,43 @@
+{
+  "schema_version": "1.0",
+  "package_type": "996-ready",
+  "source_asset_id": "fixture-ui-preview",
+  "generation_job_id": "fixture-job-996-ready-demo",
+  "device_type": "mobile",
+  "resolution": {
+    "width": 1024,
+    "height": 1024
+  },
+  "ui_preview": "ui_preview.png",
+  "components_dir": "components",
+  "components": [
+    {
+      "component_id": "main_bottom_bar",
+      "component_type": "bar",
+      "component_name_zh": "主功能栏",
+      "file": "components/main_bottom_bar.png",
+      "bounds": {
+        "x": 0,
+        "y": 840,
+        "width": 1024,
+        "height": 184
+      },
+      "transparent_png_required": true,
+      "transparent_png_verified": true
+    },
+    {
+      "component_id": "left_status_panel",
+      "component_type": "panel",
+      "component_name_zh": "左上状态面板",
+      "file": "components/left_status_panel.png",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "width": 246,
+        "height": 225
+      },
+      "transparent_png_required": false,
+      "transparent_png_verified": false
+    }
+  ]
+}

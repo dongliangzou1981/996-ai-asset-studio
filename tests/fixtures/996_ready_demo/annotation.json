@@ -1,0 +1,65 @@
+{
+  "schema_version": "1.0",
+  "source_asset_id": "fixture-ui-preview",
+  "coordinate_space": "ui_preview_pixels",
+  "components": [
+    {
+      "component_id": "main_bottom_bar",
+      "component_type": "bar",
+      "component_name_zh": "主功能栏",
+      "bounds": {
+        "x": 0,
+        "y": 840,
+        "width": 1024,
+        "height": 184
+      },
+      "style": {
+        "font_family": "Microsoft YaHei",
+        "font_size": 16,
+        "font_color": "#F5D78E"
+      },
+      "image": {
+        "file": "components/main_bottom_bar.png",
+        "format": "png",
+        "color_mode": "RGBA",
+        "alpha": "required",
+        "transparent_background": true
+      },
+      "recognition": {
+        "method": "fixture",
+        "confidence": 1.0
+      },
+      "requires_manual_review": false,
+      "notes": "Sprint 10R fixture component for export validation."
+    },
+    {
+      "component_id": "left_status_panel",
+      "component_type": "panel",
+      "component_name_zh": "左上状态面板",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "width": 246,
+        "height": 225
+      },
+      "style": {
+        "font_family": "Microsoft YaHei",
+        "font_size": 14,
+        "font_color": "#FFFFFF"
+      },
+      "image": {
+        "file": "components/left_status_panel.png",
+        "format": "png",
+        "color_mode": "RGBA",
+        "alpha": "optional",
+        "transparent_background": false
+      },
+      "recognition": {
+        "method": "fixture",
+        "confidence": 1.0
+      },
+      "requires_manual_review": false,
+      "notes": "Panel fixture used to verify relative component paths."
+    }
+  ]
+}
