@@ -1,5 +1,6 @@
 from pathlib import Path
 import json
+import sqlite3
 import sys
 
 from fastapi.testclient import TestClient
@@ -352,3 +353,52 @@ def test_provider_config_rejects_real_api_key_without_echoing_secret(tmp_path: P
     assert response.status_code == 422
     assert "sk-test-secret" not in response.text
     assert "api_key_env" in response.text
+
+
+def test_ai_provider_api_supports_legacy_provider_type_column(tmp_path: Path) -> None:
+    database_path = tmp_path / "studio.db"
+    with sqlite3.connect(database_path) as connection:
+        connection.execute(
+            """
+            CREATE TABLE ai_providers (
+              id TEXT PRIMARY KEY,
+              name TEXT NOT NULL,
+              provider_type TEXT NOT NULL,
+              enabled INTEGER NOT NULL DEFAULT 0,
+              type TEXT,
+              config_json TEXT,
+              created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+              updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
+    client = TestClient(create_app(database_path=database_path, upload_dir=tmp_path / "uploads"))
+
+    created = client.post(
+        "/ai_providers",
+        json={
+            "name": "Ofox UI Default",
+            "type": "ofox",
+            "enabled": True,
+            "config_json": "{\"api_key_env\":\"OFOX_API_KEY\",\"base_url\":\"https://api.ofox.ai/v1\",\"model\":\"gpt-image-2\"}",
+        },
+    )
+
+    assert created.status_code == 201
+    provider = created.json()
+    assert provider["type"] == "ofox"
+    with sqlite3.connect(database_path) as connection:
+        row = connection.execute("SELECT type, provider_type FROM ai_providers WHERE id = ?", (provider["id"],)).fetchone()
+    assert row == ("ofox", "ofox")
+
+    updated = client.put(
+        f"/ai_providers/{provider['id']}",
+        json={
+            "name": "Ofox UI Default",
+            "type": "ofox",
+            "enabled": True,
+            "config_json": "{\"api_key_env\":\"OFOX_API_KEY\",\"base_url\":\"https://api.ofox.ai/v1\",\"model\":\"gpt-image-2\"}",
+        },
+    )
+
+    assert updated.status_code == 200

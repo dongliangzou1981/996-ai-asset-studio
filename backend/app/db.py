@@ -35,6 +35,10 @@ class StudioDatabase:
         connection.execute("PRAGMA foreign_keys = ON")
         return connection
 
+    def table_columns(self, connection: sqlite3.Connection, table_name: str) -> set[str]:
+        rows = connection.execute(f"PRAGMA table_info({table_name})").fetchall()
+        return {str(row["name"]) for row in rows}
+
     def create_project(self, payload: ProjectCreate) -> Project:
         project_id = uuid4().hex
         with self.connect() as connection:
@@ -517,12 +521,15 @@ class StudioDatabase:
     def create_ai_provider(self, payload: AiProviderCreate) -> AiProvider:
         provider_id = uuid4().hex
         with self.connect() as connection:
+            columns = ["id", "name", "type", "enabled", "config_json"]
+            values: list[str | int] = [provider_id, payload.name, payload.type, int(payload.enabled), payload.config_json]
+            if "provider_type" in self.table_columns(connection, "ai_providers"):
+                columns.append("provider_type")
+                values.append(payload.type)
+            placeholders = ", ".join("?" for _ in columns)
             connection.execute(
-                """
-                INSERT INTO ai_providers (id, name, type, enabled, config_json)
-                VALUES (?, ?, ?, ?, ?)
-                """,
-                (provider_id, payload.name, payload.type, int(payload.enabled), payload.config_json),
+                f"INSERT INTO ai_providers ({', '.join(columns)}) VALUES ({placeholders})",
+                tuple(values),
             )
         provider = self.get_ai_provider(provider_id)
         if provider is None:
@@ -531,9 +538,11 @@ class StudioDatabase:
 
     def list_ai_providers(self) -> list[AiProvider]:
         with self.connect() as connection:
+            columns = self.table_columns(connection, "ai_providers")
+            type_select = "COALESCE(type, provider_type) AS type" if "provider_type" in columns else "type"
             rows = connection.execute(
-                """
-                SELECT id, name, type, enabled, config_json, created_at, updated_at
+                f"""
+                SELECT id, name, {type_select}, enabled, config_json, created_at, updated_at
                 FROM ai_providers
                 ORDER BY created_at ASC, id ASC
                 """
@@ -542,9 +551,11 @@ class StudioDatabase:
 
     def get_ai_provider(self, provider_id: str) -> AiProvider | None:
         with self.connect() as connection:
+            columns = self.table_columns(connection, "ai_providers")
+            type_select = "COALESCE(type, provider_type) AS type" if "provider_type" in columns else "type"
             row = connection.execute(
-                """
-                SELECT id, name, type, enabled, config_json, created_at, updated_at
+                f"""
+                SELECT id, name, {type_select}, enabled, config_json, created_at, updated_at
                 FROM ai_providers
                 WHERE id = ?
                 """,
@@ -554,17 +565,21 @@ class StudioDatabase:
 
     def update_ai_provider(self, provider_id: str, payload: AiProviderCreate) -> AiProvider | None:
         with self.connect() as connection:
+            columns = self.table_columns(connection, "ai_providers")
+            assignments = ["name = ?", "type = ?", "enabled = ?", "config_json = ?"]
+            params: list[str | int] = [payload.name, payload.type, int(payload.enabled), payload.config_json]
+            if "provider_type" in columns:
+                assignments.append("provider_type = ?")
+                params.append(payload.type)
+            assignments.append("updated_at = CURRENT_TIMESTAMP")
+            params.append(provider_id)
             result = connection.execute(
-                """
+                f"""
                 UPDATE ai_providers
-                SET name = ?,
-                    type = ?,
-                    enabled = ?,
-                    config_json = ?,
-                    updated_at = CURRENT_TIMESTAMP
+                SET {', '.join(assignments)}
                 WHERE id = ?
                 """,
-                (payload.name, payload.type, int(payload.enabled), payload.config_json, provider_id),
+                tuple(params),
             )
         if result.rowcount == 0:
             return None
