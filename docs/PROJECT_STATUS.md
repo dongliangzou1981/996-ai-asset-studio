@@ -140,6 +140,8 @@ Sprint 8 can begin with P0 real AI generation while keeping the later detection,
 
 Status: complete
 
+Automatic acceptance: passed
+
 Scope:
 
 - Template-based component processing is available for `ui_preview` assets.
@@ -149,6 +151,17 @@ Scope:
 - Component assets use `source = component_processing`.
 - Component assets inherit the source UI preview `generation_job_id`.
 - Assets detail can trigger processing and display manifest, annotation, component count, and preview link.
+
+Auto verification:
+
+- Project `Sprint8-Auto-Verify` was created or reused.
+- A `ui_preview` verification asset was created or reused.
+- `POST /assets/{asset_id}/process-components` generated the full output chain.
+- Generated output includes `components/`, at least six PNG slices, `manifest.json`, `annotation.json`, and `preview.html`.
+- `manifest.json` includes Chinese component names.
+- `annotation.json` includes Chinese fields for component name, component type, coordinates, size, font, font size, and font color.
+- `preview.html` includes Chinese component names.
+- Conclusion: Sprint 8A has passed automatic acceptance.
 
 Limitations:
 
