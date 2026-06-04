@@ -83,7 +83,12 @@ def create_app(database_path: str | Path | None = None, upload_dir: str | Path |
     app = FastAPI(title="996 AI Asset Studio API", version="0.5.0")
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+        allow_origins=[
+            "http://localhost:3000",
+            "http://localhost:3001",
+            "http://127.0.0.1:3000",
+            "http://127.0.0.1:3001",
+        ],
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],

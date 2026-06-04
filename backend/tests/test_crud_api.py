@@ -12,6 +12,28 @@ def make_client(tmp_path: Path) -> TestClient:
     return TestClient(create_app(database_path=tmp_path / "studio.db"))
 
 
+def test_cors_allows_local_frontend_origins(tmp_path: Path) -> None:
+    client = make_client(tmp_path)
+    allowed_origins = [
+        "http://localhost:3000",
+        "http://localhost:3001",
+        "http://127.0.0.1:3000",
+        "http://127.0.0.1:3001",
+    ]
+
+    for origin in allowed_origins:
+        response = client.options(
+            "/projects",
+            headers={
+                "Origin": origin,
+                "Access-Control-Request-Method": "POST",
+                "Access-Control-Request-Headers": "content-type",
+            },
+        )
+        assert response.status_code == 200
+        assert response.headers["access-control-allow-origin"] == origin
+
+
 def test_project_crud_round_trip(tmp_path: Path) -> None:
     client = make_client(tmp_path)
 
