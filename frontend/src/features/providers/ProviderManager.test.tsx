@@ -34,7 +34,7 @@ test("creates, toggles, and checks provider health", async () => {
     name: "Ofox",
     type: "ofox",
     enabled: true,
-    config_json: "{\"api_key_env\":\"OFOX_API_KEY\",\"base_url\":\"https://ofox.example/v1\",\"model\":\"ofox-ui\"}",
+    config_json: "{\"api_key_env\":\"OFOX_API_KEY\",\"base_url\":\"https://api.ofox.ai/v1\",\"model\":\"gpt-image-2\"}",
     created_at: "2026-06-03 11:00:00",
     updated_at: "2026-06-03 11:00:00",
   });
@@ -67,7 +67,7 @@ test("creates, toggles, and checks provider health", async () => {
   await user.selectOptions(screen.getByLabelText("提供商类型"), "ofox");
   await user.clear(screen.getByLabelText("Config JSON"));
   fireEvent.change(screen.getByLabelText("Config JSON"), {
-    target: { value: "{\"api_key_env\":\"OFOX_API_KEY\",\"base_url\":\"https://ofox.example/v1\",\"model\":\"ofox-ui\"}" },
+    target: { value: "{\"api_key_env\":\"OFOX_API_KEY\",\"base_url\":\"https://api.ofox.ai/v1\",\"model\":\"gpt-image-2\"}" },
   });
   await user.click(screen.getByRole("button", { name: "创建提供商" }));
 
@@ -75,7 +75,7 @@ test("creates, toggles, and checks provider health", async () => {
     name: "Ofox",
     type: "ofox",
     enabled: true,
-    config_json: "{\"api_key_env\":\"OFOX_API_KEY\",\"base_url\":\"https://ofox.example/v1\",\"model\":\"ofox-ui\"}",
+    config_json: "{\"api_key_env\":\"OFOX_API_KEY\",\"base_url\":\"https://api.ofox.ai/v1\",\"model\":\"gpt-image-2\"}",
   });
   expect(await screen.findByText("Ofox")).toBeInTheDocument();
 

@@ -294,7 +294,7 @@ Sprint 8C adds Ofox as an OpenAI Compatible image provider.
 Configuration example:
 
 ```json
-{"api_key_env":"OFOX_API_KEY","base_url":"https://your-ofox-compatible-endpoint/v1","model":"your-ofox-image-model"}
+{"api_key_env":"OFOX_API_KEY","base_url":"https://api.ofox.ai/v1","model":"gpt-image-2"}
 ```
 
 Security boundary:

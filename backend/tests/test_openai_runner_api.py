@@ -54,7 +54,7 @@ def create_openai_provider(client: TestClient, config_json: str = "{\"api_key_en
 
 def create_ofox_provider(
     client: TestClient,
-    config_json: str = "{\"api_key_env\":\"OFOX_API_KEY\",\"base_url\":\"https://ofox.example/v1\",\"model\":\"ofox-ui\"}",
+    config_json: str = "{\"api_key_env\":\"OFOX_API_KEY\"}",
 ) -> str:
     response = client.post(
         "/ai_providers",
@@ -211,9 +211,9 @@ def test_ofox_provider_openai_compatible_generation_runs_component_processing(tm
     job_id = create_real_openai_job(client, provider_id, project["id"])
 
     def fake_post(url: str, **kwargs):  # type: ignore[no-untyped-def]
-        assert url == "https://ofox.example/v1/images/generations"
+        assert url == "https://api.ofox.ai/v1/images/generations"
         assert kwargs["headers"]["Authorization"] == "Bearer sk-ofox-test-secret"
-        assert kwargs["json"]["model"] == "ofox-ui"
+        assert kwargs["json"]["model"] == "gpt-image-2"
         assert kwargs["json"]["prompt"] == "生成一张移动端主界面 UI"
         return FakeOpenAIResponse({"data": [{"b64_json": base64.b64encode(png_bytes()).decode("ascii")}]})
 

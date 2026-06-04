@@ -229,11 +229,14 @@ Implemented:
 - Ofox can be configured in the Providers page.
 - Ofox uses an OpenAI Compatible image generation endpoint.
 - Ofox config supports `api_key_env`, `base_url`, and `model`.
+- Default local Ofox config uses `base_url = https://api.ofox.ai/v1` and `model = gpt-image-2`.
 - Ofox API keys remain local environment variables and are not stored in the database.
 - Successful Ofox generation writes an `ai_generated` `ui_preview` asset.
 - Successful Ofox generation automatically runs component processing.
 - Component processing generates PNG slices, Chinese annotations, `manifest.json`, and `preview.html`.
 - Results appear in Assets through existing job result and asset listing APIs.
+- `scripts/setup_ofox_provider.py` creates or updates the default non-secret Ofox Provider config.
+- `scripts/verify_ofox_e2e.py` runs local real Ofox acceptance and verifies `ui_preview`, sliced components, `annotation.json`, `manifest.json`, and `preview.html`.
 
 Verified:
 
@@ -244,5 +247,6 @@ Verified:
 Remaining:
 
 - Manual real-key acceptance with local `OFOX_API_KEY`.
+- If `gpt-image-2` is unsupported by the local Ofox account, rerun the scripts with a supported image model.
 - Template detection still needs intelligent visual recognition.
 - Transparent PNG slicing is not optimized yet.

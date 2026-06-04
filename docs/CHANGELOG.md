@@ -1,5 +1,13 @@
 # Changelog
 
+## Sprint 8C Local Ofox Acceptance - 2026-06-04
+
+- Added `scripts/setup_ofox_provider.py` to create or update a default Ofox Provider without storing secrets.
+- Added `scripts/verify_ofox_e2e.py` to run local real Ofox E2E acceptance.
+- Defaulted Ofox local config to `https://api.ofox.ai/v1` and `gpt-image-2`.
+- Documented that users only need to provide `OFOX_API_KEY` locally.
+- Added `docs/OFOX_E2E.md` with setup, run, output, and failure-check guidance.
+
 ## Sprint 8C - 2026-06-04
 
 - Added `ofox` provider type.

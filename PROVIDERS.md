@@ -111,21 +111,30 @@ Generated assets use `source = ai_generated` and are linked to `generation_job_i
 
 ## Create an Ofox Provider
 
+For the lowest-friction local acceptance flow, use `docs/OFOX_E2E.md` and the scripts:
+
+```powershell
+backend\.venv\Scripts\python scripts\setup_ofox_provider.py
+backend\.venv\Scripts\python scripts\verify_ofox_e2e.py
+```
+
 Store the real Ofox key in a local environment variable:
 
 ```powershell
 $env:OFOX_API_KEY="your-real-key"
 ```
 
-Create an `ofox` provider with OpenAI Compatible routing settings:
+The default `ofox` provider config is created by script, so users do not need to hand-write JSON:
 
 ```json
 {
-  "name": "Ofox UI",
+  "name": "Ofox UI Default",
   "type": "ofox",
   "enabled": true,
-  "config_json": "{\"api_key_env\":\"OFOX_API_KEY\",\"base_url\":\"https://your-ofox-compatible-endpoint/v1\",\"model\":\"your-ofox-image-model\"}"
+  "config_json": "{\"api_key_env\":\"OFOX_API_KEY\",\"base_url\":\"https://api.ofox.ai/v1\",\"model\":\"gpt-image-2\"}"
 }
 ```
+
+Ofox uses the OpenAI-compatible endpoint `https://api.ofox.ai/v1/images/generations`. If `gpt-image-2` is not available for the local Ofox account, rerun the setup and verification scripts with `--model`.
 
 On success, Ofox creates an `ai_generated` `ui_preview` asset, then automatically creates `component_processing` sliced components, Chinese `annotation.json`, `manifest.json`, and `preview.html`.

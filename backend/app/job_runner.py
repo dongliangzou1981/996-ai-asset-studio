@@ -579,7 +579,7 @@ class OfoxJobRunner(OpenAIJobRunner):
         return f"{base_url}/images/generations"
 
     def image_model(self, config: dict[str, Any]) -> str:
-        return str(config.get("model") or "ofox-ui")
+        return str(config.get("model") or "gpt-image-2")
 
 
 class OpenRouterRunner(RealJobRunner):

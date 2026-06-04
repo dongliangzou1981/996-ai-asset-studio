@@ -311,4 +311,7 @@ Chinese-first principle:
 - [x] Preserve Chinese `manifest.json`, `annotation.json`, and `preview.html`
 - [x] Show Ofox as selectable provider in the frontend
 - [x] Cover the Ofox path with mocked API tests
+- [x] Add default local Ofox provider setup script
+- [x] Add local real Ofox E2E verification script
+- [x] Document that only `OFOX_API_KEY` is required locally
 - [ ] Manual real-key acceptance with local `OFOX_API_KEY`
