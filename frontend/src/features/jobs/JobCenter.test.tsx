@@ -8,9 +8,12 @@ const api = {
   createMockUiGenerationJob: jest.fn(),
   getAssetFileUrl: jest.fn((assetId: string) => `/assets/${assetId}/file`),
   listAiProviders: jest.fn(),
+  listAssets: jest.fn(),
+  listBasePanels: jest.fn(),
   listGenerationJobResults: jest.fn(),
   listGenerationJobs: jest.fn(),
   listProjects: jest.fn(),
+  listStyleProfiles: jest.fn(),
   retryGenerationJob: jest.fn(),
   runGenerationJob: jest.fn(),
   runMockGenerationJob: jest.fn(),
@@ -58,6 +61,59 @@ beforeEach(() => {
         type: "mock",
         enabled: true,
         config_json: "{}",
+        created_at: "2026-06-03 10:00:00",
+        updated_at: "2026-06-03 10:00:00",
+      },
+    ],
+  });
+  api.listStyleProfiles.mockResolvedValue({
+    items: [
+      {
+        id: "style-1",
+        project_id: "project-1",
+        name: "Neon RPG",
+        description: "",
+        palette_json: "{}",
+        prompt_notes: "Use sharp contrast",
+        created_at: "2026-06-03 10:00:00",
+        updated_at: "2026-06-03 10:00:00",
+      },
+    ],
+  });
+  api.listBasePanels.mockResolvedValue({
+    items: [
+      {
+        id: "panel-1",
+        project_id: "project-1",
+        style_profile_id: "style-1",
+        panel_type: "main_panel",
+        device_type: "mobile",
+        width: 1080,
+        height: 1920,
+        texture: "glass",
+        border_style: "thin",
+        background_style: "dark",
+        color_scheme: "neon",
+        created_at: "2026-06-03 10:00:00",
+        updated_at: "2026-06-03 10:00:00",
+      },
+    ],
+  });
+  api.listAssets.mockResolvedValue({
+    items: [
+      {
+        id: "reference-1",
+        project_id: "project-1",
+        asset_type: "reference_image",
+        device_type: "mobile",
+        width: 1080,
+        height: 1920,
+        file_path: "assets/reference.png",
+        original_filename: "reference.png",
+        metadata_json: "{}",
+        source: "uploaded",
+        generation_job_id: null,
+        thumbnail_path: "",
         created_at: "2026-06-03 10:00:00",
         updated_at: "2026-06-03 10:00:00",
       },
@@ -224,7 +280,8 @@ test("creates a real UI generation placeholder job from the job center", async (
     job_type: "real_ui_generation",
     status: "pending",
     progress: 0,
-    input_json: "{\"prompt\":\"Battle pass shop\",\"device_type\":\"mobile\",\"width\":1080,\"height\":1920}",
+    input_json:
+      "{\"project_id\":\"project-1\",\"style_profile_id\":\"style-1\",\"base_panel_id\":\"panel-1\",\"reference_image_id\":\"reference-1\",\"prompt\":\"Battle pass shop\",\"device_type\":\"mobile\",\"width\":1080,\"height\":1920}",
     output_json: "",
     output_preview_path: "",
     error_message: "",
@@ -238,7 +295,17 @@ test("creates a real UI generation placeholder job from the job center", async (
   render(<JobCenter api={api} />);
 
   await screen.findByText("base_panel_preview");
+  expect(screen.getByText("Step 1: Project")).toBeInTheDocument();
+  expect(screen.getByText("Step 2: Style Profile")).toBeInTheDocument();
+  expect(screen.getByText("Step 3: Base Panel")).toBeInTheDocument();
+  expect(screen.getByText("Step 4: Reference Image")).toBeInTheDocument();
+  expect(screen.getByText("Step 5: Prompt")).toBeInTheDocument();
+  expect(screen.getByText("Step 6: Create Real UI Job")).toBeInTheDocument();
+
   await user.selectOptions(screen.getByLabelText("Real project"), "project-1");
+  await user.selectOptions(screen.getByLabelText("Real style profile"), "style-1");
+  await user.selectOptions(screen.getByLabelText("Real base panel"), "panel-1");
+  await user.selectOptions(screen.getByLabelText("Real reference image"), "reference-1");
   await user.selectOptions(screen.getByLabelText("Real provider"), "provider-1");
   await user.clear(screen.getByLabelText("Prompt"));
   await user.type(screen.getByLabelText("Prompt"), "Battle pass shop");
@@ -256,6 +323,10 @@ test("creates a real UI generation placeholder job from the job center", async (
     status: "pending",
     progress: 0,
     input_json: JSON.stringify({
+      project_id: "project-1",
+      style_profile_id: "style-1",
+      base_panel_id: "panel-1",
+      reference_image_id: "reference-1",
       prompt: "Battle pass shop",
       device_type: "mobile",
       width: 1080,
@@ -267,4 +338,8 @@ test("creates a real UI generation placeholder job from the job center", async (
     logs: "queued",
   });
   expect(await screen.findByText("real_ui_generation")).toBeInTheDocument();
+  expect(screen.getByText("Neon RPG")).toBeInTheDocument();
+  expect(screen.getByText("main_panel / mobile / 1080x1920")).toBeInTheDocument();
+  expect(screen.getByText("reference.png")).toBeInTheDocument();
+  expect(screen.getByText("Prompt: Battle pass shop")).toBeInTheDocument();
 });

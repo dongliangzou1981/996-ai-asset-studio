@@ -49,3 +49,28 @@ Current priority after Phase 1:
 - P0: Connect a real model provider behind the existing pipeline boundary.
 - P1: Add 996 package export, slicing, and manifest output.
 - P2: Add provider security hardening, audit, concurrency control, and batch jobs.
+
+## Sprint 7C Phase 1.5
+
+Status: complete
+
+Workflow status:
+
+- Project selection: complete
+- Style profile selection: complete
+- Base panel selection: complete
+- Optional reference image selection: complete
+- Prompt capture: complete
+- Real UI job creation: complete
+- RealJobRunner placeholder execution: complete
+- Asset creation and job binding: complete
+- Job Detail traceability: complete
+- Asset source traceability: complete
+
+Closed workflow:
+
+`Project -> Style Profile -> Base Panel -> Reference Image -> Prompt -> Real UI Job -> Asset -> Preview`
+
+Conclusion:
+
+The system now has the full UI generation workflow. The remaining work is real model provider integration.

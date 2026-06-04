@@ -384,6 +384,9 @@ class RealJobRunner(BaseJobRunner):
         try:
             input_data = parse_json_object(running.input_json, "input_json")
             prompt = str(input_data.get("prompt") or "")
+            style_profile_id = input_data.get("style_profile_id")
+            base_panel_id = input_data.get("base_panel_id")
+            reference_image_id = input_data.get("reference_image_id")
             project = self.database.get_project(running.project_id) if running.project_id else None
             project_name = project.name if project else "Loose Project"
             device_type = str(input_data.get("device_type") or "mobile")
@@ -401,6 +404,10 @@ class RealJobRunner(BaseJobRunner):
                 device_type=device_type,
                 metadata={
                     "placeholder": True,
+                    "project_id": running.project_id,
+                    "style_profile_id": style_profile_id,
+                    "base_panel_id": base_panel_id,
+                    "reference_image_id": reference_image_id,
                     "prompt": prompt,
                     "project_name": project_name,
                     "job_type": running.job_type,
@@ -412,6 +419,10 @@ class RealJobRunner(BaseJobRunner):
             output = {
                 "placeholder": True,
                 "job_type": running.job_type,
+                "project_id": running.project_id,
+                "style_profile_id": style_profile_id,
+                "base_panel_id": base_panel_id,
+                "reference_image_id": reference_image_id,
                 "prompt": prompt,
                 "provider_id": self.provider.id if self.provider else None,
                 "provider_type": self.provider.type if self.provider else "default",

@@ -2,11 +2,18 @@
 
 import { FormEvent, useEffect, useState } from "react";
 
-import { Asset, Project, studioApi } from "@/lib/api";
+import { Asset, BasePanel, Project, StyleProfile, studioApi } from "@/lib/api";
 
 type AssetApi = Pick<
   typeof studioApi,
-  "deleteAsset" | "getAssetFileUrl" | "getAssetThumbnailUrl" | "listAssets" | "listProjects" | "uploadAsset"
+  | "deleteAsset"
+  | "getAssetFileUrl"
+  | "getAssetThumbnailUrl"
+  | "listAssets"
+  | "listBasePanels"
+  | "listProjects"
+  | "listStyleProfiles"
+  | "uploadAsset"
 >;
 
 const assetTypes = [
@@ -21,6 +28,8 @@ const assetTypes = [
 export function AssetManager({ api = studioApi }: { api?: AssetApi }) {
   const [assets, setAssets] = useState<Asset[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
+  const [styleProfiles, setStyleProfiles] = useState<StyleProfile[]>([]);
+  const [basePanels, setBasePanels] = useState<BasePanel[]>([]);
   const [projectFilter, setProjectFilter] = useState("");
   const [typeFilter, setTypeFilter] = useState("");
   const [deviceFilter, setDeviceFilter] = useState("");
@@ -33,9 +42,11 @@ export function AssetManager({ api = studioApi }: { api?: AssetApi }) {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    Promise.all([api.listProjects(), api.listAssets()])
-      .then(([projectResult, assetResult]) => {
+    Promise.all([api.listProjects(), api.listStyleProfiles(), api.listBasePanels(), api.listAssets()])
+      .then(([projectResult, styleResult, panelResult, assetResult]) => {
         setProjects(projectResult.items);
+        setStyleProfiles(styleResult.items);
+        setBasePanels(panelResult.items);
         setAssets(assetResult.items);
         setUploadProjectId(projectResult.items[0]?.id ?? null);
       })
@@ -86,6 +97,34 @@ export function AssetManager({ api = studioApi }: { api?: AssetApi }) {
       return "Loose asset";
     }
     return projects.find((project) => project.id === projectId)?.name ?? projectId;
+  }
+
+  function metadata(asset: Asset): Record<string, unknown> {
+    try {
+      const parsed = JSON.parse(asset.metadata_json || "{}");
+      return parsed && typeof parsed === "object" ? parsed : {};
+    } catch {
+      return {};
+    }
+  }
+
+  function styleName(styleProfileId: unknown) {
+    return styleProfiles.find((style) => style.id === styleProfileId)?.name ?? String(styleProfileId || "None");
+  }
+
+  function panelName(basePanelId: unknown) {
+    const panel = basePanels.find((item) => item.id === basePanelId);
+    return panel ? `${panel.panel_type} / ${panel.device_type} / ${panel.width}x${panel.height}` : String(basePanelId || "None");
+  }
+
+  function sourceDetails(asset: Asset) {
+    const data = metadata(asset);
+    return {
+      project: projectName(String(data.project_id || asset.project_id || "")),
+      style: styleName(data.style_profile_id),
+      panel: panelName(data.base_panel_id),
+      prompt: String(data.prompt || "None"),
+    };
   }
 
   return (
@@ -219,6 +258,9 @@ export function AssetManager({ api = studioApi }: { api?: AssetApi }) {
         <div className="mt-4 grid gap-3">
           {assets.map((asset) => (
             <article className="rounded-md border border-studio-line p-4" key={asset.id}>
+              {(() => {
+                const details = sourceDetails(asset);
+                return (
               <div className="grid gap-3 lg:grid-cols-[96px_1fr_auto] lg:items-start">
                 <img
                   alt={`Preview ${asset.original_filename}`}
@@ -234,6 +276,14 @@ export function AssetManager({ api = studioApi }: { api?: AssetApi }) {
                   <p className="mt-1 text-sm text-studio-muted">
                     Source: {asset.source} / Job: {asset.generation_job_id || "none"}
                   </p>
+                  {asset.source === "real_pipeline_placeholder" || asset.source === "ai_generated" ? (
+                    <div className="mt-2 grid gap-1 text-sm text-studio-muted">
+                      <p>Project: {details.project}</p>
+                      <p>Style: {details.style}</p>
+                      <p>Panel: {details.panel}</p>
+                      <p>Prompt: {details.prompt}</p>
+                    </div>
+                  ) : null}
                   <p className="mt-2 break-all font-mono text-xs text-studio-muted">{asset.file_path}</p>
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -270,6 +320,8 @@ export function AssetManager({ api = studioApi }: { api?: AssetApi }) {
                   </button>
                 </div>
               </div>
+                );
+              })()}
             </article>
           ))}
           {assets.length === 0 ? <p className="text-sm text-studio-muted">No assets yet.</p> : null}
@@ -277,6 +329,10 @@ export function AssetManager({ api = studioApi }: { api?: AssetApi }) {
 
         {selectedAsset ? (
           <aside className="mt-5 rounded-md border border-studio-line p-4">
+            {(() => {
+              const details = sourceDetails(selectedAsset);
+              return (
+            <>
             <h3 className="font-semibold">Asset Detail</h3>
             <img
               alt={`Detail ${selectedAsset.original_filename}`}
@@ -304,7 +360,26 @@ export function AssetManager({ api = studioApi }: { api?: AssetApi }) {
                 <dt className="font-medium">Metadata</dt>
                 <dd className="break-all text-studio-muted">{selectedAsset.metadata_json || "{}"}</dd>
               </div>
+              <div>
+                <dt className="font-medium">Project</dt>
+                <dd className="text-studio-muted">Project: {details.project}</dd>
+              </div>
+              <div>
+                <dt className="font-medium">Style</dt>
+                <dd className="text-studio-muted">Style: {details.style}</dd>
+              </div>
+              <div>
+                <dt className="font-medium">Panel</dt>
+                <dd className="text-studio-muted">Panel: {details.panel}</dd>
+              </div>
+              <div>
+                <dt className="font-medium">Prompt</dt>
+                <dd className="text-studio-muted">Prompt: {details.prompt}</dd>
+              </div>
             </dl>
+            </>
+              );
+            })()}
           </aside>
         ) : null}
       </div>

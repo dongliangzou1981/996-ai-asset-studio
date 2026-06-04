@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.7C-phase1.5 - 2026-06-04
+
+- Added Generation Wizard steps in Job Center for project, style profile, base panel, optional reference image, prompt, and real UI job creation.
+- Saved full workflow context in `real_ui_generation` job `input_json`.
+- Added Job Detail traceability for project, style, base panel, reference image, and prompt.
+- Added Asset source context display for Project, Style, Panel, and Prompt.
+- Confirmed Phase 1.5 completes the UI generation workflow without connecting OpenAI, OpenRouter, or ComfyUI.
+
 ## 0.7C-phase1.0 - 2026-06-04
 
 - Added `real_ui_generation` job creation support in Job Center.

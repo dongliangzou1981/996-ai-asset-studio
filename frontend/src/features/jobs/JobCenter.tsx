@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react";
 
-import { AiProvider, Asset, GenerationJob, Project, studioApi } from "@/lib/api";
+import { AiProvider, Asset, BasePanel, GenerationJob, Project, StyleProfile, studioApi } from "@/lib/api";
 
 type JobApi = Pick<
   typeof studioApi,
@@ -10,9 +10,12 @@ type JobApi = Pick<
   | "createMockUiGenerationJob"
   | "getAssetFileUrl"
   | "listAiProviders"
+  | "listAssets"
+  | "listBasePanels"
   | "listGenerationJobResults"
   | "listGenerationJobs"
   | "listProjects"
+  | "listStyleProfiles"
   | "retryGenerationJob"
   | "runGenerationJob"
   | "runMockGenerationJob"
@@ -21,6 +24,9 @@ type JobApi = Pick<
 export function JobCenter({ api = studioApi }: { api?: JobApi }) {
   const [jobs, setJobs] = useState<GenerationJob[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
+  const [styleProfiles, setStyleProfiles] = useState<StyleProfile[]>([]);
+  const [basePanels, setBasePanels] = useState<BasePanel[]>([]);
+  const [referenceImages, setReferenceImages] = useState<Asset[]>([]);
   const [providers, setProviders] = useState<AiProvider[]>([]);
   const [selectedJob, setSelectedJob] = useState<GenerationJob | null>(null);
   const [results, setResults] = useState<Asset[]>([]);
@@ -30,6 +36,9 @@ export function JobCenter({ api = studioApi }: { api?: JobApi }) {
   const [mockWidth, setMockWidth] = useState(1080);
   const [mockHeight, setMockHeight] = useState(1920);
   const [realProjectId, setRealProjectId] = useState<string | null>(null);
+  const [realStyleProfileId, setRealStyleProfileId] = useState<string | null>(null);
+  const [realBasePanelId, setRealBasePanelId] = useState<string | null>(null);
+  const [realReferenceImageId, setRealReferenceImageId] = useState<string | null>(null);
   const [realProviderId, setRealProviderId] = useState<string | null>(null);
   const [realPrompt, setRealPrompt] = useState("Create a polished game UI screen");
   const [realDevice, setRealDevice] = useState("mobile");
@@ -40,13 +49,29 @@ export function JobCenter({ api = studioApi }: { api?: JobApi }) {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    Promise.all([api.listGenerationJobs(), api.listProjects(), api.listAiProviders()])
-      .then(([jobResult, projectResult, providerResult]) => {
+    Promise.all([
+      api.listGenerationJobs(),
+      api.listProjects(),
+      api.listAiProviders(),
+      api.listStyleProfiles(),
+      api.listBasePanels(),
+      api.listAssets(undefined, "reference_image"),
+    ])
+      .then(([jobResult, projectResult, providerResult, styleResult, panelResult, referenceResult]) => {
         setJobs(jobResult.items);
         setProjects(projectResult.items);
         setProviders(providerResult.items);
+        setStyleProfiles(styleResult.items);
+        setBasePanels(panelResult.items);
+        setReferenceImages(referenceResult.items);
         setMockProjectId(projectResult.items[0]?.id ?? null);
-        setRealProjectId(projectResult.items[0]?.id ?? null);
+        const initialProjectId = projectResult.items[0]?.id ?? null;
+        setRealProjectId(initialProjectId);
+        setRealStyleProfileId(styleResult.items.find((style) => style.project_id === initialProjectId)?.id ?? null);
+        setRealBasePanelId(panelResult.items.find((panel) => panel.project_id === initialProjectId)?.id ?? null);
+        setRealReferenceImageId(
+          referenceResult.items.find((asset) => asset.project_id === initialProjectId)?.id ?? null,
+        );
         const enabledProviderId = providerResult.items.find((provider) => provider.enabled)?.id ?? null;
         setProviderId(enabledProviderId);
         setRealProviderId(enabledProviderId);
@@ -94,6 +119,10 @@ export function JobCenter({ api = studioApi }: { api?: JobApi }) {
       status: "pending",
       progress: 0,
       input_json: JSON.stringify({
+        project_id: realProjectId,
+        style_profile_id: realStyleProfileId,
+        base_panel_id: realBasePanelId,
+        reference_image_id: realReferenceImageId,
         prompt: realPrompt,
         device_type: realDevice,
         width: realWidth,
@@ -107,6 +136,13 @@ export function JobCenter({ api = studioApi }: { api?: JobApi }) {
     setJobs((items) => [created, ...items]);
     setSelectedJob(created);
     setResults([]);
+  }
+
+  function updateRealProject(projectId: string | null) {
+    setRealProjectId(projectId);
+    setRealStyleProfileId(styleProfiles.find((style) => style.project_id === projectId)?.id ?? null);
+    setRealBasePanelId(basePanels.find((panel) => panel.project_id === projectId)?.id ?? null);
+    setRealReferenceImageId(referenceImages.find((asset) => asset.project_id === projectId)?.id ?? null);
   }
 
   async function retryJob(job: GenerationJob) {
@@ -141,6 +177,40 @@ export function JobCenter({ api = studioApi }: { api?: JobApi }) {
       setResults([]);
     }
   }
+
+  function jobInput(job: GenerationJob | null): Record<string, unknown> {
+    if (!job?.input_json) {
+      return {};
+    }
+    try {
+      const parsed = JSON.parse(job.input_json);
+      return parsed && typeof parsed === "object" ? parsed : {};
+    } catch {
+      return {};
+    }
+  }
+
+  function projectName(projectId: unknown) {
+    return projects.find((project) => project.id === projectId)?.name ?? String(projectId || "None");
+  }
+
+  function styleName(styleProfileId: unknown) {
+    return styleProfiles.find((style) => style.id === styleProfileId)?.name ?? String(styleProfileId || "None");
+  }
+
+  function panelName(basePanelId: unknown) {
+    const panel = basePanels.find((item) => item.id === basePanelId);
+    return panel ? `${panel.panel_type} / ${panel.device_type} / ${panel.width}x${panel.height}` : String(basePanelId || "None");
+  }
+
+  function referenceName(referenceImageId: unknown) {
+    return referenceImages.find((asset) => asset.id === referenceImageId)?.original_filename ?? String(referenceImageId || "None");
+  }
+
+  const filteredStyles = styleProfiles.filter((style) => !realProjectId || style.project_id === realProjectId);
+  const filteredPanels = basePanels.filter((panel) => !realProjectId || panel.project_id === realProjectId);
+  const filteredReferences = referenceImages.filter((asset) => !realProjectId || asset.project_id === realProjectId);
+  const selectedJobInput = jobInput(selectedJob);
 
   return (
     <section className="grid gap-6 lg:grid-cols-[0.75fr_1.25fr]">
@@ -204,17 +274,71 @@ export function JobCenter({ api = studioApi }: { api?: JobApi }) {
         </form>
 
         <form className="mt-6 grid gap-3 border-t border-studio-line pt-5" onSubmit={createRealJob}>
+          <h3 className="text-sm font-semibold">Generation Wizard</h3>
           <label className="grid gap-1 text-sm font-medium">
+            <span>Step 1: Project</span>
             Real project
             <select
+              aria-label="Real project"
               className="rounded-md border border-studio-line px-3 py-2 font-normal"
-              onChange={(event) => setRealProjectId(event.target.value || null)}
+              onChange={(event) => updateRealProject(event.target.value || null)}
               value={realProjectId ?? ""}
             >
               <option value="">Loose real job</option>
               {projects.map((project) => (
                 <option key={project.id} value={project.id}>
                   {project.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="grid gap-1 text-sm font-medium">
+            <span>Step 2: Style Profile</span>
+            Real style profile
+            <select
+              aria-label="Real style profile"
+              className="rounded-md border border-studio-line px-3 py-2 font-normal"
+              onChange={(event) => setRealStyleProfileId(event.target.value || null)}
+              value={realStyleProfileId ?? ""}
+            >
+              <option value="">No style profile</option>
+              {filteredStyles.map((style) => (
+                <option key={style.id} value={style.id}>
+                  {style.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="grid gap-1 text-sm font-medium">
+            <span>Step 3: Base Panel</span>
+            Real base panel
+            <select
+              aria-label="Real base panel"
+              className="rounded-md border border-studio-line px-3 py-2 font-normal"
+              onChange={(event) => setRealBasePanelId(event.target.value || null)}
+              value={realBasePanelId ?? ""}
+            >
+              <option value="">No base panel</option>
+              {filteredPanels.map((panel) => (
+                <option key={panel.id} value={panel.id}>
+                  {panel.panel_type} / {panel.device_type} / {panel.width}x{panel.height}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="grid gap-1 text-sm font-medium">
+            <span>Step 4: Reference Image</span>
+            Real reference image
+            <select
+              aria-label="Real reference image"
+              className="rounded-md border border-studio-line px-3 py-2 font-normal"
+              onChange={(event) => setRealReferenceImageId(event.target.value || null)}
+              value={realReferenceImageId ?? ""}
+            >
+              <option value="">No reference image</option>
+              {filteredReferences.map((asset) => (
+                <option key={asset.id} value={asset.id}>
+                  {asset.original_filename}
                 </option>
               ))}
             </select>
@@ -235,8 +359,10 @@ export function JobCenter({ api = studioApi }: { api?: JobApi }) {
             </select>
           </label>
           <label className="grid gap-1 text-sm font-medium">
+            <span>Step 5: Prompt</span>
             Prompt
             <textarea
+              aria-label="Prompt"
               className="min-h-20 rounded-md border border-studio-line px-3 py-2 text-sm font-normal"
               onChange={(event) => setRealPrompt(event.target.value)}
               value={realPrompt}
@@ -245,6 +371,7 @@ export function JobCenter({ api = studioApi }: { api?: JobApi }) {
           <label className="grid gap-1 text-sm font-medium">
             Real device
             <select
+              aria-label="Real device"
               className="rounded-md border border-studio-line px-3 py-2 font-normal"
               onChange={(event) => setRealDevice(event.target.value)}
               value={realDevice}
@@ -258,6 +385,7 @@ export function JobCenter({ api = studioApi }: { api?: JobApi }) {
             <label className="grid gap-1 text-sm font-medium">
               Real width
               <input
+                aria-label="Real width"
                 className="rounded-md border border-studio-line px-3 py-2 font-normal"
                 min={1}
                 onChange={(event) => setRealWidth(Number(event.target.value))}
@@ -268,6 +396,7 @@ export function JobCenter({ api = studioApi }: { api?: JobApi }) {
             <label className="grid gap-1 text-sm font-medium">
               Real height
               <input
+                aria-label="Real height"
                 className="rounded-md border border-studio-line px-3 py-2 font-normal"
                 min={1}
                 onChange={(event) => setRealHeight(Number(event.target.value))}
@@ -279,6 +408,7 @@ export function JobCenter({ api = studioApi }: { api?: JobApi }) {
           <button className="rounded-md bg-studio-action px-4 py-2 text-sm font-semibold text-white" type="submit">
             Create Real UI Job
           </button>
+          <p className="text-sm font-semibold">Step 6: Create Real UI Job</p>
         </form>
 
         <form className="mt-6 grid gap-3 border-t border-studio-line pt-5" onSubmit={createJob}>
@@ -398,6 +528,26 @@ export function JobCenter({ api = studioApi }: { api?: JobApi }) {
               <div>
                 <dt className="font-medium">Input</dt>
                 <dd className="break-all text-studio-muted">{selectedJob.input_json || "{}"}</dd>
+              </div>
+              <div>
+                <dt className="font-medium">Project</dt>
+                <dd className="text-studio-muted">Project: {projectName(selectedJobInput.project_id)}</dd>
+              </div>
+              <div>
+                <dt className="font-medium">Style</dt>
+                <dd className="text-studio-muted">Style: {styleName(selectedJobInput.style_profile_id)}</dd>
+              </div>
+              <div>
+                <dt className="font-medium">Base Panel</dt>
+                <dd className="text-studio-muted">Panel: {panelName(selectedJobInput.base_panel_id)}</dd>
+              </div>
+              <div>
+                <dt className="font-medium">Reference Image</dt>
+                <dd className="text-studio-muted">Reference: {referenceName(selectedJobInput.reference_image_id)}</dd>
+              </div>
+              <div>
+                <dt className="font-medium">Prompt</dt>
+                <dd className="text-studio-muted">Prompt: {String(selectedJobInput.prompt || "None")}</dd>
               </div>
             </dl>
             <h4 className="mt-4 text-sm font-semibold">Log Timeline</h4>

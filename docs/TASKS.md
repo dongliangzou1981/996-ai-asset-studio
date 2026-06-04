@@ -167,3 +167,19 @@ Development priorities:
 - [ ] Production slicing
 
 Sprint 7C Phase 1 only establishes the real generation pipeline skeleton. It does not connect any real model.
+
+## Sprint 7C Phase 1.5
+
+- [x] Add Generation Wizard in Job Center
+- [x] Step 1 selects project
+- [x] Step 2 selects style profile
+- [x] Step 3 selects base panel
+- [x] Step 4 selects optional reference image
+- [x] Step 5 captures prompt
+- [x] Step 6 creates `real_ui_generation` job
+- [x] Save `project_id`, `style_profile_id`, `base_panel_id`, `reference_image_id`, `prompt`, `device_type`, `width`, and `height` in `input_json`
+- [x] Show project, style, base panel, reference image, and prompt in Job Detail
+- [x] Show Project, Style, Panel, and Prompt source information in Assets
+- [x] Keep real model providers disconnected
+
+After Phase 1.5, the UI generation workflow is complete from user selections to job and asset traceability. The remaining gap is real model integration.

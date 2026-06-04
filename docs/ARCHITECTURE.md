@@ -118,3 +118,30 @@ Out of scope for Phase 1:
 - ZIP export
 - Production slicing
 - Mock Pipeline changes
+
+## Sprint 7C Phase 1.5 Scope
+
+Sprint 7C Phase 1.5 validates the real UI generation workflow without connecting a real model.
+
+The workflow is:
+
+`Project -> Style Profile -> Base Panel -> Reference Image -> Prompt -> Real UI Job -> RealJobRunner -> Asset -> Preview`
+
+Job Center now acts as the Generation Wizard:
+
+- Step 1: choose project
+- Step 2: choose style profile
+- Step 3: choose base panel
+- Step 4: choose optional reference image
+- Step 5: enter prompt
+- Step 6: create `real_ui_generation` job
+
+The generated job stores the full workflow context in `generation_jobs.input_json`: `project_id`, `style_profile_id`, `base_panel_id`, `reference_image_id`, `prompt`, `device_type`, `width`, and `height`.
+
+Traceability surfaces:
+
+- Job Detail displays project, style, base panel, reference image, and prompt.
+- Real placeholder assets store the same source context in `assets.metadata_json`.
+- Assets displays Project, Style, Panel, and Prompt source information.
+
+After Phase 1.5, the application has a complete UI generation workflow. The only missing piece is replacing the placeholder runner output with a real model provider.

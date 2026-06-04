@@ -8,7 +8,9 @@ const api = {
   getAssetFileUrl: jest.fn((assetId: string) => `/assets/${assetId}/file`),
   getAssetThumbnailUrl: jest.fn((assetId: string) => `/assets/${assetId}/thumbnail`),
   listAssets: jest.fn(),
+  listBasePanels: jest.fn(),
   listProjects: jest.fn(),
+  listStyleProfiles: jest.fn(),
   uploadAsset: jest.fn(),
 };
 
@@ -21,6 +23,39 @@ beforeEach(() => {
         name: "Asset Project",
         description: "",
         status: "active",
+        created_at: "2026-06-03 10:00:00",
+        updated_at: "2026-06-03 10:00:00",
+      },
+    ],
+  });
+  api.listStyleProfiles.mockResolvedValue({
+    items: [
+      {
+        id: "style-1",
+        project_id: "project-1",
+        name: "Neon RPG",
+        description: "",
+        palette_json: "{}",
+        prompt_notes: "",
+        created_at: "2026-06-03 10:00:00",
+        updated_at: "2026-06-03 10:00:00",
+      },
+    ],
+  });
+  api.listBasePanels.mockResolvedValue({
+    items: [
+      {
+        id: "panel-1",
+        project_id: "project-1",
+        style_profile_id: "style-1",
+        panel_type: "main_panel",
+        device_type: "mobile",
+        width: 1080,
+        height: 1920,
+        texture: "",
+        border_style: "",
+        background_style: "",
+        color_scheme: "",
         created_at: "2026-06-03 10:00:00",
         updated_at: "2026-06-03 10:00:00",
       },
@@ -41,6 +76,23 @@ beforeEach(() => {
         source: "uploaded",
         generation_job_id: null,
         thumbnail_path: "assets/thumbs/reference.png",
+        created_at: "2026-06-03 10:00:00",
+        updated_at: "2026-06-03 10:00:00",
+      },
+      {
+        id: "asset-real-1",
+        project_id: "project-1",
+        asset_type: "ui_preview",
+        device_type: "mobile",
+        width: 1080,
+        height: 1920,
+        file_path: "assets/real/ui_preview.png",
+        original_filename: "real-preview.png",
+        metadata_json:
+          "{\"project_id\":\"project-1\",\"style_profile_id\":\"style-1\",\"base_panel_id\":\"panel-1\",\"prompt\":\"Battle pass shop\"}",
+        source: "real_pipeline_placeholder",
+        generation_job_id: "job-real-1",
+        thumbnail_path: "assets/real/thumb.png",
         created_at: "2026-06-03 10:00:00",
         updated_at: "2026-06-03 10:00:00",
       },
@@ -71,6 +123,11 @@ test("filters, previews, uploads, shows details, and deletes assets", async () =
   render(<AssetManager api={api} />);
 
   expect(await screen.findByText("reference.png")).toBeInTheDocument();
+  expect(screen.getByText("real-preview.png")).toBeInTheDocument();
+  expect(screen.getByText("Project: Asset Project")).toBeInTheDocument();
+  expect(screen.getByText("Style: Neon RPG")).toBeInTheDocument();
+  expect(screen.getByText("Panel: main_panel / mobile / 1080x1920")).toBeInTheDocument();
+  expect(screen.getByText("Prompt: Battle pass shop")).toBeInTheDocument();
   expect(screen.getByAltText("Preview reference.png")).toHaveAttribute("src", "/assets/asset-1/thumbnail");
 
   await user.selectOptions(screen.getByLabelText("项目筛选"), "project-1");

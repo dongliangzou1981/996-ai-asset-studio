@@ -96,6 +96,47 @@ def test_provider_health_update_and_unified_job_runner_outputs(tmp_path: Path) -
 def test_real_ui_generation_runner_creates_placeholder_asset(tmp_path: Path) -> None:
     client = make_client(tmp_path)
     project_id = seed_project(client)
+    style = client.post(
+        "/style_profiles",
+        json={
+            "project_id": project_id,
+            "name": "Neon RPG",
+            "description": "",
+            "palette_json": "{}",
+            "prompt_notes": "Use sharp contrast",
+        },
+    ).json()
+    panel = client.post(
+        "/base_panels",
+        json={
+            "project_id": project_id,
+            "style_profile_id": style["id"],
+            "panel_type": "main_panel",
+            "device_type": "mobile",
+            "width": 480,
+            "height": 720,
+            "texture": "glass",
+            "border_style": "thin",
+            "background_style": "dark",
+            "color_scheme": "neon",
+        },
+    ).json()
+    reference = client.post(
+        "/assets",
+        json={
+            "project_id": project_id,
+            "asset_type": "reference_image",
+            "device_type": "mobile",
+            "width": 480,
+            "height": 720,
+            "file_path": "assets/reference.png",
+            "original_filename": "reference.png",
+            "metadata_json": "{}",
+            "source": "uploaded",
+            "generation_job_id": None,
+            "thumbnail_path": "",
+        },
+    ).json()
     provider = client.post(
         "/ai_providers",
         json={"name": "Future Real Provider", "type": "custom", "enabled": True, "config_json": "{}"},
@@ -111,6 +152,10 @@ def test_real_ui_generation_runner_creates_placeholder_asset(tmp_path: Path) -> 
             "progress": 0,
             "input_json": json.dumps(
                 {
+                    "project_id": project_id,
+                    "style_profile_id": style["id"],
+                    "base_panel_id": panel["id"],
+                    "reference_image_id": reference["id"],
                     "prompt": prompt,
                     "device_type": "mobile",
                     "width": 480,
@@ -136,6 +181,10 @@ def test_real_ui_generation_runner_creates_placeholder_asset(tmp_path: Path) -> 
     assert Path(completed["output_preview_path"]).exists()
     output = json.loads(completed["output_json"])
     assert output["job_type"] == "real_ui_generation"
+    assert output["project_id"] == project_id
+    assert output["style_profile_id"] == style["id"]
+    assert output["base_panel_id"] == panel["id"]
+    assert output["reference_image_id"] == reference["id"]
     assert output["prompt"] == prompt
     assert output["provider_id"] == provider["id"]
     assert output["asset_id"]
@@ -151,6 +200,12 @@ def test_real_ui_generation_runner_creates_placeholder_asset(tmp_path: Path) -> 
     assert asset["width"] == 480
     assert asset["height"] == 720
     assert Path(asset["thumbnail_path"]).exists()
+    metadata = json.loads(asset["metadata_json"])
+    assert metadata["project_id"] == project_id
+    assert metadata["style_profile_id"] == style["id"]
+    assert metadata["base_panel_id"] == panel["id"]
+    assert metadata["reference_image_id"] == reference["id"]
+    assert metadata["prompt"] == prompt
 
 
 def test_auto_run_and_openai_health_without_secret(tmp_path: Path, monkeypatch) -> None:
