@@ -117,3 +117,32 @@ AI generation is not part of Sprint 5.
 - [x] Preserve mock provider runner behavior
 - [x] Update provider acceptance documentation
 - [ ] Manual real OpenAI smoke test with a local `OPENAI_API_KEY`
+
+## 2026-06-04 Acceptance
+
+Verified:
+
+- [x] Project CRUD
+- [x] Job Center
+- [x] Mock UI Job Creation
+- [x] Mock Job Runner
+- [x] Mock Pipeline Complete Flow
+- [x] Asset Record Creation
+- [x] Asset Binding To Generation Job
+
+Accepted flow:
+
+`Project -> Job -> Mock Runner -> Asset`
+
+Status:
+
+- Sprint 5: accepted
+- Sprint 6: accepted
+- Sprint 7A: complete
+- Sprint 7B: complete
+
+Development priorities:
+
+- P0: Real AI UI generation loop, `Prompt -> Provider -> Image -> Asset -> Preview`
+- P1: 996 package export, slicing, manifest
+- P2: Provider security hardening, audit, concurrency control, batch jobs

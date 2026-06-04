@@ -62,3 +62,32 @@
 - Frontend `/providers` manages provider config and health checks.
 - Frontend `/job-center` can create and run provider-backed jobs.
 - Frontend `/assets` supports thumbnail preview, download, path copy, and project/job/type/device filtering.
+
+## 2026-06-04 Acceptance Architecture
+
+The verified local acceptance path is:
+
+`Project -> Job -> Mock Runner -> Asset`
+
+Verified modules:
+
+- Project CRUD creates and lists project records.
+- Job Center creates and displays generation jobs.
+- Mock UI Job Creation creates local mock generation jobs.
+- Mock Job Runner moves jobs through the local execution flow.
+- Mock Pipeline Complete Flow creates preview outputs without a real AI provider.
+- Asset Record Creation persists generated asset records.
+- Asset Binding To Generation Job links generated assets through `generation_job_id`.
+
+Current sprint status:
+
+- Sprint 5: accepted
+- Sprint 6: accepted
+- Sprint 7A: complete
+- Sprint 7B: complete
+
+Next architecture priorities:
+
+- P0: Real AI UI generation loop, `Prompt -> Provider -> Image -> Asset -> Preview`.
+- P1: 996 package export, slicing, and manifest generation.
+- P2: Provider security hardening, audit trail, concurrency control, and batch jobs.

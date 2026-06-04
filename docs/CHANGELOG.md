@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-06-04 Acceptance Update
+
+- Verified Project CRUD, Job Center, Mock UI Job Creation, Mock Job Runner, Mock Pipeline Complete Flow, Asset Record Creation, and Asset Binding To Generation Job.
+- Confirmed the accepted flow: `Project -> Job -> Mock Runner -> Asset`.
+- Marked Sprint 5 and Sprint 6 as accepted.
+- Marked Sprint 7A and Sprint 7B as complete.
+- Added development priorities for real AI UI generation, 996 package export, and provider security hardening.
+
 ## 0.7B.0 - 2026-06-04
 
 - Hardened the real OpenAI Job Runner path to read keys only from `config_json.api_key_env`.
