@@ -208,6 +208,75 @@ def test_real_ui_generation_runner_creates_placeholder_asset(tmp_path: Path) -> 
     assert metadata["prompt"] == prompt
 
 
+def test_openrouter_provider_health_and_runner_placeholder(tmp_path: Path, monkeypatch) -> None:
+    client = make_client(tmp_path)
+    project_id = seed_project(client)
+
+    missing_config_provider = client.post(
+        "/ai_providers",
+        json={"name": "OpenRouter Missing Config", "type": "openrouter", "enabled": True, "config_json": "{}"},
+    )
+    assert missing_config_provider.status_code == 201
+    missing_health = client.get(f"/ai_providers/{missing_config_provider.json()['id']}/health").json()
+    assert missing_health["status"] == "unhealthy"
+    assert missing_health["message"] == "OpenRouter provider requires config_json.api_key_env"
+
+    monkeypatch.setenv("OPENROUTER_API_KEY", "sk-openrouter-test-secret")
+    provider = client.post(
+        "/ai_providers",
+        json={
+            "name": "OpenRouter",
+            "type": "openrouter",
+            "enabled": True,
+            "config_json": "{\"api_key_env\":\"OPENROUTER_API_KEY\"}",
+        },
+    )
+    assert provider.status_code == 201
+    provider_id = provider.json()["id"]
+    health = client.get(f"/ai_providers/{provider_id}/health").json()
+    assert health["status"] == "healthy"
+    assert "sk-openrouter-test-secret" not in json.dumps(health)
+
+    job = client.post(
+        "/generation_jobs",
+        json={
+            "project_id": project_id,
+            "provider_id": provider_id,
+            "job_type": "real_ui_generation",
+            "status": "pending",
+            "progress": 0,
+            "input_json": json.dumps(
+                {
+                    "project_id": project_id,
+                    "prompt": "Generate an OpenRouter placeholder",
+                    "device_type": "mobile",
+                    "width": 320,
+                    "height": 480,
+                }
+            ),
+            "output_json": "",
+            "output_preview_path": "",
+            "error_message": "",
+            "logs": "queued",
+        },
+    )
+    assert job.status_code == 201
+
+    run = client.post(f"/generation_jobs/{job.json()['id']}/run")
+    assert run.status_code == 200
+    completed = run.json()
+    assert completed["status"] == "completed"
+    assert "OpenRouter runner placeholder completed" in completed["logs"]
+    assert "sk-openrouter-test-secret" not in json.dumps(completed)
+    output = json.loads(completed["output_json"])
+    assert output["provider_type"] == "openrouter"
+    assert output["runner"] == "openrouter"
+
+    results = client.get(f"/generation_jobs/{job.json()['id']}/results").json()["items"]
+    assert len(results) == 1
+    assert results[0]["source"] == "real_pipeline_placeholder"
+
+
 def test_auto_run_and_openai_health_without_secret(tmp_path: Path, monkeypatch) -> None:
     client = make_client(tmp_path)
 

@@ -419,6 +419,7 @@ class RealJobRunner(BaseJobRunner):
             output = {
                 "placeholder": True,
                 "job_type": running.job_type,
+                "runner": self.runner_name,
                 "project_id": running.project_id,
                 "style_profile_id": style_profile_id,
                 "base_panel_id": base_panel_id,
@@ -453,6 +454,10 @@ class RealJobRunner(BaseJobRunner):
                     logs=failed_logs,
                 ),
             )
+
+    @property
+    def runner_name(self) -> str:
+        return "real_placeholder"
 
 
 class OpenAIJobRunner(BaseJobRunner):
@@ -541,6 +546,21 @@ class OpenAIJobRunner(BaseJobRunner):
         return preview_path
 
 
+class OpenRouterRunner(RealJobRunner):
+    @property
+    def runner_name(self) -> str:
+        return "openrouter"
+
+    def run(self) -> GenerationJob | None:
+        running_logs = append_log(self.job.logs, "OpenRouter runner placeholder started")
+        self.job = GenerationJob.model_validate({**self.job.model_dump(), "logs": running_logs})
+        completed = super().run()
+        if completed is None:
+            return None
+        logs = append_log(completed.logs, "OpenRouter runner placeholder completed")
+        return self.database.update_generation_job(completed.id, GenerationJobPatch(logs=logs))
+
+
 class JobRunnerService:
     def __init__(self, database: StudioDatabase, upload_root: Path) -> None:
         self.database = database
@@ -562,6 +582,8 @@ class JobRunnerService:
 
     def create_runner(self, job: GenerationJob, provider: AiProvider | None) -> BaseJobRunner:
         provider_type = provider.type if provider else "mock"
+        if provider_type == "openrouter":
+            return OpenRouterRunner(self.database, self.upload_root, job, provider)
         if job.job_type == "real_ui_generation":
             return RealJobRunner(self.database, self.upload_root, job, provider)
         if job.job_type == "mock_ui_generation" or provider_type == "mock":
@@ -583,7 +605,7 @@ def provider_health(provider: AiProvider) -> dict[str, str | bool]:
             "status": "healthy",
             "message": "Local provider is ready",
         }
-    if provider.type == "openai":
+    if provider.type in {"openai", "openrouter"}:
         try:
             config = parse_json_object(provider.config_json, "provider config_json")
         except ValueError as exc:
@@ -596,6 +618,7 @@ def provider_health(provider: AiProvider) -> dict[str, str | bool]:
                 "message": str(exc),
             }
         api_key_env = str(config.get("api_key_env") or "")
+        provider_name = "OpenAI" if provider.type == "openai" else "OpenRouter"
         if not api_key_env:
             return {
                 "id": provider.id,
@@ -603,7 +626,7 @@ def provider_health(provider: AiProvider) -> dict[str, str | bool]:
                 "type": provider.type,
                 "enabled": provider.enabled,
                 "status": "unhealthy",
-                "message": "OpenAI provider requires config_json.api_key_env",
+                "message": f"{provider_name} provider requires config_json.api_key_env",
             }
         if not os.getenv(api_key_env):
             return {

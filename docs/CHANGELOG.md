@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.7C-phase2.0 - 2026-06-04
+
+- Added `openrouter` provider type while keeping OpenAI provider support.
+- Added OpenRouter `api_key_env` configuration and health check handling without storing real keys.
+- Added `OpenRouterRunner` placeholder runner behind the existing `Provider -> Runner -> Asset` abstraction.
+- Added `openrouter` to the provider type selector.
+- Documented the multi-provider route: OpenAI, OpenRouter, and planned ComfyUI.
+- Kept external OpenRouter calls out of this phase.
+
 ## 0.7C-phase1.5 - 2026-06-04
 
 - Added Generation Wizard steps in Job Center for project, style profile, base panel, optional reference image, prompt, and real UI job creation.

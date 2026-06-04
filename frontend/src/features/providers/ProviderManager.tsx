@@ -79,6 +79,7 @@ export function ProviderManager({ api = studioApi }: { api?: ProviderApi }) {
             >
               <option value="mock">mock</option>
               <option value="openai">openai</option>
+              <option value="openrouter">openrouter</option>
               <option value="custom">custom</option>
             </select>
           </label>

@@ -15,15 +15,16 @@ def provider_health(provider: AiProvider) -> dict[str, str | bool]:
             "message": "Mock provider is available locally",
         }
 
-    if provider.type == "openai":
+    if provider.type in {"openai", "openrouter"}:
         try:
             config = json.loads(provider.config_json or "{}")
         except json.JSONDecodeError:
             return unhealthy(provider, "config_json must be valid JSON")
 
         api_key_env = config.get("api_key_env")
+        provider_name = "OpenAI" if provider.type == "openai" else "OpenRouter"
         if not api_key_env:
-            return unhealthy(provider, "OpenAI provider requires config_json.api_key_env")
+            return unhealthy(provider, f"{provider_name} provider requires config_json.api_key_env")
         if not isinstance(api_key_env, str):
             return unhealthy(provider, "config_json.api_key_env must be a string")
         if not os.getenv(api_key_env):

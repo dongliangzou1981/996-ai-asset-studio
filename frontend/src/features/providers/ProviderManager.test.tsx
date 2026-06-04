@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { ProviderManager } from "./ProviderManager";
@@ -31,10 +31,10 @@ test("creates, toggles, and checks provider health", async () => {
   const user = userEvent.setup();
   api.createAiProvider.mockResolvedValue({
     id: "provider-2",
-    name: "Mock Provider",
-    type: "mock",
+    name: "OpenRouter",
+    type: "openrouter",
     enabled: true,
-    config_json: "{}",
+    config_json: "{\"api_key_env\":\"OPENROUTER_API_KEY\"}",
     created_at: "2026-06-03 11:00:00",
     updated_at: "2026-06-03 11:00:00",
   });
@@ -63,17 +63,21 @@ test("creates, toggles, and checks provider health", async () => {
   expect(screen.getByText("Health: not checked")).toBeInTheDocument();
 
   await user.clear(screen.getByLabelText("Provider name"));
-  await user.type(screen.getByLabelText("Provider name"), "Mock Provider");
-  await user.selectOptions(screen.getByLabelText("Provider type"), "mock");
+  await user.type(screen.getByLabelText("Provider name"), "OpenRouter");
+  await user.selectOptions(screen.getByLabelText("Provider type"), "openrouter");
+  await user.clear(screen.getByLabelText("Config JSON"));
+  fireEvent.change(screen.getByLabelText("Config JSON"), {
+    target: { value: "{\"api_key_env\":\"OPENROUTER_API_KEY\"}" },
+  });
   await user.click(screen.getByRole("button", { name: "Create provider" }));
 
   expect(api.createAiProvider).toHaveBeenCalledWith({
-    name: "Mock Provider",
-    type: "mock",
+    name: "OpenRouter",
+    type: "openrouter",
     enabled: true,
-    config_json: "{}",
+    config_json: "{\"api_key_env\":\"OPENROUTER_API_KEY\"}",
   });
-  expect(await screen.findByText("Mock Provider")).toBeInTheDocument();
+  expect(await screen.findByText("OpenRouter")).toBeInTheDocument();
 
   await user.click(screen.getByRole("button", { name: "Toggle OpenAI Images" }));
   expect(api.updateAiProvider).toHaveBeenCalledWith("provider-1", {

@@ -228,9 +228,12 @@ class MockUiGenerationRequest(BaseModel):
     height: int = Field(default=1920, gt=0)
 
 
+ProviderType = Literal["mock", "openai", "openrouter", "custom"]
+
+
 class AiProviderCreate(BaseModel):
     name: str = Field(min_length=1, max_length=80)
-    type: Literal["mock", "openai", "custom"] = "mock"
+    type: ProviderType = "mock"
     enabled: bool = False
     config_json: str = "{}"
 

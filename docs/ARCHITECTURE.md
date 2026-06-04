@@ -145,3 +145,33 @@ Traceability surfaces:
 - Assets displays Project, Style, Panel, and Prompt source information.
 
 After Phase 1.5, the application has a complete UI generation workflow. The only missing piece is replacing the placeholder runner output with a real model provider.
+
+## Sprint 7C Phase 2 Scope
+
+Sprint 7C Phase 2 adds the first additional real-provider integration point without making external network calls.
+
+Provider route:
+
+`Provider -> Runner -> Asset`
+
+Supported provider types:
+
+- `mock`: local mock pipeline
+- `openai`: existing OpenAI provider path remains available
+- `openrouter`: provider type and runner skeleton added
+- `custom`: local custom placeholder path
+
+OpenRouter boundaries:
+
+- `ai_providers.type = openrouter`
+- `config_json` stores only `api_key_env`
+- Health checks validate `api_key_env` and the named local environment variable
+- Real keys are not saved, logged, or returned
+- `OpenRouterRunner` follows the same runner interface as existing runners
+- Phase 2 produces placeholder assets only and does not call OpenRouter externally
+
+Multi-provider roadmap:
+
+- OpenAI: supported
+- OpenRouter: provider and runner skeleton added
+- ComfyUI: planned

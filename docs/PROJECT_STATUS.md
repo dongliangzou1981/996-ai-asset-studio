@@ -74,3 +74,24 @@ Closed workflow:
 Conclusion:
 
 The system now has the full UI generation workflow. The remaining work is real model provider integration.
+
+## Sprint 7C Phase 2
+
+Status: complete
+
+Provider status:
+
+- OpenAI: supported and preserved
+- OpenRouter: provider type and runner skeleton added
+- ComfyUI: planned
+
+OpenRouter scope:
+
+- Provider configuration uses only `api_key_env`
+- Health check validates local environment variable presence
+- Runner participates in the existing `Provider -> Runner -> Asset` structure
+- No external OpenRouter request is made in this phase
+
+Conclusion:
+
+OpenRouter is now selectable and wired into the unified provider abstraction. The next step is a controlled real-model acceptance phase.

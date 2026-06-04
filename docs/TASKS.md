@@ -183,3 +183,23 @@ Sprint 7C Phase 1 only establishes the real generation pipeline skeleton. It doe
 - [x] Keep real model providers disconnected
 
 After Phase 1.5, the UI generation workflow is complete from user selections to job and asset traceability. The remaining gap is real model integration.
+
+## Sprint 7C Phase 2
+
+- [x] Add `openrouter` provider type
+- [x] Keep OpenAI provider support
+- [x] Keep provider config limited to `api_key_env`
+- [x] Add OpenRouter health checks without exposing real keys
+- [x] Add `OpenRouterRunner` placeholder runner
+- [x] Preserve `Provider -> Runner -> Asset` abstraction
+- [x] Expose `openrouter` in the provider type selector
+- [x] Avoid real external OpenRouter calls
+- [x] Update multi-provider roadmap
+- [ ] Real OpenRouter model acceptance test
+- [ ] ComfyUI provider implementation
+
+Multi-provider route:
+
+- OpenAI: supported provider
+- OpenRouter: provider and runner skeleton added
+- ComfyUI: planned
