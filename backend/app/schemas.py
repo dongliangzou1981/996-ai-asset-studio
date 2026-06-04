@@ -2,7 +2,7 @@ from typing import Literal
 
 import json
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 class ProjectCreate(BaseModel):
@@ -234,7 +234,7 @@ class MockUiGenerationRequest(BaseModel):
     height: int = Field(default=1920, gt=0)
 
 
-ProviderType = Literal["mock", "openai", "openrouter", "custom"]
+ProviderType = Literal["mock", "openai", "openrouter", "ofox", "custom"]
 
 
 class AiProviderCreate(BaseModel):
@@ -252,13 +252,26 @@ class AiProviderCreate(BaseModel):
             raise ValueError("config_json must be a JSON object") from exc
         if not isinstance(config, dict):
             raise ValueError("config_json must be a JSON object")
-        allowed_keys = {"api_key_env"}
+        allowed_keys = {"api_key_env", "base_url", "model"}
         extra_keys = set(config) - allowed_keys
         if extra_keys:
-            raise ValueError("config_json may only contain api_key_env")
+            raise ValueError("config_json may only contain api_key_env, base_url, and model")
         if "api_key_env" in config and not isinstance(config["api_key_env"], str):
             raise ValueError("api_key_env must be a string")
+        if "base_url" in config and not isinstance(config["base_url"], str):
+            raise ValueError("base_url must be a string")
+        if "model" in config and not isinstance(config["model"], str):
+            raise ValueError("model must be a string")
         return json.dumps(config, separators=(",", ":"))
+
+    @model_validator(mode="after")
+    def validate_provider_specific_config(self) -> "AiProviderCreate":
+        config = json.loads(self.config_json or "{}")
+        if self.type in {"openai", "openrouter"}:
+            extra_keys = set(config) - {"api_key_env"}
+            if extra_keys:
+                raise ValueError("openai and openrouter config_json may only contain api_key_env")
+        return self
 
 
 class AiProvider(AiProviderCreate):

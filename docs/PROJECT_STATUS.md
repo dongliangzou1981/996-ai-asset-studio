@@ -218,3 +218,31 @@ Remaining:
 - Manual real-key acceptance with local `OPENAI_API_KEY`.
 - Template detection still needs intelligent visual recognition.
 - Transparent PNG slicing is not optimized yet.
+
+## Sprint 8C
+
+Status: complete
+
+Implemented:
+
+- Ofox is available as provider type `ofox`.
+- Ofox can be configured in the Providers page.
+- Ofox uses an OpenAI Compatible image generation endpoint.
+- Ofox config supports `api_key_env`, `base_url`, and `model`.
+- Ofox API keys remain local environment variables and are not stored in the database.
+- Successful Ofox generation writes an `ai_generated` `ui_preview` asset.
+- Successful Ofox generation automatically runs component processing.
+- Component processing generates PNG slices, Chinese annotations, `manifest.json`, and `preview.html`.
+- Results appear in Assets through existing job result and asset listing APIs.
+
+Verified:
+
+- Automated tests mock Ofox's OpenAI Compatible response.
+- Health checks validate `OFOX_API_KEY` presence without exposing the key.
+- The Ofox path creates six `component_processing` sliced component assets.
+
+Remaining:
+
+- Manual real-key acceptance with local `OFOX_API_KEY`.
+- Template detection still needs intelligent visual recognition.
+- Transparent PNG slicing is not optimized yet.

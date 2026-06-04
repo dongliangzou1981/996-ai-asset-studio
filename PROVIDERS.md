@@ -37,13 +37,14 @@ Forbidden examples:
 }
 ```
 
-The backend rejects config fields other than `api_key_env` and removes raw input from validation error responses.
+For OpenAI and OpenRouter, the backend rejects config fields other than `api_key_env` and removes raw input from validation error responses. For Ofox, the backend allows `api_key_env`, `base_url`, and `model` so it can call an OpenAI Compatible endpoint without storing a real key.
 
 ## Health Check
 
 - `mock`: returns `healthy`.
 - `openai`: returns `healthy` only when `api_key_env` is configured and the named environment variable exists.
 - `openai`: returns `unhealthy` when `api_key_env` is missing or the environment variable is not set.
+- `ofox`: returns `healthy` only when `api_key_env` is configured and the named environment variable exists.
 
 Health responses never include the real API key.
 
@@ -107,3 +108,24 @@ Use these endpoints or the frontend pages:
 - `/assets?generation_job_id={generation_job_id}`
 
 Generated assets use `source = ai_generated` and are linked to `generation_job_id`.
+
+## Create an Ofox Provider
+
+Store the real Ofox key in a local environment variable:
+
+```powershell
+$env:OFOX_API_KEY="your-real-key"
+```
+
+Create an `ofox` provider with OpenAI Compatible routing settings:
+
+```json
+{
+  "name": "Ofox UI",
+  "type": "ofox",
+  "enabled": true,
+  "config_json": "{\"api_key_env\":\"OFOX_API_KEY\",\"base_url\":\"https://your-ofox-compatible-endpoint/v1\",\"model\":\"your-ofox-image-model\"}"
+}
+```
+
+On success, Ofox creates an `ai_generated` `ui_preview` asset, then automatically creates `component_processing` sliced components, Chinese `annotation.json`, `manifest.json`, and `preview.html`.

@@ -188,11 +188,11 @@ Resets a failed job to `pending`, clears `error_message`, sets `progress` to `0`
 
 ### POST /generation_jobs/{generation_job_id}/run
 
-Runs a job through the unified Job Runner. Supported provider types are `mock`, `openai`, and `custom`.
+Runs a job through the unified Job Runner. Supported provider types are `mock`, `openai`, `openrouter`, `ofox`, and `custom`.
 
 Successful runs create a 996-ready output directory under `assets/uploads/996-ready/{generation_job_id}` with previews, components, thumbnails, and `package/manifest.json`.
 
-For `openai` providers, the runner reads the API key only from the environment variable named by `ai_providers.config_json.api_key_env`. The key is not saved to the database and is not returned in job responses.
+For `openai` and `ofox` providers, the runner reads the API key only from the environment variable named by `ai_providers.config_json.api_key_env`. The key is not saved to the database and is not returned in job responses. Ofox also supports OpenAI Compatible `base_url` and `model` settings in `config_json`.
 
 OpenAI success writes `ai_generated` result assets, stores thumbnail paths, links assets to `generation_job_id`, and writes generated paths plus asset ids to `output_json`.
 
@@ -318,9 +318,9 @@ Returns the created asset record with file path, width, height, type, and origin
 
 ## AI Providers
 
-Provider config supports `mock`, `openai`, and `custom`.
+Provider config supports `mock`, `openai`, `openrouter`, `ofox`, and `custom`.
 
-OpenAI config may only include `api_key_env`. Do not store real keys in `config_json`.
+OpenAI and OpenRouter config may only include `api_key_env`. Ofox config may include `api_key_env`, `base_url`, and `model`. Do not store real keys in `config_json`.
 
 ### POST /ai_providers
 

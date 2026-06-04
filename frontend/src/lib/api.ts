@@ -121,7 +121,7 @@ export type Asset = {
 export type AiProvider = {
   id: string;
   name: string;
-  type: "mock" | "openai" | "openrouter" | "custom";
+  type: "mock" | "openai" | "openrouter" | "ofox" | "custom";
   enabled: boolean;
   config_json: string;
   created_at: string;

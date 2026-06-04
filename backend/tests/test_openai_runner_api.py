@@ -52,6 +52,23 @@ def create_openai_provider(client: TestClient, config_json: str = "{\"api_key_en
     return response.json()["id"]
 
 
+def create_ofox_provider(
+    client: TestClient,
+    config_json: str = "{\"api_key_env\":\"OFOX_API_KEY\",\"base_url\":\"https://ofox.example/v1\",\"model\":\"ofox-ui\"}",
+) -> str:
+    response = client.post(
+        "/ai_providers",
+        json={
+            "name": "Ofox UI",
+            "type": "ofox",
+            "enabled": True,
+            "config_json": config_json,
+        },
+    )
+    assert response.status_code == 201
+    return response.json()["id"]
+
+
 def create_openai_job(client: TestClient, provider_id: str) -> str:
     response = client.post(
         "/generation_jobs",
@@ -178,6 +195,53 @@ def test_real_ui_generation_openai_runs_component_processing(tmp_path: Path, mon
     assert len(component_assets) == 6
     assert {asset["asset_type"] for asset in component_assets} == {"sliced_component"}
     assert all(Path(asset["file_path"]).exists() for asset in component_assets)
+
+
+def test_ofox_provider_openai_compatible_generation_runs_component_processing(tmp_path: Path, monkeypatch) -> None:
+    client = make_client(tmp_path)
+    project = client.post(
+        "/projects",
+        json={"name": "Sprint8C Ofox", "description": "Ofox provider", "status": "active"},
+    ).json()
+    monkeypatch.setenv("OFOX_API_KEY", "sk-ofox-test-secret")
+    provider_id = create_ofox_provider(client)
+    health = client.get(f"/ai_providers/{provider_id}/health").json()
+    assert health["status"] == "healthy"
+    assert "sk-ofox-test-secret" not in json.dumps(health)
+    job_id = create_real_openai_job(client, provider_id, project["id"])
+
+    def fake_post(url: str, **kwargs):  # type: ignore[no-untyped-def]
+        assert url == "https://ofox.example/v1/images/generations"
+        assert kwargs["headers"]["Authorization"] == "Bearer sk-ofox-test-secret"
+        assert kwargs["json"]["model"] == "ofox-ui"
+        assert kwargs["json"]["prompt"] == "生成一张移动端主界面 UI"
+        return FakeOpenAIResponse({"data": [{"b64_json": base64.b64encode(png_bytes()).decode("ascii")}]})
+
+    monkeypatch.setattr("app.job_runner.httpx.post", fake_post)
+
+    run = client.post(f"/generation_jobs/{job_id}/run")
+
+    assert run.status_code == 200
+    completed = run.json()
+    assert completed["status"] == "completed"
+    assert "Ofox run completed" in completed["logs"]
+    assert "sk-ofox-test-secret" not in json.dumps(completed)
+    output = json.loads(completed["output_json"])
+    assert output["component_processing"]["component_asset_ids"]
+    assert Path(output["component_processing"]["manifest_path"]).exists()
+
+    manifest = json.loads(Path(output["component_processing"]["manifest_path"]).read_text(encoding="utf-8"))
+    assert manifest["components"][0]["component_name_zh"] == "主功能栏"
+    annotation = json.loads(Path(output["component_processing"]["annotation_path"]).read_text(encoding="utf-8"))
+    assert annotation["components"][0]["组件名称"] == "主功能栏"
+    preview_html = Path(output["component_processing"]["preview_html_path"]).read_text(encoding="utf-8")
+    assert "主功能栏" in preview_html
+
+    results = client.get(f"/generation_jobs/{job_id}/results").json()["items"]
+    assert any(asset["asset_type"] == "ui_preview" and asset["source"] == "ai_generated" for asset in results)
+    component_assets = [asset for asset in results if asset["source"] == "component_processing"]
+    assert len(component_assets) == 6
+    assert all(asset["generation_job_id"] == job_id for asset in component_assets)
 
 
 def test_openai_runner_missing_config_and_env_fail_jobs(tmp_path: Path, monkeypatch) -> None:

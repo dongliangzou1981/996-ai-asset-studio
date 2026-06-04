@@ -1,5 +1,15 @@
 # Changelog
 
+## Sprint 8C - 2026-06-04
+
+- Added `ofox` provider type.
+- Added Ofox OpenAI Compatible image runner.
+- Allowed Ofox config fields `api_key_env`, `base_url`, and `model` without storing real API keys.
+- Added Ofox health checks using local environment variables.
+- Added Ofox to the frontend provider type selector.
+- Connected Ofox generation output to Assets and automatic component processing.
+- Added mocked Ofox tests for UI generation, component slicing, Chinese annotation, manifest, and preview output.
+
 ## Sprint 8B - 2026-06-04
 
 - Routed `real_ui_generation` jobs with OpenAI providers to the real OpenAI runner.

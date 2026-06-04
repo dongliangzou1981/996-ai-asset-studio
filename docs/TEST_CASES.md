@@ -149,3 +149,24 @@
 14. Run `npm test -- --runInBand` in `frontend/`.
 15. Run `npm run build` in `frontend/`.
 16. Run `backend\.venv\Scripts\python -m alembic -c backend\alembic.ini upgrade head`.
+
+## Sprint 8C
+
+1. Create an Ofox provider with `type = ofox`.
+2. Use config such as `{"api_key_env":"OFOX_API_KEY","base_url":"https://your-ofox-compatible-endpoint/v1","model":"your-ofox-image-model"}`.
+3. Check health returns `healthy` when the named local environment variable exists.
+4. Check health and job payloads do not expose the real API key.
+5. Create a `real_ui_generation` job with `provider_id` set to the Ofox provider.
+6. In automated tests, mock the OpenAI Compatible response; do not call the external network.
+7. Check the runner calls `{base_url}/images/generations`.
+8. Check the request includes the configured model and prompt.
+9. Check the generated UI image is saved as an `ai_generated` `ui_preview` asset.
+10. Check six `component_processing` `sliced_component` assets are created.
+11. Check `manifest.json` contains Chinese component names.
+12. Check `annotation.json` contains Chinese annotation fields.
+13. Check `preview.html` contains Chinese component names.
+14. Check Assets can show generated and sliced result assets.
+15. Run `backend\.venv\Scripts\python -m pytest backend\tests -q`.
+16. Run `npm test -- --runInBand` in `frontend/`.
+17. Run `npm run build` in `frontend/`.
+18. Run `backend\.venv\Scripts\python -m alembic -c backend\alembic.ini upgrade head`.

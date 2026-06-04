@@ -296,3 +296,19 @@ Chinese-first principle:
 - [x] Cover the end-to-end OpenAI path with mocked API tests
 - [ ] Manual real-key acceptance with local `OPENAI_API_KEY`
 - [ ] Transparent PNG background optimization
+
+## Sprint 8C
+
+- [x] Add `ofox` provider type
+- [x] Allow Ofox provider configuration through `config_json.api_key_env`
+- [x] Allow OpenAI Compatible Ofox config fields: `base_url` and `model`
+- [x] Keep real Ofox API keys out of the database and GitHub
+- [x] Add Ofox health check using local environment variables
+- [x] Add `OfoxJobRunner`
+- [x] Call the OpenAI Compatible `/images/generations` endpoint
+- [x] Save Ofox output as an `ai_generated` `ui_preview` asset
+- [x] Automatically run component slicing after Ofox UI generation
+- [x] Preserve Chinese `manifest.json`, `annotation.json`, and `preview.html`
+- [x] Show Ofox as selectable provider in the frontend
+- [x] Cover the Ofox path with mocked API tests
+- [ ] Manual real-key acceptance with local `OFOX_API_KEY`

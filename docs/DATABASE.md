@@ -106,7 +106,7 @@ Allowed asset sources: `uploaded`, `mock_generated`, `ai_generated`.
 - `created_at`
 - `updated_at`
 
-Provider types: `mock`, `openai`, `custom`. `config_json` may only contain `api_key_env`; do not store real API keys.
+Provider types: `mock`, `openai`, `openrouter`, `ofox`, `custom`. `config_json` must not store real API keys. OpenAI and OpenRouter use `api_key_env`; Ofox may use `api_key_env`, `base_url`, and `model` for OpenAI Compatible routing.
 
 ## 996-Ready Output
 

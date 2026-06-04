@@ -31,10 +31,10 @@ test("creates, toggles, and checks provider health", async () => {
   const user = userEvent.setup();
   api.createAiProvider.mockResolvedValue({
     id: "provider-2",
-    name: "OpenRouter",
-    type: "openrouter",
+    name: "Ofox",
+    type: "ofox",
     enabled: true,
-    config_json: "{\"api_key_env\":\"OPENROUTER_API_KEY\"}",
+    config_json: "{\"api_key_env\":\"OFOX_API_KEY\",\"base_url\":\"https://ofox.example/v1\",\"model\":\"ofox-ui\"}",
     created_at: "2026-06-03 11:00:00",
     updated_at: "2026-06-03 11:00:00",
   });
@@ -63,21 +63,21 @@ test("creates, toggles, and checks provider health", async () => {
   expect(screen.getByText("健康状态：未检查")).toBeInTheDocument();
 
   await user.clear(screen.getByLabelText("提供商名称"));
-  await user.type(screen.getByLabelText("提供商名称"), "OpenRouter");
-  await user.selectOptions(screen.getByLabelText("提供商类型"), "openrouter");
+  await user.type(screen.getByLabelText("提供商名称"), "Ofox");
+  await user.selectOptions(screen.getByLabelText("提供商类型"), "ofox");
   await user.clear(screen.getByLabelText("Config JSON"));
   fireEvent.change(screen.getByLabelText("Config JSON"), {
-    target: { value: "{\"api_key_env\":\"OPENROUTER_API_KEY\"}" },
+    target: { value: "{\"api_key_env\":\"OFOX_API_KEY\",\"base_url\":\"https://ofox.example/v1\",\"model\":\"ofox-ui\"}" },
   });
   await user.click(screen.getByRole("button", { name: "创建提供商" }));
 
   expect(api.createAiProvider).toHaveBeenCalledWith({
-    name: "OpenRouter",
-    type: "openrouter",
+    name: "Ofox",
+    type: "ofox",
     enabled: true,
-    config_json: "{\"api_key_env\":\"OPENROUTER_API_KEY\"}",
+    config_json: "{\"api_key_env\":\"OFOX_API_KEY\",\"base_url\":\"https://ofox.example/v1\",\"model\":\"ofox-ui\"}",
   });
-  expect(await screen.findByText("OpenRouter")).toBeInTheDocument();
+  expect(await screen.findByText("Ofox")).toBeInTheDocument();
 
   await user.click(screen.getByRole("button", { name: "切换 OpenAI Images" }));
   expect(api.updateAiProvider).toHaveBeenCalledWith("provider-1", {

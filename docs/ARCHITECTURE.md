@@ -286,3 +286,30 @@ Current limits:
 - Automated tests mock OpenAI network calls.
 - Component detection remains template-based.
 - Transparent PNG background optimization remains future work.
+
+## Sprint 8C Ofox Provider
+
+Sprint 8C adds Ofox as an OpenAI Compatible image provider.
+
+Configuration example:
+
+```json
+{"api_key_env":"OFOX_API_KEY","base_url":"https://your-ofox-compatible-endpoint/v1","model":"your-ofox-image-model"}
+```
+
+Security boundary:
+
+- `api_key_env` stores only the local environment variable name.
+- The real Ofox API Key must stay in the local environment.
+- `base_url` and `model` are non-secret OpenAI Compatible routing settings.
+- `config_json` still rejects direct `api_key` values.
+
+Execution flow:
+
+`Prompt -> OfoxJobRunner -> OpenAI Compatible /images/generations -> ai_generated ui_preview -> Component Processing Service -> sliced components -> Chinese annotation`
+
+Outputs:
+
+- The generated UI image is recorded in `assets` as `asset_type = ui_preview`, `source = ai_generated`.
+- Component slices are recorded in `assets` as `asset_type = sliced_component`, `source = component_processing`.
+- The job `output_json` contains component processing output paths and component asset ids.

@@ -477,26 +477,30 @@ class OpenAIJobRunner(BaseJobRunner):
 
     @property
     def start_message(self) -> str:
-        return "OpenAI run started"
+        return f"{self.provider_label} run started"
 
     @property
     def complete_message(self) -> str:
-        return "OpenAI run completed"
+        return f"{self.provider_label} run completed"
 
     @property
     def fail_message(self) -> str:
-        return "OpenAI run failed"
+        return f"{self.provider_label} run failed"
+
+    @property
+    def provider_label(self) -> str:
+        return "OpenAI"
 
     def generate_preview(self, input_data: dict[str, Any], project_name: str, ready_dir: Path) -> Path:
         config = parse_json_object(self.provider.config_json, "provider config_json")
         api_key_env = str(config.get("api_key_env") or "")
         if not api_key_env:
-            raise RuntimeError("OpenAI provider requires config_json.api_key_env")
+            raise RuntimeError(f"{self.provider_label} provider requires config_json.api_key_env")
         api_key = os.getenv(api_key_env, "")
         if not api_key:
             raise RuntimeError(f"Environment variable {api_key_env} is not set")
 
-        model = "gpt-image-1"
+        model = self.image_model(config)
         output_format = "png"
         size = openai_image_size(input_data)
         prompt = str(
@@ -506,7 +510,7 @@ class OpenAIJobRunner(BaseJobRunner):
 
         try:
             response = httpx.post(
-                "https://api.openai.com/v1/images/generations",
+                self.image_generation_url(config),
                 headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
                 json={
                     "model": model,
@@ -519,21 +523,21 @@ class OpenAIJobRunner(BaseJobRunner):
             )
             response.raise_for_status()
         except httpx.HTTPStatusError as exc:
-            raise RuntimeError(f"OpenAI API request failed: {exc.response.status_code}") from exc
+            raise RuntimeError(f"{self.provider_label} API request failed: {exc.response.status_code}") from exc
         except httpx.HTTPError as exc:
-            raise RuntimeError("OpenAI API request failed") from exc
+            raise RuntimeError(f"{self.provider_label} API request failed") from exc
 
         try:
             payload = response.json()
         except ValueError as exc:
-            raise RuntimeError("OpenAI API response was not valid JSON") from exc
+            raise RuntimeError(f"{self.provider_label} API response was not valid JSON") from exc
 
         data = payload.get("data")
         if not isinstance(data, list) or not data:
-            raise RuntimeError("OpenAI response did not include image data")
+            raise RuntimeError(f"{self.provider_label} response did not include image data")
         image_data = data[0]
         if not isinstance(image_data, dict):
-            raise RuntimeError("OpenAI response did not include image data")
+            raise RuntimeError(f"{self.provider_label} response did not include image data")
 
         preview_path = ready_dir / "previews" / f"ui_preview.{output_format}"
         try:
@@ -544,12 +548,18 @@ class OpenAIJobRunner(BaseJobRunner):
                 image_response.raise_for_status()
                 preview_path.write_bytes(image_response.content)
             else:
-                raise RuntimeError("OpenAI response did not include image data")
+                raise RuntimeError(f"{self.provider_label} response did not include image data")
         except RuntimeError:
             raise
         except Exception as exc:
-            raise RuntimeError(f"Failed to save OpenAI image: {exc}") from exc
+            raise RuntimeError(f"Failed to save {self.provider_label} image: {exc}") from exc
         return preview_path
+
+    def image_generation_url(self, config: dict[str, Any]) -> str:
+        return "https://api.openai.com/v1/images/generations"
+
+    def image_model(self, config: dict[str, Any]) -> str:
+        return "gpt-image-1"
 
     def after_preview_asset(self, preview_asset: Asset) -> dict[str, str | list[str]] | None:
         return process_ui_preview_components(
@@ -557,6 +567,19 @@ class OpenAIJobRunner(BaseJobRunner):
             upload_root=self.upload_root,
             ui_preview=preview_asset,
         )
+
+
+class OfoxJobRunner(OpenAIJobRunner):
+    @property
+    def provider_label(self) -> str:
+        return "Ofox"
+
+    def image_generation_url(self, config: dict[str, Any]) -> str:
+        base_url = str(config.get("base_url") or "https://api.ofox.ai/v1").rstrip("/")
+        return f"{base_url}/images/generations"
+
+    def image_model(self, config: dict[str, Any]) -> str:
+        return str(config.get("model") or "ofox-ui")
 
 
 class OpenRouterRunner(RealJobRunner):
@@ -601,6 +624,10 @@ class JobRunnerService:
             if provider is None:
                 raise RuntimeError("OpenAI provider is not configured")
             return OpenAIJobRunner(self.database, self.upload_root, job, provider)
+        if provider_type == "ofox":
+            if provider is None:
+                raise RuntimeError("Ofox provider is not configured")
+            return OfoxJobRunner(self.database, self.upload_root, job, provider)
         if job.job_type == "real_ui_generation":
             return RealJobRunner(self.database, self.upload_root, job, provider)
         if job.job_type == "mock_ui_generation" or provider_type == "mock":
@@ -618,7 +645,7 @@ def provider_health(provider: AiProvider) -> dict[str, str | bool]:
             "status": "healthy",
             "message": "Local provider is ready",
         }
-    if provider.type in {"openai", "openrouter"}:
+    if provider.type in {"openai", "openrouter", "ofox"}:
         try:
             config = parse_json_object(provider.config_json, "provider config_json")
         except ValueError as exc:
@@ -631,7 +658,11 @@ def provider_health(provider: AiProvider) -> dict[str, str | bool]:
                 "message": str(exc),
             }
         api_key_env = str(config.get("api_key_env") or "")
-        provider_name = "OpenAI" if provider.type == "openai" else "OpenRouter"
+        provider_name = {
+            "openai": "OpenAI",
+            "openrouter": "OpenRouter",
+            "ofox": "Ofox",
+        }[provider.type]
         if not api_key_env:
             return {
                 "id": provider.id,
