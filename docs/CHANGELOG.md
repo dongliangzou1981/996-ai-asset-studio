@@ -1,5 +1,14 @@
 # Changelog
 
+## Sprint 8A - 2026-06-04
+
+- Added template-based Component Processing Service for `ui_preview` assets.
+- Added `POST /assets/{asset_id}/process-components`.
+- Generated six `main_ui` component regions, component PNGs, `manifest.json`, `annotation.json`, and `preview.html`.
+- Stored generated slices as `sliced_component` assets with `source = component_processing`.
+- Added Assets detail action to trigger component slicing and annotation generation.
+- Documented Sprint 8A as template-based component recognition, not intelligent visual recognition.
+
 ## Sprint 8 Planning - 2026-06-04
 
 - Added the V1 final target: `Prompt -> UI Generation -> Component Detection -> Annotation -> Transparent PNG Slice -> 996 Export Package`.

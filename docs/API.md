@@ -271,6 +271,31 @@ Streams the asset file for browser previews.
 
 Streams the generated thumbnail when present, otherwise falls back to the source image.
 
+### POST /assets/{asset_id}/process-components
+
+Processes a `ui_preview` asset with Sprint 8A template-based component rules. This is not intelligent visual recognition.
+
+Creates:
+
+- `996-ready/ui_preview.png`
+- `996-ready/components/*.png`
+- `996-ready/manifest.json`
+- `996-ready/annotation.json`
+- `996-ready/preview.html`
+
+Response:
+
+```json
+{
+  "manifest_path": "assets/uploads/996-ready/job-id/manifest.json",
+  "annotation_path": "assets/uploads/996-ready/job-id/annotation.json",
+  "preview_html_path": "assets/uploads/996-ready/job-id/preview.html",
+  "component_asset_ids": ["asset-id"]
+}
+```
+
+The component assets are written to `assets` with `asset_type = sliced_component`, `source = component_processing`, and the source `ui_preview` asset's `generation_job_id`.
+
 ### PUT /assets/{asset_id}
 
 Uses the same JSON body as `POST /assets`.

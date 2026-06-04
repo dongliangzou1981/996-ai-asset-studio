@@ -135,3 +135,23 @@ Priority order:
 - P4: 996 export
 
 Sprint 8 can begin with P0 real AI generation while keeping the later detection, annotation, slicing, and export stages behind stable pipeline boundaries.
+
+## Sprint 8A
+
+Status: complete
+
+Scope:
+
+- Template-based component processing is available for `ui_preview` assets.
+- `main_ui` currently generates six fixed proportional regions.
+- The backend writes `manifest.json`, `annotation.json`, component PNGs, and `preview.html`.
+- Component PNGs are recorded as `sliced_component` assets.
+- Component assets use `source = component_processing`.
+- Component assets inherit the source UI preview `generation_job_id`.
+- Assets detail can trigger processing and display manifest, annotation, component count, and preview link.
+
+Limitations:
+
+- This is not intelligent visual recognition.
+- Transparent background optimization is not implemented yet.
+- The existing Mock Pipeline and Real Pipeline remain intact.

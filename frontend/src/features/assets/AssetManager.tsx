@@ -2,7 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react";
 
-import { Asset, BasePanel, Project, StyleProfile, studioApi } from "@/lib/api";
+import { Asset, BasePanel, ComponentProcessingResult, Project, StyleProfile, studioApi } from "@/lib/api";
 
 type AssetApi = Pick<
   typeof studioApi,
@@ -13,6 +13,7 @@ type AssetApi = Pick<
   | "listBasePanels"
   | "listProjects"
   | "listStyleProfiles"
+  | "processAssetComponents"
   | "uploadAsset"
 >;
 
@@ -39,6 +40,7 @@ export function AssetManager({ api = studioApi }: { api?: AssetApi }) {
   const [uploadDevice, setUploadDevice] = useState("mobile");
   const [file, setFile] = useState<File | null>(null);
   const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
+  const [componentResult, setComponentResult] = useState<ComponentProcessingResult | null>(null);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -62,6 +64,7 @@ export function AssetManager({ api = studioApi }: { api?: AssetApi }) {
     );
     setAssets(result.items);
     setSelectedAsset(null);
+    setComponentResult(null);
   }
 
   async function upload(event: FormEvent<HTMLFormElement>) {
@@ -79,6 +82,7 @@ export function AssetManager({ api = studioApi }: { api?: AssetApi }) {
     });
     setAssets((items) => [created, ...items]);
     setSelectedAsset(created);
+    setComponentResult(null);
     setFile(null);
   }
 
@@ -86,6 +90,11 @@ export function AssetManager({ api = studioApi }: { api?: AssetApi }) {
     await api.deleteAsset(asset.id);
     setAssets((items) => items.filter((item) => item.id !== asset.id));
     setSelectedAsset((current) => (current?.id === asset.id ? null : current));
+  }
+
+  async function processComponents(asset: Asset) {
+    const result = await api.processAssetComponents(asset.id);
+    setComponentResult(result);
   }
 
   async function copyPath(asset: Asset) {
@@ -290,7 +299,10 @@ export function AssetManager({ api = studioApi }: { api?: AssetApi }) {
                   <button
                     aria-label={`查看 ${asset.original_filename}`}
                     className="rounded-md border border-studio-line px-3 py-2 text-sm"
-                    onClick={() => setSelectedAsset(asset)}
+                    onClick={() => {
+                      setSelectedAsset(asset);
+                      setComponentResult(null);
+                    }}
                     type="button"
                   >
                     查看
@@ -339,6 +351,25 @@ export function AssetManager({ api = studioApi }: { api?: AssetApi }) {
               className="mt-3 max-h-80 w-full rounded-md border border-studio-line object-contain"
               src={api.getAssetFileUrl(selectedAsset.id)}
             />
+            {selectedAsset.asset_type === "ui_preview" ? (
+              <button
+                className="mt-3 rounded-md bg-studio-action px-4 py-2 text-sm font-semibold text-white"
+                onClick={() => processComponents(selectedAsset)}
+                type="button"
+              >
+                生成组件切图与标注
+              </button>
+            ) : null}
+            {componentResult ? (
+              <div className="mt-3 grid gap-2 rounded-md border border-studio-line p-3 text-sm text-studio-muted">
+                <p className="break-all">{componentResult.manifest_path}</p>
+                <p className="break-all">{componentResult.annotation_path}</p>
+                <p>Components: {componentResult.component_asset_ids.length}</p>
+                <a className="font-semibold text-studio-action" href={componentResult.preview_html_path}>
+                  preview.html
+                </a>
+              </div>
+            ) : null}
             <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
               <div>
                 <dt className="font-medium">Source</dt>

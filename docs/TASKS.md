@@ -239,3 +239,22 @@ Development priorities:
 - [ ] P2: Annotation system
 - [ ] P3: Transparent PNG slicing
 - [ ] P4: 996 export
+
+## Sprint 8A
+
+- [x] Add Component Processing Service
+- [x] Process `ui_preview` assets
+- [x] Add template-based `main_ui` component regions
+- [x] Generate six component records
+- [x] Generate `manifest.json`
+- [x] Generate `annotation.json`
+- [x] Generate `preview.html`
+- [x] Crop component PNGs from source UI preview
+- [x] Write `sliced_component` asset records
+- [x] Set component source to `component_processing`
+- [x] Inherit `generation_job_id` from source UI preview
+- [x] Add `POST /assets/{asset_id}/process-components`
+- [x] Add Assets page action for component slicing and annotation
+- [x] Document that Sprint 8A is template-based, not intelligent visual recognition
+- [ ] Intelligent component detection
+- [ ] Transparent background optimization

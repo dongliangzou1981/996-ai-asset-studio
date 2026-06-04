@@ -11,6 +11,7 @@ const api = {
   listBasePanels: jest.fn(),
   listProjects: jest.fn(),
   listStyleProfiles: jest.fn(),
+  processAssetComponents: jest.fn(),
   uploadAsset: jest.fn(),
 };
 
@@ -119,6 +120,12 @@ test("filters, previews, uploads, shows details, and deletes assets", async () =
     updated_at: "2026-06-03 11:00:00",
   });
   api.deleteAsset.mockResolvedValue(undefined);
+  api.processAssetComponents.mockResolvedValue({
+    manifest_path: "assets/uploads/996-ready/job-real-1/manifest.json",
+    annotation_path: "assets/uploads/996-ready/job-real-1/annotation.json",
+    preview_html_path: "assets/uploads/996-ready/job-real-1/preview.html",
+    component_asset_ids: ["component-1", "component-2", "component-3", "component-4", "component-5", "component-6"],
+  });
 
   render(<AssetManager api={api} />);
 
@@ -157,6 +164,17 @@ test("filters, previews, uploads, shows details, and deletes assets", async () =
   expect(screen.getByAltText("Detail reference.png")).toHaveAttribute("src", "/assets/asset-1/file");
   expect(screen.getByText("uploaded")).toBeInTheDocument();
   expect(screen.getByText("assets/thumbs/reference.png")).toBeInTheDocument();
+
+  await user.click(screen.getByRole("button", { name: "查看 real-preview.png" }));
+  await user.click(screen.getByRole("button", { name: "生成组件切图与标注" }));
+  expect(api.processAssetComponents).toHaveBeenCalledWith("asset-real-1");
+  expect(await screen.findByText("assets/uploads/996-ready/job-real-1/manifest.json")).toBeInTheDocument();
+  expect(screen.getByText("assets/uploads/996-ready/job-real-1/annotation.json")).toBeInTheDocument();
+  expect(screen.getByText("Components: 6")).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "preview.html" })).toHaveAttribute(
+    "href",
+    "assets/uploads/996-ready/job-real-1/preview.html",
+  );
 
   await user.click(screen.getByRole("button", { name: "复制路径 reference.png" }));
   await user.click(screen.getByRole("button", { name: "删除 reference.png" }));

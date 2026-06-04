@@ -213,3 +213,42 @@ Updated development priorities:
 - P4: 996 export
 
 Sprint 8 should start by replacing placeholder generation with a real provider-backed UI image while preserving the existing provider, job, asset, and traceability boundaries.
+
+## Sprint 8A Scope
+
+Sprint 8A adds a template-based component processing skeleton. It does not perform intelligent visual recognition.
+
+Processing flow:
+
+`ui_preview asset -> Component Processing Service -> annotation.json -> components/*.png -> 996-ready output`
+
+Template rule:
+
+- `main_ui` divides a UI preview into six proportional regions:
+  - `main_bottom_bar`
+  - `left_status_panel`
+  - `right_menu_panel`
+  - `minimap_area`
+  - `chat_panel`
+  - `skill_area`
+
+Generated output:
+
+```text
+996-ready/
+  ui_preview.png
+  components/
+    main_bottom_bar.png
+    left_status_panel.png
+    right_menu_panel.png
+    minimap_area.png
+    chat_panel.png
+    skill_area.png
+  manifest.json
+  annotation.json
+  preview.html
+```
+
+`annotation.json` includes `component_id`, `component_type`, `x`, `y`, `width`, `height`, `font_family`, `font_size`, `font_color`, and `notes`.
+
+Generated slices are stored as `sliced_component` assets with `source = component_processing` and inherit the source UI preview's `generation_job_id`.

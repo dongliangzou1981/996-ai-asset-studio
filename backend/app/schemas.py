@@ -139,7 +139,13 @@ AssetType = Literal[
 ]
 
 JobStatus = Literal["pending", "running", "completed", "failed", "cancelled"]
-AssetSource = Literal["uploaded", "mock_generated", "ai_generated", "real_pipeline_placeholder"]
+AssetSource = Literal[
+    "uploaded",
+    "mock_generated",
+    "ai_generated",
+    "real_pipeline_placeholder",
+    "component_processing",
+]
 
 
 class AssetCreate(BaseModel):

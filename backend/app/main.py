@@ -9,6 +9,7 @@ from fastapi.responses import JSONResponse
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.component_processing import process_ui_preview_components
 from app.db import StudioDatabase
 from app.job_runner import JobRunnerService
 from app.mock_worker import run_mock_generation
@@ -244,6 +245,22 @@ def create_app(database_path: str | Path | None = None, upload_dir: str | Path |
         if asset is None:
             raise HTTPException(status_code=404, detail="Asset not found")
         return asset
+
+    @app.post("/assets/{asset_id}/process-components")
+    def process_asset_components(asset_id: str) -> dict[str, str | list[str]]:
+        asset = database.get_asset(asset_id)
+        if asset is None:
+            raise HTTPException(status_code=404, detail="Asset not found")
+        if asset.asset_type != "ui_preview":
+            raise HTTPException(status_code=400, detail="Only ui_preview assets can be processed")
+        try:
+            return process_ui_preview_components(
+                database=database,
+                upload_root=upload_root,
+                ui_preview=asset,
+            )
+        except FileNotFoundError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     @app.get("/assets/{asset_id}/file")
     def get_asset_file(asset_id: str) -> FileResponse:

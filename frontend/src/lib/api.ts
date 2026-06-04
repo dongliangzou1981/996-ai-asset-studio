@@ -151,6 +151,13 @@ export type UploadAssetInput = {
   device_type: string;
 };
 
+export type ComponentProcessingResult = {
+  manifest_path: string;
+  annotation_path: string;
+  preview_html_path: string;
+  component_asset_ids: string[];
+};
+
 export type ListResponse<T> = {
   items: T[];
 };
@@ -295,6 +302,9 @@ export const studioApi = {
   },
   deleteAsset(assetId: string) {
     return request<void>(`/assets/${assetId}`, { method: "DELETE" });
+  },
+  processAssetComponents(assetId: string) {
+    return request<ComponentProcessingResult>(`/assets/${assetId}/process-components`, { method: "POST" });
   },
   listAssets(projectId?: string, assetType?: string, deviceType?: string, generationJobId?: string) {
     const params = new URLSearchParams();

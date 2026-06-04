@@ -100,3 +100,19 @@
 12. Run `npm run build` in `frontend/`.
 13. Run `backend\.venv\Scripts\python -m alembic -c backend\alembic.ini upgrade head`.
 14. Start the backend and check `GET /health`.
+
+## Sprint 8A
+
+1. Create or upload a `ui_preview` asset backed by a PNG file.
+2. Call `POST /assets/{asset_id}/process-components`.
+3. Check the response includes `manifest_path`, `annotation_path`, `preview_html_path`, and six `component_asset_ids`.
+4. Check `manifest.json` contains the six `main_ui` template components.
+5. Check `annotation.json` contains `component_id`, `component_type`, `x`, `y`, `width`, `height`, `font_family`, `font_size`, `font_color`, and `notes`.
+6. Check `components/` includes six PNG slices.
+7. Check generated slices are saved as `sliced_component` assets with `source = component_processing`.
+8. Check generated slices inherit the source UI preview `generation_job_id`.
+9. Check Assets detail can trigger component processing and display manifest, annotation, component count, and `preview.html`.
+10. Run `backend\.venv\Scripts\python -m pytest backend\tests -q`.
+11. Run `npm test -- --runInBand` in `frontend/`.
+12. Run `npm run build` in `frontend/`.
+13. Run `backend\.venv\Scripts\python -m alembic -c backend\alembic.ini upgrade head`.
