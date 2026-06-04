@@ -175,3 +175,41 @@ Multi-provider roadmap:
 - OpenAI: supported
 - OpenRouter: provider and runner skeleton added
 - ComfyUI: planned
+
+## Sprint 8 Planning
+
+V1 final target:
+
+`Prompt -> UI Generation -> Component Detection -> Annotation -> Transparent PNG Slice -> 996 Export Package`
+
+The V1 output package structure is:
+
+```text
+996-ready/
+  ui_preview.png
+  components/
+  manifest.json
+  annotation.json
+  preview.html
+```
+
+`annotation.json` must support each detected component with:
+
+- component type
+- x
+- y
+- width
+- height
+- font family
+- font size
+- font color
+
+Updated development priorities:
+
+- P0: Real AI generation
+- P1: Component detection
+- P2: Annotation system
+- P3: Transparent PNG slicing
+- P4: 996 export
+
+Sprint 8 should start by replacing placeholder generation with a real provider-backed UI image while preserving the existing provider, job, asset, and traceability boundaries.

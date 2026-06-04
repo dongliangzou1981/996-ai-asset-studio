@@ -203,3 +203,39 @@ Multi-provider route:
 - OpenAI: supported provider
 - OpenRouter: provider and runner skeleton added
 - ComfyUI: planned
+
+## Sprint 8 Planning
+
+V1 final target:
+
+`Prompt -> UI Generation -> Component Detection -> Annotation -> Transparent PNG Slice -> 996 Export Package`
+
+996-ready export structure:
+
+```text
+996-ready/
+  ui_preview.png
+  components/
+  manifest.json
+  annotation.json
+  preview.html
+```
+
+`annotation.json` must support:
+
+- component type
+- x
+- y
+- width
+- height
+- font family
+- font size
+- font color
+
+Development priorities:
+
+- [ ] P0: Real AI generation
+- [ ] P1: Component detection
+- [ ] P2: Annotation system
+- [ ] P3: Transparent PNG slicing
+- [ ] P4: 996 export

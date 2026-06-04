@@ -95,3 +95,43 @@ OpenRouter scope:
 Conclusion:
 
 OpenRouter is now selectable and wired into the unified provider abstraction. The next step is a controlled real-model acceptance phase.
+
+## Sprint 8 Planning
+
+Status: planned
+
+V1 final target:
+
+`Prompt -> UI Generation -> Component Detection -> Annotation -> Transparent PNG Slice -> 996 Export Package`
+
+Target export structure:
+
+```text
+996-ready/
+  ui_preview.png
+  components/
+  manifest.json
+  annotation.json
+  preview.html
+```
+
+`annotation.json` requirements:
+
+- component type
+- x
+- y
+- width
+- height
+- font family
+- font size
+- font color
+
+Priority order:
+
+- P0: Real AI generation
+- P1: Component detection
+- P2: Annotation system
+- P3: Transparent PNG slicing
+- P4: 996 export
+
+Sprint 8 can begin with P0 real AI generation while keeping the later detection, annotation, slicing, and export stages behind stable pipeline boundaries.

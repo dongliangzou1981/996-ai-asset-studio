@@ -1,5 +1,13 @@
 # Changelog
 
+## Sprint 8 Planning - 2026-06-04
+
+- Added the V1 final target: `Prompt -> UI Generation -> Component Detection -> Annotation -> Transparent PNG Slice -> 996 Export Package`.
+- Defined the target `996-ready/` export structure with `ui_preview.png`, `components/`, `manifest.json`, `annotation.json`, and `preview.html`.
+- Documented required `annotation.json` fields: component type, x, y, width, height, font family, font size, and font color.
+- Reordered development priorities to P0 real AI generation, P1 component detection, P2 annotation system, P3 transparent PNG slicing, and P4 996 export.
+- Confirmed Sprint 8 planning is documentation-only.
+
 ## 0.7C-phase2.0 - 2026-06-04
 
 - Added `openrouter` provider type while keeping OpenAI provider support.
