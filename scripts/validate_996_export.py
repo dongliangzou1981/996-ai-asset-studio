@@ -10,7 +10,7 @@ SCHEMA_VERSION = "1.0"
 PACKAGE_TYPE = "996-ready"
 COORDINATE_SPACE = "ui_preview_pixels"
 
-DEVICE_TYPES = {"mobile", "pc"}
+DEVICE_TYPES = {"mobile", "pc", "mobile_landscape", "pc_landscape"}
 COMPONENT_TYPES = {
     "panel",
     "bar",
@@ -191,6 +191,33 @@ def expect_enum(value: Any, allowed: set[str], label: str, errors: list[str]) ->
     return True
 
 
+def validate_device_resolution(device_type: Any, resolution: Any, errors: list[str]) -> bool:
+    if device_type not in {"mobile_landscape", "pc_landscape"}:
+        return True
+    if not isinstance(resolution, dict):
+        return False
+    width = resolution.get("width")
+    height = resolution.get("height")
+    if not isinstance(width, int) or isinstance(width, bool) or not isinstance(height, int) or isinstance(height, bool):
+        return False
+    if width <= 0 or height <= 0:
+        return False
+    if width <= height:
+        errors.append(f"manifest.resolution must be landscape for {device_type}")
+        return False
+
+    ratio = width / height
+    if device_type == "mobile_landscape" and abs(ratio - (16 / 9)) > 0.02:
+        errors.append("manifest.resolution must be 16:9 landscape for mobile_landscape")
+        return False
+    if device_type == "pc_landscape":
+        allowed = any(abs(ratio - expected) <= 0.08 for expected in (4 / 3, 3 / 2, 16 / 9))
+        if not allowed:
+            errors.append("manifest.resolution must be PC landscape, typically 4:3, 3:2, or 16:9, for pc_landscape")
+            return False
+    return True
+
+
 def expect_confidence(value: Any, label: str, errors: list[str]) -> bool:
     if value is None:
         return True
@@ -252,6 +279,7 @@ def validate_manifest_schema(manifest: dict[str, Any], errors: list[str]) -> dic
         "schema_v1": True,
         "manifest_required_fields": True,
         "field_types": True,
+        "device_resolution": True,
         "component_classification": True,
         "transparent_fields": True,
     }
@@ -289,6 +317,7 @@ def validate_manifest_schema(manifest: dict[str, Any], errors: list[str]) -> dic
     else:
         checks["field_types"] = expect_positive_int(resolution.get("width"), "manifest.resolution.width", errors) and checks["field_types"]
         checks["field_types"] = expect_positive_int(resolution.get("height"), "manifest.resolution.height", errors) and checks["field_types"]
+        checks["device_resolution"] = validate_device_resolution(manifest.get("device_type"), resolution, errors)
 
     components = manifest.get("components")
     if not isinstance(components, list) or not components:
@@ -357,6 +386,8 @@ def validate_annotation_schema(annotation: dict[str, Any], errors: list[str]) ->
         checks["schema_v1"] = False
 
     checks["field_types"] = expect_string(annotation, "source_asset_id", "annotation", errors) and checks["field_types"]
+    if "device_type" in annotation:
+        checks["field_types"] = expect_enum(annotation.get("device_type"), DEVICE_TYPES, "annotation.device_type", errors) and checks["field_types"]
     components = annotation.get("components")
     if not isinstance(components, list) or not components:
         errors.append("annotation.components must be a non-empty list")
@@ -448,6 +479,7 @@ def validate_package(package_dir: str | Path) -> dict[str, Any]:
         "manifest_required_fields": True,
         "annotation_required_fields": True,
         "field_types": True,
+        "device_resolution": True,
         "component_classification": True,
         "transparent_fields": True,
         "ui_preview_exists": False,

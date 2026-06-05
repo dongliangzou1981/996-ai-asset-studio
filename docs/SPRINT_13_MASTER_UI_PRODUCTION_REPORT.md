@@ -197,3 +197,25 @@ Recommendation: **Yes, enter v1.0 Beta candidate validation.**
 Reason:
 
 The final package is complete, validator passes, all required 996-ready files exist, the image is strict 16:9 landscape, the core main UI functional areas are visible, and the visual style is strong enough to serve as a master style seed.
+
+## Sprint 13C Device Type Addendum
+
+Sprint 13C adds an explicit pre-generation `device_type` selection for later production runs.
+
+Supported values:
+
+- `mobile_landscape`: default, strict 16:9 landscape, default `1536x864`, touch-friendly mobile controls
+- `pc_landscape`: PC landscape, default `1536x1024`, mouse-click layout with denser information areas
+
+The selected `device_type` is written into:
+
+- `style.json`
+- `manifest.json`
+- `annotation.json`
+- `delivery_report.json`
+
+Validator behavior:
+
+- `mobile_landscape` packages must use 16:9 landscape dimensions.
+- `pc_landscape` packages must use PC landscape dimensions, allowing common 4:3, 3:2, or 16:9 canvases.
+- legacy `mobile` / `pc` packages remain accepted for backward compatibility.

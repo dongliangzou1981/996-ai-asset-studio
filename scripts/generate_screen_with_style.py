@@ -24,6 +24,27 @@ from scripts.validate_996_export import validate_package
 
 SUPPORTED_SCREEN_TYPES = {"main_ui", "role_ui", "bag_ui", "shop_ui", "activity_ui"}
 REAL_PROVIDER_TYPES = {"openai", "ofox"}
+DEVICE_TYPES = {"mobile_landscape", "pc_landscape"}
+DEFAULT_DEVICE_TYPE = "mobile_landscape"
+
+DEVICE_PROFILES = {
+    "mobile_landscape": {
+        "width": 1536,
+        "height": 864,
+        "prompt": (
+            "Device target: mobile_landscape. Use a strict 16:9 landscape horizontal mobile game UI, "
+            "large touch-friendly buttons, and mobile-adapted skill bar, chat area, right menu, and minimap."
+        ),
+    },
+    "pc_landscape": {
+        "width": 1536,
+        "height": 1024,
+        "prompt": (
+            "Device target: pc_landscape. Use a PC landscape UI for mouse clicking, "
+            "with a denser information area and desktop-oriented interaction spacing."
+        ),
+    },
+}
 
 SCREEN_TYPE_GOALS = {
     "main_ui": "main game HUD with player info, core entries, chat, map, skill bar, and shortcut bar",
@@ -47,15 +68,41 @@ def load_style(style_code: str, style_root: str | Path = "style_codes") -> dict[
     return data
 
 
+def normalize_generation_device_type(device_type: str | None = None) -> str:
+    if not device_type:
+        return DEFAULT_DEVICE_TYPE
+    if device_type == "mobile":
+        return "mobile_landscape"
+    if device_type in {"pc", "desktop"}:
+        return "pc_landscape"
+    if device_type not in DEVICE_TYPES:
+        raise ValueError(f"device_type must be one of {sorted(DEVICE_TYPES)}")
+    return device_type
+
+
+def generation_dimensions(device_type: str) -> tuple[int, int]:
+    normalized = normalize_generation_device_type(device_type)
+    profile = DEVICE_PROFILES[normalized]
+    return int(profile["width"]), int(profile["height"])
+
+
+def device_prompt_line(device_type: str) -> str:
+    normalized = normalize_generation_device_type(device_type)
+    return str(DEVICE_PROFILES[normalized]["prompt"])
+
+
 def build_reference_guided_prompt(
     *,
     style: dict[str, Any],
     screen_type: str,
     reference_image_path: str | Path | None = None,
     user_prompt: str = "",
+    device_type: str = DEFAULT_DEVICE_TYPE,
 ) -> str:
     if screen_type not in SUPPORTED_SCREEN_TYPES:
         raise ValueError(f"screen_type must be one of {sorted(SUPPORTED_SCREEN_TYPES)}")
+    normalized_device_type = normalize_generation_device_type(device_type)
+    target_width, target_height = generation_dimensions(normalized_device_type)
     style_code = str(style.get("style_code") or "")
     style_name = str(style.get("style_name") or style_code)
     palette = style.get("color_palette") or []
@@ -81,8 +128,9 @@ def build_reference_guided_prompt(
         f"button_style: {style.get('button_style', '')}",
         f"icon_style: {style.get('icon_style', '')}",
         f"texture_style: {style.get('texture_style', '')}",
-        "For main_ui, use a horizontal mobile game UI in strict 16:9 landscape.",
-        "Preferred main_ui target canvas is 1536x864 pixels.",
+        f"device_type: {normalized_device_type}",
+        device_prompt_line(normalized_device_type),
+        f"Target canvas is {target_width}x{target_height} pixels.",
         "Output a single screen only. Do not create a collage, tutorial page, or multi-screen sheet.",
         "Make it suitable for later slicing and annotation: buttons, icons, inputs, frames, tabs, and inventory slots should have clear boundaries.",
     ]
@@ -140,6 +188,7 @@ def write_delivery_report(
     generation_job_id: str,
     screen_generation_mode: str,
     prompt: str,
+    device_type: str | None = None,
     reference_image_path: str | Path | None = None,
 ) -> dict[str, Any]:
     package_path = Path(package_dir)
@@ -148,6 +197,7 @@ def write_delivery_report(
         "screen_type": screen_type,
         "generation_job_id": generation_job_id,
         "screen_generation_mode": screen_generation_mode,
+        "device_type": normalize_generation_device_type(device_type),
         "reference_image_path": str(reference_image_path) if reference_image_path else None,
         "prompt": prompt,
         "outputs": {
@@ -191,9 +241,12 @@ def generate_screen_with_style(
     upload_root: str | Path = "assets/uploads",
     project_id: str | None = None,
     provider_id: str | None = None,
+    device_type: str = DEFAULT_DEVICE_TYPE,
 ) -> dict[str, Any]:
     if screen_type not in SUPPORTED_SCREEN_TYPES:
         raise ValueError(f"screen_type must be one of {sorted(SUPPORTED_SCREEN_TYPES)}")
+    normalized_device_type = normalize_generation_device_type(device_type)
+    target_width, target_height = generation_dimensions(normalized_device_type)
     reference_path = Path(reference_image) if reference_image else None
     if reference_path is not None and not reference_path.exists():
         raise FileNotFoundError(f"Reference image does not exist: {reference_path}")
@@ -204,6 +257,7 @@ def generate_screen_with_style(
         screen_type=screen_type,
         reference_image_path=reference_path,
         user_prompt=user_prompt,
+        device_type=normalized_device_type,
     )
 
     database = StudioDatabase(Path(database_path))
@@ -222,7 +276,7 @@ def generate_screen_with_style(
             AssetCreate(
                 project_id=project_id,
                 asset_type="reference_image",
-                device_type="pc",
+                device_type=normalized_device_type,
                 width=width,
                 height=height,
                 file_path=str(reference_path),
@@ -252,9 +306,9 @@ def generate_screen_with_style(
                     "screen_generation_mode": screen_generation_mode,
                     "reference_image_id": reference_asset_id,
                     "reference_image_path": str(reference_path) if reference_path else None,
-                    "device_type": "pc",
-                    "width": 1536 if screen_type == "main_ui" else 1024,
-                    "height": 864 if screen_type == "main_ui" else 768,
+                    "device_type": normalized_device_type,
+                    "width": target_width,
+                    "height": target_height,
                 },
                 ensure_ascii=False,
             ),
@@ -293,6 +347,7 @@ def generate_screen_with_style(
         generation_job_id=completed.id,
         screen_generation_mode=screen_generation_mode,
         prompt=prompt,
+        device_type=normalized_device_type,
         reference_image_path=reference_path,
     )
     report = validate_package(final_package)
@@ -302,6 +357,7 @@ def generate_screen_with_style(
     return {
         "style_code": style_code,
         "screen_type": screen_type,
+        "device_type": normalized_device_type,
         "generation_job_id": completed.id,
         "reference_asset_id": reference_asset_id,
         "prompt": prompt,
@@ -322,6 +378,7 @@ def main() -> int:
     parser.add_argument("--upload-root", default="assets/uploads")
     parser.add_argument("--project-id")
     parser.add_argument("--provider-id")
+    parser.add_argument("--device-type", choices=sorted(DEVICE_TYPES), default=DEFAULT_DEVICE_TYPE)
     args = parser.parse_args()
 
     try:
@@ -335,6 +392,7 @@ def main() -> int:
             upload_root=args.upload_root,
             project_id=args.project_id,
             provider_id=args.provider_id,
+            device_type=args.device_type,
         )
     except Exception as exc:
         print(f"Failed to generate style-guided screen: {exc}", file=sys.stderr)

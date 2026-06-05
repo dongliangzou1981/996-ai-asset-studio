@@ -58,6 +58,32 @@ The right-side function menu must remain available for secondary actions and eve
 
 It may collapse into a compact icon stack, but the core actions should not disappear.
 
+## Device Type Rules
+
+`main_ui` generation supports two explicit device targets.
+
+### mobile_landscape
+
+Default device type.
+
+- ratio: strict 16:9 landscape
+- recommended size: `1536x864` or `1280x720`
+- operation model: mobile landscape touch controls
+- layout emphasis: large buttons, clear skill bar, readable chat area, right-side menu, and minimap adapted to phone screens
+
+The mobile layout must keep touch targets visually large enough for horizontal phone operation.
+
+### pc_landscape
+
+PC landscape target.
+
+- ratio: PC landscape, allowing 4:3, 3:2, or 16:9 style canvases
+- default size: `1536x1024`
+- operation model: mouse clicking
+- layout emphasis: denser information area, more compact controls, and desktop-style spacing
+
+The PC layout may carry more information density, but it must still preserve the required functional areas.
+
 ## Allowed Variation
 
 The generator may vary:

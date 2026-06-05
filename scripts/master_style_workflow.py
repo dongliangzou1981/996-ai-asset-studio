@@ -19,9 +19,14 @@ from app.job_runner import JobRunnerService, parse_json_object
 from app.schemas import AssetCreate, GenerationJobCreate, ProjectCreate
 from scripts.create_style_code import create_style_code
 from scripts.generate_screen_with_style import (
+    DEFAULT_DEVICE_TYPE,
+    DEVICE_TYPES,
     copy_package_to_style_dir,
+    device_prompt_line,
     ensure_real_provider_ready,
+    generation_dimensions,
     image_dimensions,
+    normalize_generation_device_type,
     target_package_dir,
     write_delivery_report,
 )
@@ -58,6 +63,7 @@ def build_master_main_ui_prompt(
     screen_type: str = "main_ui",
     reference_image_path: str | Path | None = None,
     user_prompt: str = "",
+    device_type: str = DEFAULT_DEVICE_TYPE,
 ) -> str:
     if screen_generation_mode not in SCREEN_GENERATION_MODES:
         raise ValueError(f"screen_generation_mode must be one of {sorted(SCREEN_GENERATION_MODES)}")
@@ -65,6 +71,8 @@ def build_master_main_ui_prompt(
         raise ValueError("Master style creation must start from main_ui")
     if screen_generation_mode == "reference_guided" and not reference_image_path:
         raise ValueError("reference_guided mode requires reference_image_path")
+    normalized_device_type = normalize_generation_device_type(device_type)
+    target_width, target_height = generation_dimensions(normalized_device_type)
 
     mode_line = (
         "Auto generate a new main UI from the style brief."
@@ -75,8 +83,9 @@ def build_master_main_ui_prompt(
         "Generate one 996 legend game main_ui screen as the master style source.",
         f"screen_generation_mode: {screen_generation_mode}",
         f"style_name: {style_name}",
-        "Create a horizontal mobile game UI in strict 16:9 landscape.",
-        "Target canvas is 1536x864 pixels.",
+        f"device_type: {normalized_device_type}",
+        device_prompt_line(normalized_device_type),
+        f"Target canvas is {target_width}x{target_height} pixels.",
         mode_line,
         "The layout may be adjusted, but the basic operation logic must not be broken.",
         "Required main UI elements:",
@@ -119,6 +128,7 @@ def save_master_style_artifacts(
             generation_job_id=str(manifest.get("generation_job_id") or package_path.name),
             screen_generation_mode="master_style_snapshot",
             prompt="",
+            device_type=manifest.get("device_type"),
         )
 
     for name in [
@@ -148,11 +158,13 @@ def create_master_style_from_package(
     screen_type: str = "main_ui",
     prompt: str = "",
     reference_image_path: str | Path | None = None,
+    device_type: str = DEFAULT_DEVICE_TYPE,
 ) -> dict[str, Any]:
     if screen_type != "main_ui":
         raise ValueError("Master style package creation must use main_ui")
     if screen_generation_mode not in SCREEN_GENERATION_MODES:
         raise ValueError(f"screen_generation_mode must be one of {sorted(SCREEN_GENERATION_MODES)}")
+    normalized_device_type = normalize_generation_device_type(device_type)
 
     source_package = Path(package_dir)
     style = create_style_code(package_dir=source_package, style_root=style_root, style_name=style_name)
@@ -172,6 +184,7 @@ def create_master_style_from_package(
         generation_job_id=generation_job_id,
         screen_generation_mode=screen_generation_mode,
         prompt=prompt,
+        device_type=normalized_device_type,
         reference_image_path=reference_image_path,
     )
     style_dir = save_master_style_artifacts(style=style, package_dir=final_package, style_root=style_root)
@@ -182,6 +195,7 @@ def create_master_style_from_package(
         "style_code": style_code,
         "style_dir": str(style_dir),
         "screen_type": screen_type,
+        "device_type": normalized_device_type,
         "generation_job_id": generation_job_id,
         "package_dir": str(final_package),
         "delivery_report": delivery_report,
@@ -200,7 +214,10 @@ def run_master_style_workflow(
     upload_root: str | Path = "assets/uploads",
     project_id: str | None = None,
     provider_id: str | None = None,
+    device_type: str = DEFAULT_DEVICE_TYPE,
 ) -> dict[str, Any]:
+    normalized_device_type = normalize_generation_device_type(device_type)
+    target_width, target_height = generation_dimensions(normalized_device_type)
     reference_path = Path(reference_image) if reference_image else None
     if reference_path is not None and not reference_path.exists():
         raise FileNotFoundError(f"Reference image does not exist: {reference_path}")
@@ -210,6 +227,7 @@ def run_master_style_workflow(
         screen_type="main_ui",
         reference_image_path=reference_path,
         user_prompt=prompt,
+        device_type=normalized_device_type,
     )
 
     database = StudioDatabase(Path(database_path))
@@ -228,7 +246,7 @@ def run_master_style_workflow(
             AssetCreate(
                 project_id=project_id,
                 asset_type="reference_image",
-                device_type="pc",
+                device_type=normalized_device_type,
                 width=width,
                 height=height,
                 file_path=str(reference_path),
@@ -257,9 +275,9 @@ def run_master_style_workflow(
                     "style_name": style_name,
                     "reference_image_id": reference_asset_id,
                     "reference_image_path": str(reference_path) if reference_path else None,
-                    "device_type": "pc",
-                    "width": 1536,
-                    "height": 864,
+                    "device_type": normalized_device_type,
+                    "width": target_width,
+                    "height": target_height,
                 },
                 ensure_ascii=False,
             ),
@@ -290,6 +308,7 @@ def run_master_style_workflow(
         screen_type="main_ui",
         prompt=master_prompt,
         reference_image_path=reference_path,
+        device_type=normalized_device_type,
     )
 
 
@@ -304,6 +323,7 @@ def main() -> int:
     parser.add_argument("--upload-root", default="assets/uploads")
     parser.add_argument("--project-id")
     parser.add_argument("--provider-id")
+    parser.add_argument("--device-type", choices=sorted(DEVICE_TYPES), default=DEFAULT_DEVICE_TYPE)
     args = parser.parse_args()
 
     try:
@@ -317,6 +337,7 @@ def main() -> int:
             upload_root=args.upload_root,
             project_id=args.project_id,
             provider_id=args.provider_id,
+            device_type=args.device_type,
         )
     except Exception as exc:
         print(f"Failed to run master style workflow: {exc}", file=sys.stderr)

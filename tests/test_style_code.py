@@ -50,6 +50,7 @@ def test_create_style_code_from_996_ready_package(tmp_path: Path) -> None:
     assert saved["style_name"] == "Dark Gold Dragon"
     assert saved["source_job_id"] == "job-001"
     assert saved["source_asset_id"] == "asset-001"
+    assert saved["device_type"] == "pc_landscape"
     assert saved["original_ui_preview"].endswith("ui_preview.png")
     assert saved["style_summary"]
     assert saved["color_palette"]

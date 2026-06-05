@@ -67,7 +67,6 @@ def normalize_preview_dimensions(path: Path, input_data: dict[str, Any]) -> None
     target = requested_image_dimensions(input_data)
     if target is None:
         return
-    target_width, target_height = target
     with Image.open(path) as image:
         if image.size == target:
             return

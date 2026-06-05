@@ -43,6 +43,7 @@ Required fields:
 | `style_name` | string | Human-readable style name |
 | `source_job_id` | string | Generation job used as the style source |
 | `source_asset_id` | string | Source `ui_preview` asset id when available |
+| `device_type` | string | Target device type: `mobile_landscape` or `pc_landscape` |
 | `style_summary` | string | Short reusable visual summary |
 | `color_palette` | array | Dominant or default color list |
 | `font_style` | string | Font and typography guidance |
@@ -68,6 +69,7 @@ Additional Sprint 12A fields:
   "style_name": "Dark Gold Dragon",
   "source_job_id": "job-id",
   "source_asset_id": "asset-id",
+  "device_type": "mobile_landscape",
   "original_ui_preview": "assets/uploads/996-ready/job-id/ui_preview.png",
   "style_summary": "Dark Gold Dragon: 996 legend game UI style derived from source job output.",
   "color_palette": ["#1A120E", "#D9A441", "#6E1F16"],
@@ -109,3 +111,24 @@ Sprint 12A uses lightweight extraction only:
 - fills font, border, button, icon, and texture guidance with conservative default descriptions
 
 It does not use YOLO, OCR, SAM, model training, or complex visual recognition.
+
+## Device Type
+
+`device_type` records the intended production target for the style source.
+
+Supported values:
+
+- `mobile_landscape`
+- `pc_landscape`
+
+Creation from legacy packages maps old values for compatibility:
+
+- `mobile` -> `mobile_landscape`
+- `pc` / `desktop` -> `pc_landscape`
+
+New Master Style Workflow output should write the selected value consistently into:
+
+- `style.json`
+- `manifest.json`
+- `annotation.json`
+- `delivery_report.json`

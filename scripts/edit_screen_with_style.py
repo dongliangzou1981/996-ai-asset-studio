@@ -19,11 +19,16 @@ from app.db import StudioDatabase
 from app.job_runner import JobRunnerService, parse_json_object
 from app.schemas import AssetCreate, GenerationJobCreate, ProjectCreate
 from scripts.generate_screen_with_style import (
+    DEFAULT_DEVICE_TYPE,
+    DEVICE_TYPES,
     SUPPORTED_SCREEN_TYPES,
     copy_package_to_style_dir,
+    device_prompt_line,
     ensure_real_provider_ready,
+    generation_dimensions,
     image_dimensions,
     load_style,
+    normalize_generation_device_type,
     write_delivery_report,
 )
 from scripts.validate_996_export import validate_package
@@ -107,9 +112,12 @@ def build_style_edit_prompt(
     context: dict[str, Any],
     edit_request: str,
     source_preview_path: str | Path,
+    device_type: str = DEFAULT_DEVICE_TYPE,
 ) -> str:
     if screen_type not in SUPPORTED_SCREEN_TYPES:
         raise ValueError(f"screen_type must be one of {sorted(SUPPORTED_SCREEN_TYPES)}")
+    normalized_device_type = normalize_generation_device_type(device_type)
+    target_width, target_height = generation_dimensions(normalized_device_type)
     style_code = str(style.get("style_code") or "")
     style_name = str(style.get("style_name") or style_code)
     palette = style.get("color_palette") or []
@@ -139,8 +147,9 @@ def build_style_edit_prompt(
             f"texture_style: {style.get('texture_style', '')}",
             f"annotation_summary: {summarize_components(context)}",
             f"candidate_summary: {summarize_candidates(context)}",
-            "For main_ui, canvas ratio must remain strict 16:9 landscape for horizontal mobile gameplay.",
-            "Preferred main_ui target canvas is 1536x864 pixels.",
+            f"device_type: {normalized_device_type}",
+            device_prompt_line(normalized_device_type),
+            f"Target canvas is {target_width}x{target_height} pixels.",
             "Output a single revised UI screen only, suitable for Component Processing, annotation, candidate detection, and 996-ready delivery.",
         ]
     )
@@ -167,7 +176,9 @@ def write_edit_metadata_report(
     edit_mode: str,
     source_preview_path: str | Path,
     prompt: str,
+    device_type: str = DEFAULT_DEVICE_TYPE,
 ) -> dict[str, Any]:
+    normalized_device_type = normalize_generation_device_type(device_type)
     report = write_delivery_report(
         package_dir=package_dir,
         style_code=style_code,
@@ -175,6 +186,7 @@ def write_edit_metadata_report(
         generation_job_id=new_generation_job_id,
         screen_generation_mode="screen_edit",
         prompt=prompt,
+        device_type=normalized_device_type,
         reference_image_path=source_preview_path,
     )
     report["edit_metadata"] = {
@@ -182,6 +194,7 @@ def write_edit_metadata_report(
         "edit_request": edit_request,
         "edit_mode": edit_mode,
         "style_code": style_code,
+        "device_type": normalized_device_type,
         "source_preview_path": str(source_preview_path),
     }
     package_path = Path(package_dir)
@@ -195,6 +208,7 @@ def write_edit_metadata_report(
         f"<p>new_generation_job_id: <code>{html.escape(new_generation_job_id)}</code></p>"
         f"<p>parent_generation_job_id: <code>{html.escape(parent_generation_job_id)}</code></p>"
         f"<p>edit_mode: <code>{html.escape(edit_mode)}</code></p>"
+        f"<p>device_type: <code>{html.escape(normalized_device_type)}</code></p>"
         f"<p>edit_request: {html.escape(edit_request)}</p>"
         "</body></html>",
         encoding="utf-8",
@@ -214,6 +228,7 @@ def finalize_edit_package(
     edit_mode: str,
     source_preview_path: str | Path,
     prompt: str,
+    device_type: str = DEFAULT_DEVICE_TYPE,
 ) -> dict[str, Any]:
     generated_path = Path(generated_package)
     target_path = Path(target_package)
@@ -228,6 +243,7 @@ def finalize_edit_package(
         edit_mode=edit_mode,
         source_preview_path=source_preview_path,
         prompt=prompt,
+        device_type=device_type,
     )
     validation = validate_package(target_path)
     if not validation["ok"]:
@@ -255,7 +271,10 @@ def edit_screen_with_style(
     upload_root: str | Path = "assets/uploads",
     project_id: str | None = None,
     provider_id: str | None = None,
+    device_type: str = DEFAULT_DEVICE_TYPE,
 ) -> dict[str, Any]:
+    normalized_device_type = normalize_generation_device_type(device_type)
+    target_width, target_height = generation_dimensions(normalized_device_type)
     source_package_path = Path(source_package)
     context = load_source_package_context(source_package_path)
     style = load_style(style_code, style_root)
@@ -269,6 +288,7 @@ def edit_screen_with_style(
         context=context,
         edit_request=edit_prompt,
         source_preview_path=source_preview_path,
+        device_type=normalized_device_type,
     )
 
     database = StudioDatabase(Path(database_path))
@@ -285,7 +305,7 @@ def edit_screen_with_style(
         AssetCreate(
             project_id=project_id,
             asset_type="reference_image",
-            device_type="pc",
+            device_type=normalized_device_type,
             width=width,
             height=height,
             file_path=str(source_preview_path),
@@ -325,9 +345,9 @@ def edit_screen_with_style(
                     "source_preview_path": str(source_preview_path),
                     "reference_image_id": reference_asset.id,
                     "reference_image_path": str(source_preview_path),
-                    "device_type": "pc",
-                    "width": 1536 if screen_type == "main_ui" else 1024,
-                    "height": 864 if screen_type == "main_ui" else 768,
+                    "device_type": normalized_device_type,
+                    "width": target_width,
+                    "height": target_height,
                 },
                 ensure_ascii=False,
             ),
@@ -367,6 +387,7 @@ def edit_screen_with_style(
         edit_mode=EDIT_MODE,
         source_preview_path=source_preview_path,
         prompt=prompt,
+        device_type=normalized_device_type,
     )
 
 
@@ -382,6 +403,7 @@ def main() -> int:
     parser.add_argument("--upload-root", default="assets/uploads")
     parser.add_argument("--project-id")
     parser.add_argument("--provider-id")
+    parser.add_argument("--device-type", choices=sorted(DEVICE_TYPES), default=DEFAULT_DEVICE_TYPE)
     args = parser.parse_args()
 
     try:
@@ -396,6 +418,7 @@ def main() -> int:
             upload_root=args.upload_root,
             project_id=args.project_id,
             provider_id=args.provider_id,
+            device_type=args.device_type,
         )
     except Exception as exc:
         print(f"Failed to edit style-guided screen: {exc}", file=sys.stderr)

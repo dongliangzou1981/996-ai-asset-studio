@@ -46,7 +46,7 @@ All JSON paths are relative to the package root and must use `/`.
 | `package_type` | string | Must be `"996-ready"` |
 | `source_asset_id` | string | Non-empty source UI preview asset id |
 | `generation_job_id` | string | Non-empty generation job id |
-| `device_type` | string | Must be `mobile` or `pc` |
+| `device_type` | string | Must be `mobile_landscape`, `pc_landscape`, or legacy `mobile` / `pc` |
 | `resolution` | object | Required width and height object |
 | `ui_preview` | string | Relative path to UI preview image |
 | `components_dir` | string | Relative component directory |
@@ -58,6 +58,12 @@ All JSON paths are relative to the package root and must use `/`.
 | --- | --- | --- |
 | `width` | integer | Positive integer |
 | `height` | integer | Positive integer |
+
+Device-specific resolution rules:
+
+- `mobile_landscape`: must be strict 16:9 landscape, recommended `1536x864` or `1280x720`
+- `pc_landscape`: must be PC landscape, allowing common 4:3, 3:2, or 16:9 canvases such as `1536x1024` or `1280x960`
+- legacy `mobile` / `pc`: accepted for backward compatibility and not upgraded in-place by the validator
 
 ### components[]
 
@@ -90,6 +96,7 @@ All JSON paths are relative to the package root and must use `/`.
 | --- | --- | --- |
 | `schema_version` | string | Must be `"1.0"` |
 | `source_asset_id` | string | Non-empty source UI preview asset id |
+| `device_type` | string | Optional for legacy packages; new output should match `manifest.device_type` |
 | `coordinate_space` | string | Must be `"ui_preview_pixels"` |
 | `components` | array | Non-empty component annotation list |
 
@@ -232,6 +239,9 @@ components\main_bottom_bar.png
 - optional transparent field
 - resource group enum
 - review status enum
+- `device_type` enum
+- `mobile_landscape` 16:9 landscape resolution rule
+- `pc_landscape` PC landscape resolution rule
 - relative path rules
 - referenced file existence
 

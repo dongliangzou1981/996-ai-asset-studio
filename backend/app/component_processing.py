@@ -54,6 +54,10 @@ COMPONENT_NAME_ZH = {
 
 
 def normalize_device_type(device_type: str) -> str:
+    if device_type == "pc_landscape":
+        return "pc_landscape"
+    if device_type == "mobile_landscape":
+        return "mobile_landscape"
     return "pc" if device_type in {"pc", "desktop"} else "mobile"
 
 
@@ -387,6 +391,7 @@ def process_ui_preview_components(
         "schema_version": SCHEMA_VERSION,
         "template": "main_ui",
         "source_asset_id": ui_preview.id,
+        "device_type": normalize_device_type(ui_preview.device_type),
         "coordinate_space": COORDINATE_SPACE,
         "components": annotation_components,
     }

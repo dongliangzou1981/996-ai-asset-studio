@@ -14,6 +14,15 @@ from PIL import Image
 STYLE_CODE_PATTERN = re.compile(r"^STYLE_(\d{4})$")
 
 
+def style_device_type(manifest: dict[str, Any]) -> str:
+    value = str(manifest.get("device_type") or "mobile_landscape")
+    if value == "mobile":
+        return "mobile_landscape"
+    if value in {"pc", "desktop"}:
+        return "pc_landscape"
+    return value
+
+
 def next_style_code(style_root: Path) -> str:
     style_root.mkdir(parents=True, exist_ok=True)
     highest = 0
@@ -74,6 +83,7 @@ def create_style_profile(
         "style_name": style_name,
         "source_job_id": str(manifest.get("generation_job_id") or package_dir.name),
         "source_asset_id": str(manifest.get("source_asset_id") or ""),
+        "device_type": style_device_type(manifest),
         "original_ui_preview": str(preview_path),
         "style_summary": f"{style_name}: 996 legend game UI style derived from source job output.",
         "color_palette": palette or ["#1A120E", "#D9A441", "#6E1F16"],
