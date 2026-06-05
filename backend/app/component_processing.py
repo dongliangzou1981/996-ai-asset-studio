@@ -33,6 +33,8 @@ CANDIDATE_RULES = [
 SCHEMA_VERSION = "1.0"
 PACKAGE_TYPE = "996-ready"
 COORDINATE_SPACE = "ui_preview_pixels"
+ASSET_MODES = {"ui_package", "resource_production"}
+DEFAULT_ASSET_MODE = "ui_package"
 
 COMPONENT_TYPE_BY_ID = {
     "main_bottom_bar": "bar",
@@ -41,6 +43,27 @@ COMPONENT_TYPE_BY_ID = {
     "minimap_area": "panel",
     "chat_panel": "panel",
     "skill_area": "panel",
+}
+
+RESOURCE_CATEGORY_BY_COMPONENT_TYPE = {
+    "bar": "layout_bar",
+    "panel": "panel_region",
+    "button": "button_asset",
+    "icon": "icon_asset",
+    "frame": "frame_asset",
+    "input": "input_asset",
+    "slot": "slot_asset",
+    "tab": "tab_asset",
+    "background": "background_asset",
+}
+
+RESOURCE_CATEGORY_BY_CANDIDATE_TYPE = {
+    "button_candidate": "button_asset",
+    "icon_candidate": "icon_asset",
+    "input_candidate": "input_asset",
+    "frame_candidate": "frame_asset",
+    "tab_candidate": "tab_asset",
+    "slot_candidate": "slot_asset",
 }
 
 COMPONENT_NAME_ZH = {
@@ -59,6 +82,43 @@ def normalize_device_type(device_type: str) -> str:
     if device_type == "mobile_landscape":
         return "mobile_landscape"
     return "pc" if device_type in {"pc", "desktop"} else "mobile"
+
+
+def normalize_asset_mode(asset_mode: Any) -> str:
+    value = str(asset_mode or DEFAULT_ASSET_MODE)
+    return value if value in ASSET_MODES else DEFAULT_ASSET_MODE
+
+
+def asset_metadata(asset: Asset) -> dict[str, Any]:
+    try:
+        data = json.loads(asset.metadata_json or "{}")
+    except json.JSONDecodeError:
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def asset_mode_from_preview(ui_preview: Asset) -> str:
+    return normalize_asset_mode(asset_metadata(ui_preview).get("asset_mode"))
+
+
+def resource_category(component_type: str) -> str:
+    return RESOURCE_CATEGORY_BY_COMPONENT_TYPE.get(component_type, "unknown_asset")
+
+
+def production_usage(component_type: str) -> str:
+    if component_type in {"button", "icon", "frame", "input", "slot", "tab"}:
+        return "reusable_996_asset"
+    if component_type in {"panel", "background", "bar"}:
+        return "layout_or_full_region"
+    return "manual_review_required"
+
+
+def transparent_policy() -> dict[str, Any]:
+    return {
+        "required_component_types": ["button", "icon", "frame", "input"],
+        "allowed_flat_component_types": ["panel", "background", "bar"],
+        "verification": "metadata_only",
+    }
 
 
 def transparent_metadata(component_type: str) -> dict[str, bool | str]:
@@ -220,9 +280,11 @@ def detect_component_candidates(image: Image.Image, candidate_dir: Path) -> list
             {
                 "candidate_id": candidate_id,
                 "candidate_type": candidate_type,
+                "resource_category": RESOURCE_CATEGORY_BY_CANDIDATE_TYPE.get(candidate_type, "unknown_asset"),
                 "bounds": bounds,
                 "confidence": candidate_confidence(image, bounds),
                 "image_path": f"candidates/{file_name}",
+                "transparent": transparent_metadata(candidate_type.replace("_candidate", "")),
                 "review_status": "pending",
             }
         )
@@ -252,6 +314,7 @@ def process_ui_preview_components(
     manifest_components: list[dict[str, Any]] = []
     annotation_components: list[dict[str, Any]] = []
     candidate_components: list[dict[str, Any]] = []
+    asset_mode = asset_mode_from_preview(ui_preview)
 
     with Image.open(source_path).convert("RGBA") as image:
         source_width, source_height = image.size
@@ -277,6 +340,9 @@ def process_ui_preview_components(
                 {
                     "component_id": component_id,
                     "component_type": schema_component_type,
+                    "asset_mode": asset_mode,
+                    "resource_category": resource_category(schema_component_type),
+                    "production_usage": production_usage(schema_component_type),
                     "resource_group": "main",
                     "file": component_file,
                     "bounds": bounds,
@@ -321,6 +387,9 @@ def process_ui_preview_components(
             annotation_components[-1].update(
                 {
                     "component_name_zh": component_name_zh,
+                    "asset_mode": asset_mode,
+                    "resource_category": resource_category(schema_component_type),
+                    "production_usage": production_usage(schema_component_type),
                     "resource_group": "main",
                     "bounds": bounds,
                     "style": {
@@ -376,6 +445,7 @@ def process_ui_preview_components(
         "schema_version": SCHEMA_VERSION,
         "package_type": PACKAGE_TYPE,
         "template": "main_ui",
+        "asset_mode": asset_mode,
         "source_asset_id": ui_preview.id,
         "generation_job_id": ui_preview.generation_job_id or ui_preview.id,
         "device_type": normalize_device_type(ui_preview.device_type),
@@ -385,25 +455,35 @@ def process_ui_preview_components(
         },
         "ui_preview": "ui_preview.png",
         "components_dir": "components",
+        "transparent_policy": transparent_policy(),
+        "resource_summary": {
+            "mode": asset_mode,
+            "classification": "template_and_candidate",
+            "transparent_metadata": "included",
+        },
         "components": manifest_components,
     }
     annotation = {
         "schema_version": SCHEMA_VERSION,
         "template": "main_ui",
+        "asset_mode": asset_mode,
         "source_asset_id": ui_preview.id,
         "device_type": normalize_device_type(ui_preview.device_type),
         "coordinate_space": COORDINATE_SPACE,
+        "transparent_policy": transparent_policy(),
         "components": annotation_components,
     }
     candidate_manifest = {
         "schema_version": SCHEMA_VERSION,
         "package_type": PACKAGE_TYPE,
+        "asset_mode": asset_mode,
         "detection_method": "rule_and_image_feature",
         "source_asset_id": ui_preview.id,
         "generation_job_id": ui_preview.generation_job_id or ui_preview.id,
         "ui_preview": "ui_preview.png",
         "candidates_dir": "candidates",
         "coordinate_space": COORDINATE_SPACE,
+        "transparent_policy": transparent_policy(),
         "candidates": candidate_components,
     }
 

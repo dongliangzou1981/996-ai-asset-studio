@@ -188,6 +188,7 @@ class BaseJobRunner(ABC):
             project = self.database.get_project(running.project_id) if running.project_id else None
             project_name = project.name if project else "Loose Project"
             device_type = str(input_data.get("device_type") or "mobile")
+            asset_mode = str(input_data.get("asset_mode") or "ui_package")
             width = int(input_data.get("width") or 1080)
             height = int(input_data.get("height") or 1920)
             ready_dir = self.upload_root / "996-ready" / running.id
@@ -211,6 +212,7 @@ class BaseJobRunner(ABC):
                     "job_type": running.job_type,
                     "generation_job_id": running.id,
                     "ready_dir": str(ready_dir),
+                    "asset_mode": asset_mode,
                 },
             )
             assets.append(preview_asset)
@@ -223,7 +225,7 @@ class BaseJobRunner(ABC):
                     file_path=annotated_path,
                     thumbnail_dir=thumbnail_dir,
                     device_type=device_type,
-                    metadata={"project_name": project_name, "generation_job_id": running.id},
+                    metadata={"project_name": project_name, "generation_job_id": running.id, "asset_mode": asset_mode},
                 )
             )
 
@@ -235,7 +237,7 @@ class BaseJobRunner(ABC):
                     file_path=component_path,
                     thumbnail_dir=thumbnail_dir,
                     device_type=device_type,
-                    metadata={"project_name": project_name, "generation_job_id": running.id},
+                    metadata={"project_name": project_name, "generation_job_id": running.id, "asset_mode": asset_mode},
                 )
             )
             component_processing = self.after_preview_asset(preview_asset)
@@ -246,6 +248,7 @@ class BaseJobRunner(ABC):
                 "project_id": running.project_id,
                 "provider_id": running.provider_id,
                 "device_type": device_type,
+                "asset_mode": asset_mode,
                 "resolution": [preview_width, preview_height],
                 "ready_dir": str(ready_dir),
                 "asset_ids": [asset.id for asset in assets],
@@ -420,6 +423,7 @@ class RealJobRunner(BaseJobRunner):
             project = self.database.get_project(running.project_id) if running.project_id else None
             project_name = project.name if project else "Loose Project"
             device_type = str(input_data.get("device_type") or "mobile")
+            asset_mode = str(input_data.get("asset_mode") or "ui_package")
             ready_dir = self.upload_root / "real-pipeline" / running.id
             preview_dir = ready_dir / "previews"
             thumbnail_dir = ready_dir / "thumbnails"
@@ -444,6 +448,7 @@ class RealJobRunner(BaseJobRunner):
                     "generation_job_id": running.id,
                     "provider_id": self.provider.id if self.provider else None,
                     "provider_type": self.provider.type if self.provider else "default",
+                    "asset_mode": asset_mode,
                 },
             )
             output = {
@@ -457,6 +462,7 @@ class RealJobRunner(BaseJobRunner):
                 "prompt": prompt,
                 "provider_id": self.provider.id if self.provider else None,
                 "provider_type": self.provider.type if self.provider else "default",
+                "asset_mode": asset_mode,
                 "preview_path": str(preview_path),
                 "thumbnail_path": asset.thumbnail_path,
                 "asset_id": asset.id,

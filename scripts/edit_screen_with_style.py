@@ -19,15 +19,19 @@ from app.db import StudioDatabase
 from app.job_runner import JobRunnerService, parse_json_object
 from app.schemas import AssetCreate, GenerationJobCreate, ProjectCreate
 from scripts.generate_screen_with_style import (
+    ASSET_MODES,
+    DEFAULT_ASSET_MODE,
     DEFAULT_DEVICE_TYPE,
     DEVICE_TYPES,
     SUPPORTED_SCREEN_TYPES,
+    asset_mode_prompt_line,
     copy_package_to_style_dir,
     device_prompt_line,
     ensure_real_provider_ready,
     generation_dimensions,
     image_dimensions,
     load_style,
+    normalize_asset_mode,
     normalize_generation_device_type,
     write_delivery_report,
 )
@@ -113,10 +117,12 @@ def build_style_edit_prompt(
     edit_request: str,
     source_preview_path: str | Path,
     device_type: str = DEFAULT_DEVICE_TYPE,
+    asset_mode: str = DEFAULT_ASSET_MODE,
 ) -> str:
     if screen_type not in SUPPORTED_SCREEN_TYPES:
         raise ValueError(f"screen_type must be one of {sorted(SUPPORTED_SCREEN_TYPES)}")
     normalized_device_type = normalize_generation_device_type(device_type)
+    normalized_asset_mode = normalize_asset_mode(asset_mode)
     target_width, target_height = generation_dimensions(normalized_device_type)
     style_code = str(style.get("style_code") or "")
     style_name = str(style.get("style_name") or style_code)
@@ -149,6 +155,7 @@ def build_style_edit_prompt(
             f"candidate_summary: {summarize_candidates(context)}",
             f"device_type: {normalized_device_type}",
             device_prompt_line(normalized_device_type),
+            asset_mode_prompt_line(normalized_asset_mode),
             f"Target canvas is {target_width}x{target_height} pixels.",
             "Output a single revised UI screen only, suitable for Component Processing, annotation, candidate detection, and 996-ready delivery.",
         ]
@@ -177,8 +184,10 @@ def write_edit_metadata_report(
     source_preview_path: str | Path,
     prompt: str,
     device_type: str = DEFAULT_DEVICE_TYPE,
+    asset_mode: str = DEFAULT_ASSET_MODE,
 ) -> dict[str, Any]:
     normalized_device_type = normalize_generation_device_type(device_type)
+    normalized_asset_mode = normalize_asset_mode(asset_mode)
     report = write_delivery_report(
         package_dir=package_dir,
         style_code=style_code,
@@ -187,6 +196,7 @@ def write_edit_metadata_report(
         screen_generation_mode="screen_edit",
         prompt=prompt,
         device_type=normalized_device_type,
+        asset_mode=normalized_asset_mode,
         reference_image_path=source_preview_path,
     )
     report["edit_metadata"] = {
@@ -195,6 +205,7 @@ def write_edit_metadata_report(
         "edit_mode": edit_mode,
         "style_code": style_code,
         "device_type": normalized_device_type,
+        "asset_mode": normalized_asset_mode,
         "source_preview_path": str(source_preview_path),
     }
     package_path = Path(package_dir)
@@ -209,6 +220,7 @@ def write_edit_metadata_report(
         f"<p>parent_generation_job_id: <code>{html.escape(parent_generation_job_id)}</code></p>"
         f"<p>edit_mode: <code>{html.escape(edit_mode)}</code></p>"
         f"<p>device_type: <code>{html.escape(normalized_device_type)}</code></p>"
+        f"<p>asset_mode: <code>{html.escape(normalized_asset_mode)}</code></p>"
         f"<p>edit_request: {html.escape(edit_request)}</p>"
         "</body></html>",
         encoding="utf-8",
@@ -229,6 +241,7 @@ def finalize_edit_package(
     source_preview_path: str | Path,
     prompt: str,
     device_type: str = DEFAULT_DEVICE_TYPE,
+    asset_mode: str = DEFAULT_ASSET_MODE,
 ) -> dict[str, Any]:
     generated_path = Path(generated_package)
     target_path = Path(target_package)
@@ -244,6 +257,7 @@ def finalize_edit_package(
         source_preview_path=source_preview_path,
         prompt=prompt,
         device_type=device_type,
+        asset_mode=asset_mode,
     )
     validation = validate_package(target_path)
     if not validation["ok"]:
@@ -272,8 +286,10 @@ def edit_screen_with_style(
     project_id: str | None = None,
     provider_id: str | None = None,
     device_type: str = DEFAULT_DEVICE_TYPE,
+    asset_mode: str = DEFAULT_ASSET_MODE,
 ) -> dict[str, Any]:
     normalized_device_type = normalize_generation_device_type(device_type)
+    normalized_asset_mode = normalize_asset_mode(asset_mode)
     target_width, target_height = generation_dimensions(normalized_device_type)
     source_package_path = Path(source_package)
     context = load_source_package_context(source_package_path)
@@ -289,6 +305,7 @@ def edit_screen_with_style(
         edit_request=edit_prompt,
         source_preview_path=source_preview_path,
         device_type=normalized_device_type,
+        asset_mode=normalized_asset_mode,
     )
 
     database = StudioDatabase(Path(database_path))
@@ -339,6 +356,7 @@ def edit_screen_with_style(
                     "style_code": style_code,
                     "screen_type": screen_type,
                     "screen_generation_mode": "screen_edit",
+                    "asset_mode": normalized_asset_mode,
                     "parent_generation_job_id": parent_job_id,
                     "edit_request": edit_prompt,
                     "edit_mode": EDIT_MODE,
@@ -388,6 +406,7 @@ def edit_screen_with_style(
         source_preview_path=source_preview_path,
         prompt=prompt,
         device_type=normalized_device_type,
+        asset_mode=normalized_asset_mode,
     )
 
 
@@ -404,6 +423,7 @@ def main() -> int:
     parser.add_argument("--project-id")
     parser.add_argument("--provider-id")
     parser.add_argument("--device-type", choices=sorted(DEVICE_TYPES), default=DEFAULT_DEVICE_TYPE)
+    parser.add_argument("--asset-mode", choices=sorted(ASSET_MODES), default=DEFAULT_ASSET_MODE)
     args = parser.parse_args()
 
     try:
@@ -419,6 +439,7 @@ def main() -> int:
             project_id=args.project_id,
             provider_id=args.provider_id,
             device_type=args.device_type,
+            asset_mode=args.asset_mode,
         )
     except Exception as exc:
         print(f"Failed to edit style-guided screen: {exc}", file=sys.stderr)

@@ -315,3 +315,32 @@ Out of scope:
 - Automatic transparent PNG generation
 - ZIP export
 - Cloud deployment
+
+## Resource Production
+
+Status: complete
+
+Scope:
+
+- Add `asset_mode` support with `ui_package` and `resource_production`.
+- Keep `ui_package` compatible with the existing 996-ready output chain.
+- Add Resource Production metadata to `manifest.json`, `annotation.json`, and `candidate_manifest.json`.
+- Add resource categories and production usage hints for 996 follow-up work.
+- Add package-level transparent policy metadata without generating transparent PNGs automatically.
+- Add a compact Job Center `Asset mode` selector for real UI generation.
+- Document the Resource Production contract in `docs/RESOURCE_PRODUCTION.md`.
+
+Out of scope:
+
+- Style extraction
+- OCR
+- YOLO
+- SAM
+- Cloud deployment
+- ZIP export
+- Database schema changes
+
+Verification:
+
+- Resource Production package metadata is covered by `tests/test_resource_production.py`.
+- Validator remains backward-compatible with older packages.

@@ -101,12 +101,15 @@ def test_component_processing_outputs_candidate_manifest_and_preview(tmp_path: P
         assert set(candidate) == {
             "candidate_id",
             "candidate_type",
+            "resource_category",
             "bounds",
             "confidence",
             "image_path",
+            "transparent",
             "review_status",
         }
         assert candidate["candidate_type"] in EXPECTED_CANDIDATE_TYPES
+        assert candidate["resource_category"].endswith("_asset")
         assert 0.0 <= candidate["confidence"] <= 1.0
         assert candidate["review_status"] == "pending"
         assert candidate["image_path"].startswith("candidates/")

@@ -4,6 +4,19 @@ import { FormEvent, useEffect, useState } from "react";
 
 import { AiProvider, Asset, BasePanel, GenerationJob, Project, StyleProfile, studioApi } from "@/lib/api";
 
+const ASSET_MODE_OPTIONS = [
+  {
+    value: "ui_package",
+    label: "UI package",
+    description: "保留完整界面、标注、切图和候选框，兼容旧生产链路。",
+  },
+  {
+    value: "resource_production",
+    label: "Resource production",
+    description: "优先产出可继续制作的按钮、图标、边框、输入框和透明资源元数据。",
+  },
+];
+
 type JobApi = Pick<
   typeof studioApi,
   | "createGenerationJob"
@@ -41,11 +54,14 @@ export function JobCenter({ api = studioApi }: { api?: JobApi }) {
   const [realReferenceImageId, setRealReferenceImageId] = useState<string | null>(null);
   const [realProviderId, setRealProviderId] = useState<string | null>(null);
   const [realPrompt, setRealPrompt] = useState("Create a polished game UI screen");
+  const [realAssetMode, setRealAssetMode] = useState("resource_production");
   const [realDevice, setRealDevice] = useState("mobile");
   const [realWidth, setRealWidth] = useState(1080);
   const [realHeight, setRealHeight] = useState(1920);
   const [providerId, setProviderId] = useState<string | null>(null);
-  const [inputJson, setInputJson] = useState("{\"device_type\":\"mobile\",\"width\":1080,\"height\":1920}");
+  const [inputJson, setInputJson] = useState(
+    "{\"device_type\":\"mobile\",\"asset_mode\":\"ui_package\",\"width\":1080,\"height\":1920}",
+  );
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -124,6 +140,7 @@ export function JobCenter({ api = studioApi }: { api?: JobApi }) {
         base_panel_id: realBasePanelId,
         reference_image_id: realReferenceImageId,
         prompt: realPrompt,
+        asset_mode: realAssetMode,
         device_type: realDevice,
         width: realWidth,
         height: realHeight,
@@ -369,6 +386,26 @@ export function JobCenter({ api = studioApi }: { api?: JobApi }) {
               value={realPrompt}
             />
           </label>
+          <div className="grid gap-2 rounded-md border border-studio-line bg-slate-50 p-3">
+            <label className="grid gap-1 text-sm font-medium">
+              Asset mode
+              <select
+                aria-label="Asset mode"
+                className="rounded-md border border-studio-line px-3 py-2 font-normal"
+                onChange={(event) => setRealAssetMode(event.target.value)}
+                value={realAssetMode}
+              >
+                {ASSET_MODE_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <p className="text-xs text-studio-muted">
+              {ASSET_MODE_OPTIONS.find((option) => option.value === realAssetMode)?.description}
+            </p>
+          </div>
           <label className="grid gap-1 text-sm font-medium">
             真实设备
             <select
@@ -529,6 +566,10 @@ export function JobCenter({ api = studioApi }: { api?: JobApi }) {
               <div>
                 <dt className="font-medium">输入</dt>
                 <dd className="break-all text-studio-muted">{selectedJob.input_json || "{}"}</dd>
+              </div>
+              <div>
+                <dt className="font-medium">Asset mode</dt>
+                <dd className="text-studio-muted">{String(selectedJobInput.asset_mode || "ui_package")}</dd>
               </div>
               <div>
                 <dt className="font-medium">项目</dt>

@@ -47,9 +47,12 @@ All JSON paths are relative to the package root and must use `/`.
 | `source_asset_id` | string | Non-empty source UI preview asset id |
 | `generation_job_id` | string | Non-empty generation job id |
 | `device_type` | string | Must be `mobile_landscape`, `pc_landscape`, or legacy `mobile` / `pc` |
+| `asset_mode` | string | Optional; `ui_package` or `resource_production` |
 | `resolution` | object | Required width and height object |
 | `ui_preview` | string | Relative path to UI preview image |
 | `components_dir` | string | Relative component directory |
+| `transparent_policy` | object | Optional Resource Production transparent policy |
+| `resource_summary` | object | Optional Resource Production summary |
 | `components` | array | Non-empty component list |
 
 ### resolution
@@ -71,6 +74,9 @@ Device-specific resolution rules:
 | --- | --- | --- |
 | `component_id` | string | Non-empty unique component id |
 | `component_type` | string | Must be one of Schema V1 component types |
+| `asset_mode` | string | Optional; `ui_package` or `resource_production` |
+| `resource_category` | string | Optional Resource Production category |
+| `production_usage` | string | Optional usage hint for 996 follow-up work |
 | `component_name_zh` | string | Non-empty Chinese display name |
 | `resource_group` | string | Must be one of Schema V1 resource groups |
 | `file` | string | Relative path to component PNG |
@@ -97,7 +103,9 @@ Device-specific resolution rules:
 | `schema_version` | string | Must be `"1.0"` |
 | `source_asset_id` | string | Non-empty source UI preview asset id |
 | `device_type` | string | Optional for legacy packages; new output should match `manifest.device_type` |
+| `asset_mode` | string | Optional; new Resource Production output should match `manifest.asset_mode` |
 | `coordinate_space` | string | Must be `"ui_preview_pixels"` |
+| `transparent_policy` | object | Optional Resource Production transparent policy |
 | `components` | array | Non-empty component annotation list |
 
 ### components[]
@@ -106,6 +114,9 @@ Device-specific resolution rules:
 | --- | --- | --- |
 | `component_id` | string | Non-empty component id |
 | `component_type` | string | Must be one of Schema V1 component types |
+| `asset_mode` | string | Optional; `ui_package` or `resource_production` |
+| `resource_category` | string | Optional Resource Production category |
+| `production_usage` | string | Optional usage hint for 996 follow-up work |
 | `component_name_zh` | string | Non-empty Chinese display name |
 | `resource_group` | string | Must be one of Schema V1 resource groups |
 | `bounds` | object | Same coordinate meaning as manifest |
@@ -191,6 +202,38 @@ skill_icon_c
 unknown
 ```
 
+## Resource Production Fields
+
+`asset_mode` values:
+
+```text
+ui_package
+resource_production
+```
+
+`resource_category` values:
+
+```text
+layout_bar
+panel_region
+button_asset
+icon_asset
+frame_asset
+input_asset
+slot_asset
+tab_asset
+background_asset
+unknown_asset
+```
+
+`transparent_policy` is optional. When present, it should include:
+
+| Field | Type | Rule |
+| --- | --- | --- |
+| `required_component_types` | array | String array |
+| `allowed_flat_component_types` | array | String array |
+| `verification` | string | Non-empty verification description |
+
 ## Review Status
 
 Schema V1 review statuses:
@@ -240,6 +283,7 @@ components\main_bottom_bar.png
 - resource group enum
 - review status enum
 - `device_type` enum
+- optional Resource Production `asset_mode`, `resource_category`, `production_usage`, and `transparent_policy`
 - `mobile_landscape` 16:9 landscape resolution rule
 - `pc_landscape` PC landscape resolution rule
 - relative path rules

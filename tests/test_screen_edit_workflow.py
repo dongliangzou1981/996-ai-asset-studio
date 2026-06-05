@@ -124,6 +124,7 @@ def test_finalize_edit_package_writes_metadata_without_overwriting_old_package(t
         "edit_mode": "prompt_fallback",
         "style_code": "STYLE_0001",
         "device_type": "mobile_landscape",
+        "asset_mode": "ui_package",
         "source_preview_path": str(old_package / "ui_preview.png"),
     }
     assert report["screen_generation_mode"] == "screen_edit"

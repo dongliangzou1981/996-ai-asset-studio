@@ -11,6 +11,19 @@ PACKAGE_TYPE = "996-ready"
 COORDINATE_SPACE = "ui_preview_pixels"
 
 DEVICE_TYPES = {"mobile", "pc", "mobile_landscape", "pc_landscape"}
+ASSET_MODES = {"ui_package", "resource_production"}
+RESOURCE_CATEGORIES = {
+    "layout_bar",
+    "panel_region",
+    "button_asset",
+    "icon_asset",
+    "frame_asset",
+    "input_asset",
+    "slot_asset",
+    "tab_asset",
+    "background_asset",
+    "unknown_asset",
+}
 COMPONENT_TYPES = {
     "panel",
     "bar",
@@ -274,6 +287,28 @@ def validate_transparent_field(
     return ok
 
 
+def validate_transparent_policy(value: Any, label: str, errors: list[str]) -> bool:
+    if value is None:
+        return True
+    if not isinstance(value, dict):
+        errors.append(f"{label}.transparent_policy must be an object")
+        return False
+    ok = True
+    required_types = value.get("required_component_types")
+    allowed_flat = value.get("allowed_flat_component_types")
+    if not isinstance(required_types, list) or not all(isinstance(item, str) for item in required_types):
+        errors.append(f"{label}.transparent_policy.required_component_types must be a string array")
+        ok = False
+    if not isinstance(allowed_flat, list) or not all(isinstance(item, str) for item in allowed_flat):
+        errors.append(f"{label}.transparent_policy.allowed_flat_component_types must be a string array")
+        ok = False
+    verification = value.get("verification")
+    if not isinstance(verification, str) or not verification:
+        errors.append(f"{label}.transparent_policy.verification must be a string")
+        ok = False
+    return ok
+
+
 def validate_manifest_schema(manifest: dict[str, Any], errors: list[str]) -> dict[str, bool]:
     checks = {
         "schema_v1": True,
@@ -282,6 +317,7 @@ def validate_manifest_schema(manifest: dict[str, Any], errors: list[str]) -> dic
         "device_resolution": True,
         "component_classification": True,
         "transparent_fields": True,
+        "resource_production_fields": True,
     }
     required = [
         "schema_version",
@@ -309,6 +345,9 @@ def validate_manifest_schema(manifest: dict[str, Any], errors: list[str]) -> dic
     checks["field_types"] = expect_enum(manifest.get("device_type"), DEVICE_TYPES, "manifest.device_type", errors) and checks["field_types"]
     checks["field_types"] = expect_string(manifest, "ui_preview", "manifest", errors) and checks["field_types"]
     checks["field_types"] = expect_string(manifest, "components_dir", "manifest", errors) and checks["field_types"]
+    if "asset_mode" in manifest:
+        checks["resource_production_fields"] = expect_enum(manifest.get("asset_mode"), ASSET_MODES, "manifest.asset_mode", errors) and checks["resource_production_fields"]
+    checks["resource_production_fields"] = validate_transparent_policy(manifest.get("transparent_policy"), "manifest", errors) and checks["resource_production_fields"]
 
     resolution = manifest.get("resolution")
     if not isinstance(resolution, dict):
@@ -352,6 +391,12 @@ def validate_manifest_schema(manifest: dict[str, Any], errors: list[str]) -> dic
             seen_ids.add(component_id)
         checks["component_classification"] = expect_enum(component.get("component_type"), COMPONENT_TYPES, f"{label}.component_type", errors) and checks["component_classification"]
         checks["component_classification"] = expect_enum(component.get("resource_group"), RESOURCE_GROUPS, f"{label}.resource_group", errors) and checks["component_classification"]
+        if "asset_mode" in component:
+            checks["resource_production_fields"] = expect_enum(component.get("asset_mode"), ASSET_MODES, f"{label}.asset_mode", errors) and checks["resource_production_fields"]
+        if "resource_category" in component:
+            checks["resource_production_fields"] = expect_enum(component.get("resource_category"), RESOURCE_CATEGORIES, f"{label}.resource_category", errors) and checks["resource_production_fields"]
+        if "production_usage" in component:
+            checks["resource_production_fields"] = expect_string(component, "production_usage", label, errors) and checks["resource_production_fields"]
         checks["field_types"] = expect_string(component, "component_name_zh", label, errors) and checks["field_types"]
         checks["field_types"] = expect_string(component, "file", label, errors) and checks["field_types"]
         checks["field_types"] = expect_bounds(component.get("bounds"), f"{label}.bounds", errors) and checks["field_types"]
@@ -373,6 +418,7 @@ def validate_annotation_schema(annotation: dict[str, Any], errors: list[str]) ->
         "field_types": True,
         "component_classification": True,
         "transparent_fields": True,
+        "resource_production_fields": True,
     }
     required = ["schema_version", "source_asset_id", "coordinate_space", "components"]
     for field in required:
@@ -388,6 +434,9 @@ def validate_annotation_schema(annotation: dict[str, Any], errors: list[str]) ->
     checks["field_types"] = expect_string(annotation, "source_asset_id", "annotation", errors) and checks["field_types"]
     if "device_type" in annotation:
         checks["field_types"] = expect_enum(annotation.get("device_type"), DEVICE_TYPES, "annotation.device_type", errors) and checks["field_types"]
+    if "asset_mode" in annotation:
+        checks["resource_production_fields"] = expect_enum(annotation.get("asset_mode"), ASSET_MODES, "annotation.asset_mode", errors) and checks["resource_production_fields"]
+    checks["resource_production_fields"] = validate_transparent_policy(annotation.get("transparent_policy"), "annotation", errors) and checks["resource_production_fields"]
     components = annotation.get("components")
     if not isinstance(components, list) or not components:
         errors.append("annotation.components must be a non-empty list")
@@ -417,6 +466,12 @@ def validate_annotation_schema(annotation: dict[str, Any], errors: list[str]) ->
         checks["field_types"] = expect_string(component, "component_id", label, errors) and checks["field_types"]
         checks["component_classification"] = expect_enum(component.get("component_type"), COMPONENT_TYPES, f"{label}.component_type", errors) and checks["component_classification"]
         checks["component_classification"] = expect_enum(component.get("resource_group"), RESOURCE_GROUPS, f"{label}.resource_group", errors) and checks["component_classification"]
+        if "asset_mode" in component:
+            checks["resource_production_fields"] = expect_enum(component.get("asset_mode"), ASSET_MODES, f"{label}.asset_mode", errors) and checks["resource_production_fields"]
+        if "resource_category" in component:
+            checks["resource_production_fields"] = expect_enum(component.get("resource_category"), RESOURCE_CATEGORIES, f"{label}.resource_category", errors) and checks["resource_production_fields"]
+        if "production_usage" in component:
+            checks["resource_production_fields"] = expect_string(component, "production_usage", label, errors) and checks["resource_production_fields"]
         checks["field_types"] = expect_string(component, "component_name_zh", label, errors) and checks["field_types"]
         checks["field_types"] = expect_bounds(component.get("bounds"), f"{label}.bounds", errors) and checks["field_types"]
         checks["field_types"] = expect_bool(component, "requires_manual_review", label, errors) and checks["field_types"]
@@ -482,6 +537,7 @@ def validate_package(package_dir: str | Path) -> dict[str, Any]:
         "device_resolution": True,
         "component_classification": True,
         "transparent_fields": True,
+        "resource_production_fields": True,
         "ui_preview_exists": False,
         "component_paths_relative": True,
         "component_files_exist": True,

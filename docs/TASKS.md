@@ -351,3 +351,18 @@ Chinese-first principle:
 - [x] Keep database schema unchanged
 - [x] Keep business pipeline unchanged
 - [x] Avoid component recognition upgrades, OCR, YOLO, SAM, automatic transparent PNG generation, ZIP export, and cloud deployment
+
+## Resource Production
+
+- [x] Add `asset_mode` values: `ui_package` and `resource_production`
+- [x] Keep `ui_package` as the backward-compatible package mode
+- [x] Add `resource_production` prompt guidance for reusable 996 resources
+- [x] Write `asset_mode` into job input, output JSON, delivery reports, and 996-ready metadata
+- [x] Add resource categories for layout bars, panels, buttons, icons, frames, inputs, slots, and tabs
+- [x] Add package-level transparent policy metadata
+- [x] Keep transparent PNG generation as metadata-only, not automatic image processing
+- [x] Add a compact Job Center `Asset mode` selector
+- [x] Add `docs/RESOURCE_PRODUCTION.md`
+- [x] Add Resource Production regression tests
+- [x] Keep database schema unchanged
+- [x] Avoid style extraction, OCR, YOLO, SAM, ZIP export, cloud deployment, and user systems

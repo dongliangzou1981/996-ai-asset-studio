@@ -26,6 +26,8 @@ SUPPORTED_SCREEN_TYPES = {"main_ui", "role_ui", "bag_ui", "shop_ui", "activity_u
 REAL_PROVIDER_TYPES = {"openai", "ofox"}
 DEVICE_TYPES = {"mobile_landscape", "pc_landscape"}
 DEFAULT_DEVICE_TYPE = "mobile_landscape"
+ASSET_MODES = {"ui_package", "resource_production"}
+DEFAULT_ASSET_MODE = "ui_package"
 
 DEVICE_PROFILES = {
     "mobile_landscape": {
@@ -91,6 +93,25 @@ def device_prompt_line(device_type: str) -> str:
     return str(DEVICE_PROFILES[normalized]["prompt"])
 
 
+def normalize_asset_mode(asset_mode: str | None = None) -> str:
+    if not asset_mode:
+        return DEFAULT_ASSET_MODE
+    if asset_mode not in ASSET_MODES:
+        raise ValueError(f"asset_mode must be one of {sorted(ASSET_MODES)}")
+    return asset_mode
+
+
+def asset_mode_prompt_line(asset_mode: str) -> str:
+    normalized = normalize_asset_mode(asset_mode)
+    if normalized == "resource_production":
+        return (
+            "asset_mode: resource_production. Prioritize reusable 996 production resources: "
+            "clear separable buttons, icons, frames, inputs, tabs, slots, transparent-background-ready parts, "
+            "and clean component boundaries for later editing."
+        )
+    return "asset_mode: ui_package. Generate a complete 996-ready UI package with preview, annotation, slices, and candidates."
+
+
 def build_reference_guided_prompt(
     *,
     style: dict[str, Any],
@@ -98,10 +119,12 @@ def build_reference_guided_prompt(
     reference_image_path: str | Path | None = None,
     user_prompt: str = "",
     device_type: str = DEFAULT_DEVICE_TYPE,
+    asset_mode: str = DEFAULT_ASSET_MODE,
 ) -> str:
     if screen_type not in SUPPORTED_SCREEN_TYPES:
         raise ValueError(f"screen_type must be one of {sorted(SUPPORTED_SCREEN_TYPES)}")
     normalized_device_type = normalize_generation_device_type(device_type)
+    normalized_asset_mode = normalize_asset_mode(asset_mode)
     target_width, target_height = generation_dimensions(normalized_device_type)
     style_code = str(style.get("style_code") or "")
     style_name = str(style.get("style_name") or style_code)
@@ -130,6 +153,7 @@ def build_reference_guided_prompt(
         f"texture_style: {style.get('texture_style', '')}",
         f"device_type: {normalized_device_type}",
         device_prompt_line(normalized_device_type),
+        asset_mode_prompt_line(normalized_asset_mode),
         f"Target canvas is {target_width}x{target_height} pixels.",
         "Output a single screen only. Do not create a collage, tutorial page, or multi-screen sheet.",
         "Make it suitable for later slicing and annotation: buttons, icons, inputs, frames, tabs, and inventory slots should have clear boundaries.",
@@ -189,6 +213,7 @@ def write_delivery_report(
     screen_generation_mode: str,
     prompt: str,
     device_type: str | None = None,
+    asset_mode: str | None = None,
     reference_image_path: str | Path | None = None,
 ) -> dict[str, Any]:
     package_path = Path(package_dir)
@@ -198,6 +223,7 @@ def write_delivery_report(
         "generation_job_id": generation_job_id,
         "screen_generation_mode": screen_generation_mode,
         "device_type": normalize_generation_device_type(device_type),
+        "asset_mode": normalize_asset_mode(asset_mode),
         "reference_image_path": str(reference_image_path) if reference_image_path else None,
         "prompt": prompt,
         "outputs": {
@@ -242,10 +268,12 @@ def generate_screen_with_style(
     project_id: str | None = None,
     provider_id: str | None = None,
     device_type: str = DEFAULT_DEVICE_TYPE,
+    asset_mode: str = DEFAULT_ASSET_MODE,
 ) -> dict[str, Any]:
     if screen_type not in SUPPORTED_SCREEN_TYPES:
         raise ValueError(f"screen_type must be one of {sorted(SUPPORTED_SCREEN_TYPES)}")
     normalized_device_type = normalize_generation_device_type(device_type)
+    normalized_asset_mode = normalize_asset_mode(asset_mode)
     target_width, target_height = generation_dimensions(normalized_device_type)
     reference_path = Path(reference_image) if reference_image else None
     if reference_path is not None and not reference_path.exists():
@@ -258,6 +286,7 @@ def generate_screen_with_style(
         reference_image_path=reference_path,
         user_prompt=user_prompt,
         device_type=normalized_device_type,
+        asset_mode=normalized_asset_mode,
     )
 
     database = StudioDatabase(Path(database_path))
@@ -304,6 +333,7 @@ def generate_screen_with_style(
                     "style_code": style_code,
                     "screen_type": screen_type,
                     "screen_generation_mode": screen_generation_mode,
+                    "asset_mode": normalized_asset_mode,
                     "reference_image_id": reference_asset_id,
                     "reference_image_path": str(reference_path) if reference_path else None,
                     "device_type": normalized_device_type,
@@ -348,6 +378,7 @@ def generate_screen_with_style(
         screen_generation_mode=screen_generation_mode,
         prompt=prompt,
         device_type=normalized_device_type,
+        asset_mode=normalized_asset_mode,
         reference_image_path=reference_path,
     )
     report = validate_package(final_package)
@@ -358,6 +389,7 @@ def generate_screen_with_style(
         "style_code": style_code,
         "screen_type": screen_type,
         "device_type": normalized_device_type,
+        "asset_mode": normalized_asset_mode,
         "generation_job_id": completed.id,
         "reference_asset_id": reference_asset_id,
         "prompt": prompt,
@@ -379,6 +411,7 @@ def main() -> int:
     parser.add_argument("--project-id")
     parser.add_argument("--provider-id")
     parser.add_argument("--device-type", choices=sorted(DEVICE_TYPES), default=DEFAULT_DEVICE_TYPE)
+    parser.add_argument("--asset-mode", choices=sorted(ASSET_MODES), default=DEFAULT_ASSET_MODE)
     args = parser.parse_args()
 
     try:
@@ -393,6 +426,7 @@ def main() -> int:
             project_id=args.project_id,
             provider_id=args.provider_id,
             device_type=args.device_type,
+            asset_mode=args.asset_mode,
         )
     except Exception as exc:
         print(f"Failed to generate style-guided screen: {exc}", file=sys.stderr)

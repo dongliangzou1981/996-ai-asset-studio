@@ -19,13 +19,17 @@ from app.job_runner import JobRunnerService, parse_json_object
 from app.schemas import AssetCreate, GenerationJobCreate, ProjectCreate
 from scripts.create_style_code import create_style_code
 from scripts.generate_screen_with_style import (
+    ASSET_MODES,
     DEFAULT_DEVICE_TYPE,
+    DEFAULT_ASSET_MODE,
     DEVICE_TYPES,
+    asset_mode_prompt_line,
     copy_package_to_style_dir,
     device_prompt_line,
     ensure_real_provider_ready,
     generation_dimensions,
     image_dimensions,
+    normalize_asset_mode,
     normalize_generation_device_type,
     target_package_dir,
     write_delivery_report,
@@ -64,6 +68,7 @@ def build_master_main_ui_prompt(
     reference_image_path: str | Path | None = None,
     user_prompt: str = "",
     device_type: str = DEFAULT_DEVICE_TYPE,
+    asset_mode: str = DEFAULT_ASSET_MODE,
 ) -> str:
     if screen_generation_mode not in SCREEN_GENERATION_MODES:
         raise ValueError(f"screen_generation_mode must be one of {sorted(SCREEN_GENERATION_MODES)}")
@@ -72,6 +77,7 @@ def build_master_main_ui_prompt(
     if screen_generation_mode == "reference_guided" and not reference_image_path:
         raise ValueError("reference_guided mode requires reference_image_path")
     normalized_device_type = normalize_generation_device_type(device_type)
+    normalized_asset_mode = normalize_asset_mode(asset_mode)
     target_width, target_height = generation_dimensions(normalized_device_type)
 
     mode_line = (
@@ -85,6 +91,7 @@ def build_master_main_ui_prompt(
         f"style_name: {style_name}",
         f"device_type: {normalized_device_type}",
         device_prompt_line(normalized_device_type),
+        asset_mode_prompt_line(normalized_asset_mode),
         f"Target canvas is {target_width}x{target_height} pixels.",
         mode_line,
         "The layout may be adjusted, but the basic operation logic must not be broken.",
@@ -129,6 +136,7 @@ def save_master_style_artifacts(
             screen_generation_mode="master_style_snapshot",
             prompt="",
             device_type=manifest.get("device_type"),
+            asset_mode=manifest.get("asset_mode"),
         )
 
     for name in [
@@ -159,12 +167,14 @@ def create_master_style_from_package(
     prompt: str = "",
     reference_image_path: str | Path | None = None,
     device_type: str = DEFAULT_DEVICE_TYPE,
+    asset_mode: str = DEFAULT_ASSET_MODE,
 ) -> dict[str, Any]:
     if screen_type != "main_ui":
         raise ValueError("Master style package creation must use main_ui")
     if screen_generation_mode not in SCREEN_GENERATION_MODES:
         raise ValueError(f"screen_generation_mode must be one of {sorted(SCREEN_GENERATION_MODES)}")
     normalized_device_type = normalize_generation_device_type(device_type)
+    normalized_asset_mode = normalize_asset_mode(asset_mode)
 
     source_package = Path(package_dir)
     style = create_style_code(package_dir=source_package, style_root=style_root, style_name=style_name)
@@ -185,6 +195,7 @@ def create_master_style_from_package(
         screen_generation_mode=screen_generation_mode,
         prompt=prompt,
         device_type=normalized_device_type,
+        asset_mode=normalized_asset_mode,
         reference_image_path=reference_image_path,
     )
     style_dir = save_master_style_artifacts(style=style, package_dir=final_package, style_root=style_root)
@@ -196,6 +207,7 @@ def create_master_style_from_package(
         "style_dir": str(style_dir),
         "screen_type": screen_type,
         "device_type": normalized_device_type,
+        "asset_mode": normalized_asset_mode,
         "generation_job_id": generation_job_id,
         "package_dir": str(final_package),
         "delivery_report": delivery_report,
@@ -215,8 +227,10 @@ def run_master_style_workflow(
     project_id: str | None = None,
     provider_id: str | None = None,
     device_type: str = DEFAULT_DEVICE_TYPE,
+    asset_mode: str = DEFAULT_ASSET_MODE,
 ) -> dict[str, Any]:
     normalized_device_type = normalize_generation_device_type(device_type)
+    normalized_asset_mode = normalize_asset_mode(asset_mode)
     target_width, target_height = generation_dimensions(normalized_device_type)
     reference_path = Path(reference_image) if reference_image else None
     if reference_path is not None and not reference_path.exists():
@@ -228,6 +242,7 @@ def run_master_style_workflow(
         reference_image_path=reference_path,
         user_prompt=prompt,
         device_type=normalized_device_type,
+        asset_mode=normalized_asset_mode,
     )
 
     database = StudioDatabase(Path(database_path))
@@ -273,6 +288,7 @@ def run_master_style_workflow(
                     "screen_generation_mode": screen_generation_mode,
                     "screen_type": "main_ui",
                     "style_name": style_name,
+                    "asset_mode": normalized_asset_mode,
                     "reference_image_id": reference_asset_id,
                     "reference_image_path": str(reference_path) if reference_path else None,
                     "device_type": normalized_device_type,
@@ -309,6 +325,7 @@ def run_master_style_workflow(
         prompt=master_prompt,
         reference_image_path=reference_path,
         device_type=normalized_device_type,
+        asset_mode=normalized_asset_mode,
     )
 
 
@@ -324,6 +341,7 @@ def main() -> int:
     parser.add_argument("--project-id")
     parser.add_argument("--provider-id")
     parser.add_argument("--device-type", choices=sorted(DEVICE_TYPES), default=DEFAULT_DEVICE_TYPE)
+    parser.add_argument("--asset-mode", choices=sorted(ASSET_MODES), default=DEFAULT_ASSET_MODE)
     args = parser.parse_args()
 
     try:
@@ -338,6 +356,7 @@ def main() -> int:
             project_id=args.project_id,
             provider_id=args.provider_id,
             device_type=args.device_type,
+            asset_mode=args.asset_mode,
         )
     except Exception as exc:
         print(f"Failed to run master style workflow: {exc}", file=sys.stderr)

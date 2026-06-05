@@ -175,7 +175,7 @@ test("creates, shows details, and retries failed generation jobs with Chinese la
     job_type: "asset_prepare",
     status: "pending",
     progress: 0,
-    input_json: "{\"device_type\":\"mobile\",\"width\":1080,\"height\":1920}",
+    input_json: "{\"device_type\":\"mobile\",\"asset_mode\":\"ui_package\",\"width\":1080,\"height\":1920}",
     output_json: "",
     output_preview_path: "",
     error_message: "",
@@ -281,7 +281,7 @@ test("creates a real UI generation placeholder job from the Chinese generation w
     status: "pending",
     progress: 0,
     input_json:
-      "{\"project_id\":\"project-1\",\"style_profile_id\":\"style-1\",\"base_panel_id\":\"panel-1\",\"reference_image_id\":\"reference-1\",\"prompt\":\"Battle pass shop\",\"device_type\":\"mobile\",\"width\":1080,\"height\":1920}",
+      "{\"project_id\":\"project-1\",\"style_profile_id\":\"style-1\",\"base_panel_id\":\"panel-1\",\"reference_image_id\":\"reference-1\",\"prompt\":\"Battle pass shop\",\"asset_mode\":\"resource_production\",\"device_type\":\"mobile\",\"width\":1080,\"height\":1920}",
     output_json: "",
     output_preview_path: "",
     error_message: "",
@@ -309,6 +309,7 @@ test("creates a real UI generation placeholder job from the Chinese generation w
   await user.selectOptions(screen.getByLabelText("真实提供商"), "provider-1");
   await user.clear(screen.getByLabelText("Prompt"));
   await user.type(screen.getByLabelText("Prompt"), "Battle pass shop");
+  expect(screen.getByText(/优先产出可继续制作/)).toBeInTheDocument();
   await user.selectOptions(screen.getByLabelText("真实设备"), "mobile");
   await user.clear(screen.getByLabelText("真实宽度"));
   await user.type(screen.getByLabelText("真实宽度"), "1080");
@@ -328,6 +329,7 @@ test("creates a real UI generation placeholder job from the Chinese generation w
       base_panel_id: "panel-1",
       reference_image_id: "reference-1",
       prompt: "Battle pass shop",
+      asset_mode: "resource_production",
       device_type: "mobile",
       width: 1080,
       height: 1920,
