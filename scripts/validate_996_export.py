@@ -54,6 +54,34 @@ REQUIRED_FILES = {
 }
 
 
+def detect_package_layout(root: Path) -> dict[str, str | None]:
+    parts = root.parts
+    for index, part in enumerate(parts):
+        if part != "996-ready":
+            continue
+        remaining = parts[index + 1 :]
+        if len(remaining) >= 3 and remaining[0].startswith("STYLE_"):
+            return {
+                "mode": "style_guided",
+                "style_code": remaining[0],
+                "screen_type": remaining[1],
+                "generation_job_id": remaining[2],
+            }
+        if remaining:
+            return {
+                "mode": "direct",
+                "style_code": None,
+                "screen_type": None,
+                "generation_job_id": remaining[0],
+            }
+    return {
+        "mode": "unknown",
+        "style_code": None,
+        "screen_type": None,
+        "generation_job_id": root.name,
+    }
+
+
 def load_json(path: Path, errors: list[str]) -> dict[str, Any]:
     try:
         data = json.loads(path.read_text(encoding="utf-8"))
@@ -521,6 +549,7 @@ def validate_package(package_dir: str | Path) -> dict[str, Any]:
         "ok": ok,
         "schema_version": SCHEMA_VERSION if checks["schema_v1"] else None,
         "package_dir": str(root),
+        "layout": detect_package_layout(root),
         "checks": checks,
         "files": {
             "manifest": str(manifest_path),
