@@ -41,6 +41,9 @@ export default function Home() {
             <Link className="rounded-md border border-studio-line bg-white px-4 py-3 text-sm font-semibold" href="/job-center">
               任务中心
             </Link>
+            <Link className="rounded-md border border-studio-line bg-white px-4 py-3 text-sm font-semibold" href="/studio">
+              生产工作台
+            </Link>
             <Link className="rounded-md border border-studio-line bg-white px-4 py-3 text-sm font-semibold" href="/providers">
               提供商管理
             </Link>

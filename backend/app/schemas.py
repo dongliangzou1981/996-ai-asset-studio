@@ -295,3 +295,62 @@ class ProviderHealth(BaseModel):
 
 class ProviderHealthList(BaseModel):
     items: list[ProviderHealth]
+
+
+ProductionDeviceType = Literal["mobile_landscape", "pc_landscape"]
+ProductionAssetMode = Literal["ui_package", "resource_production"]
+ProductionStyleSource = Literal["new_style", "existing_style"]
+ProductionScreenType = Literal["main_ui", "role_ui", "bag_ui", "shop_ui", "activity_ui"]
+
+
+class ProductionStudioStyleCode(BaseModel):
+    style_code: str
+    style_name: str
+    source_job_id: str = ""
+    device_type: str = ""
+
+
+class ProductionStudioStyleCodeList(BaseModel):
+    items: list[ProductionStudioStyleCode]
+
+
+class ProductionStudioRequest(BaseModel):
+    device_type: ProductionDeviceType = "mobile_landscape"
+    asset_mode: ProductionAssetMode = "resource_production"
+    style_source: ProductionStyleSource = "new_style"
+    style_code: str | None = None
+    screen_types: list[ProductionScreenType] = Field(default_factory=lambda: ["main_ui"])
+    style_name: str = "996 UI Style"
+    prompt: str = ""
+
+    @model_validator(mode="after")
+    def validate_style_selection(self) -> "ProductionStudioRequest":
+        if not self.screen_types:
+            raise ValueError("screen_types must include at least one screen")
+        if self.style_source == "existing_style" and not self.style_code:
+            raise ValueError("style_code is required when style_source is existing_style")
+        return self
+
+
+class ProductionStudioScreenResult(BaseModel):
+    screen_type: ProductionScreenType
+    generation_job_id: str
+    status: str
+    package_dir: str
+    ui_preview_url: str
+    delivery_report_url: str
+    candidate_preview_url: str
+    component_quality_report_url: str
+    components_count: int
+    candidates_count: int
+    validator_ok: bool
+    missing_semantic_icons: bool
+    common_icons_note: str
+
+
+class ProductionStudioResponse(BaseModel):
+    style_code: str
+    device_type: ProductionDeviceType
+    asset_mode: ProductionAssetMode
+    style_source: ProductionStyleSource
+    results: list[ProductionStudioScreenResult]

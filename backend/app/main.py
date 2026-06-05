@@ -14,6 +14,8 @@ from app.db import StudioDatabase
 from app.job_runner import JobRunnerService
 from app.mock_worker import run_mock_generation
 from app.provider_security import provider_health
+from app.production_studio import list_style_codes as list_production_style_codes
+from app.production_studio import run_production_studio
 from app.schema import TABLE_NAMES
 from app.schemas import (
     AiProvider,
@@ -32,6 +34,9 @@ from app.schemas import (
     MockUiGenerationRequest,
     ProviderHealth,
     ProviderHealthList,
+    ProductionStudioRequest,
+    ProductionStudioResponse,
+    ProductionStudioStyleCodeList,
     Project,
     ProjectCreate,
     ProjectList,
@@ -116,6 +121,31 @@ def create_app(database_path: str | Path | None = None, upload_dir: str | Path |
     @app.get("/schema/tables")
     def schema_tables() -> dict[str, list[str]]:
         return {"tables": TABLE_NAMES}
+
+    @app.get("/production-studio/style-codes", response_model=ProductionStudioStyleCodeList)
+    def production_studio_style_codes() -> ProductionStudioStyleCodeList:
+        return ProductionStudioStyleCodeList(items=list_production_style_codes())
+
+    @app.post("/production-studio/generate", response_model=ProductionStudioResponse)
+    def production_studio_generate(payload: ProductionStudioRequest) -> ProductionStudioResponse:
+        try:
+            return run_production_studio(
+                payload=payload,
+                database_path=database.database_path,
+                upload_root=upload_root,
+            )
+        except (FileNotFoundError, RuntimeError, ValueError) as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.get("/production-studio/files/{file_path:path}")
+    def get_production_studio_file(file_path: str) -> FileResponse:
+        candidate = (upload_root / file_path).resolve()
+        upload_root_resolved = upload_root.resolve()
+        if not candidate.is_relative_to(upload_root_resolved):
+            raise HTTPException(status_code=400, detail="File path must stay inside upload root")
+        if not candidate.exists() or not candidate.is_file():
+            raise HTTPException(status_code=404, detail="Production studio file not found")
+        return FileResponse(candidate)
 
     @app.post("/projects", response_model=Project, status_code=status.HTTP_201_CREATED)
     def create_project(payload: ProjectCreate) -> Project:

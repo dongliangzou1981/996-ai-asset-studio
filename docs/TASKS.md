@@ -379,3 +379,42 @@ Chinese-first principle:
 - [x] Validate quality report structure when present
 - [x] Keep older packages without quality reports valid
 - [x] Avoid database changes, ZIP export, cloud deployment, OCR, YOLO, SAM, and model training
+
+## Sprint 16
+
+- [x] Generate `main_ui`
+- [x] Generate `role_ui`
+- [x] Generate `bag_ui`
+- [x] Generate `shop_ui`
+- [x] Generate `activity_ui`
+- [x] Use a single `STYLE_CODE`
+- [x] Use `mobile_landscape`
+- [x] Use `resource_production`
+- [x] Verify every package with `validate_996_export.py`
+- [x] Add `docs/FIRST_USABLE_996_UI_PACKAGE_REPORT.md`
+- [x] Document that semantic small icons still need follow-up work
+
+## Sprint 17
+
+- [x] Add `/studio` Production Studio page
+- [x] Add device type selection
+- [x] Add output mode selection
+- [x] Add style source selection
+- [x] Add existing `STYLE_CODE` selection
+- [x] Add screen type checkboxes
+- [x] Add style name input
+- [x] Add prompt input
+- [x] Add `生成 UI 资源` action
+- [x] Add backend endpoint to list local `STYLE_CODE` folders
+- [x] Add backend endpoint to run the existing production generation chain
+- [x] Show `ui_preview` thumbnails
+- [x] Show 996-ready package paths
+- [x] Show component and candidate counts
+- [x] Show validator status
+- [x] Link to delivery, candidate preview, and component quality reports
+- [x] Show common icon semantic naming limitation
+- [x] Add `docs/PRODUCTION_STUDIO_UI.md`
+- [x] Add backend Production Studio tests
+- [x] Add frontend Production Studio tests
+- [x] Keep Job Center compatible
+- [x] Avoid database changes, ZIP export, cloud deployment, user systems, OCR, YOLO, SAM, and model training

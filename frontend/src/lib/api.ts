@@ -162,6 +162,52 @@ export type ComponentProcessingResult = {
   component_asset_ids: string[];
 };
 
+export type ProductionDeviceType = "mobile_landscape" | "pc_landscape";
+export type ProductionAssetMode = "ui_package" | "resource_production";
+export type ProductionStyleSource = "new_style" | "existing_style";
+export type ProductionScreenType = "main_ui" | "role_ui" | "bag_ui" | "shop_ui" | "activity_ui";
+
+export type ProductionStudioStyleCode = {
+  style_code: string;
+  style_name: string;
+  source_job_id: string;
+  device_type: string;
+};
+
+export type ProductionStudioInput = {
+  device_type: ProductionDeviceType;
+  asset_mode: ProductionAssetMode;
+  style_source: ProductionStyleSource;
+  style_code?: string | null;
+  screen_types: ProductionScreenType[];
+  style_name: string;
+  prompt: string;
+};
+
+export type ProductionStudioScreenResult = {
+  screen_type: ProductionScreenType;
+  generation_job_id: string;
+  status: string;
+  package_dir: string;
+  ui_preview_url: string;
+  delivery_report_url: string;
+  candidate_preview_url: string;
+  component_quality_report_url: string;
+  components_count: number;
+  candidates_count: number;
+  validator_ok: boolean;
+  missing_semantic_icons: boolean;
+  common_icons_note: string;
+};
+
+export type ProductionStudioResult = {
+  style_code: string;
+  device_type: ProductionDeviceType;
+  asset_mode: ProductionAssetMode;
+  style_source: ProductionStyleSource;
+  results: ProductionStudioScreenResult[];
+};
+
 export type ListResponse<T> = {
   items: T[];
 };
@@ -310,6 +356,15 @@ export const studioApi = {
   processAssetComponents(assetId: string) {
     return request<ComponentProcessingResult>(`/assets/${assetId}/process-components`, { method: "POST" });
   },
+  listProductionStyleCodes() {
+    return request<ListResponse<ProductionStudioStyleCode>>("/production-studio/style-codes");
+  },
+  generateProductionStudioPackage(payload: ProductionStudioInput) {
+    return request<ProductionStudioResult>("/production-studio/generate", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
   listAssets(projectId?: string, assetType?: string, deviceType?: string, generationJobId?: string) {
     const params = new URLSearchParams();
     if (projectId) {
@@ -332,6 +387,9 @@ export const studioApi = {
   },
   getAssetThumbnailUrl(assetId: string) {
     return `${API_BASE_URL}/assets/${assetId}/thumbnail`;
+  },
+  getProductionStudioFileUrl(path: string) {
+    return path.startsWith("http") ? path : `${API_BASE_URL}${path}`;
   },
   uploadAsset(payload: UploadAssetInput) {
     const formData = new FormData();

@@ -373,3 +373,55 @@ Verification:
 
 - `tests/test_candidate_detection.py` covers quality report generation and validator compatibility.
 - Existing packages without quality reports remain valid.
+
+## Sprint 16
+
+Status: complete
+
+Scope:
+
+- Produce the first usable 996 UI package set.
+- Use `STYLE_CODE = STYLE_0003`.
+- Generate `main_ui`, `role_ui`, `bag_ui`, `shop_ui`, and `activity_ui`.
+- Keep `device_type = mobile_landscape`.
+- Keep `asset_mode = resource_production`.
+- Output `1536x864` previews.
+- Include `components/`, `candidates/`, delivery reports, candidate previews, and component quality reports for every screen.
+- Add `docs/FIRST_USABLE_996_UI_PACKAGE_REPORT.md`.
+
+Verification:
+
+- Every Sprint 16 package passed `scripts/validate_996_export.py`.
+- Python pytest passed with 66 tests.
+
+Limit:
+
+- Named `common_icons` still need manual handling or later rule improvements.
+
+## Sprint 17
+
+Status: complete
+
+Scope:
+
+- Add a simple `/studio` Production Studio page.
+- Add web fields for `device_type`, `asset_mode`, style source, `STYLE_CODE`, screen types, style name, and prompt.
+- Add backend endpoints for listing `STYLE_CODE` folders and generating production packages.
+- Reuse the existing master style and style-guided generation scripts.
+- Show `ui_preview`, 996-ready path, component counts, candidate counts, validator status, and report links.
+- Explicitly show when semantic common icons are still missing.
+- Add `docs/PRODUCTION_STUDIO_UI.md`.
+
+Out of scope:
+
+- ZIP export
+- Cloud deployment
+- User systems
+- Commercial admin backend
+- Database schema changes
+- OCR, YOLO, SAM, or model training
+
+Verification:
+
+- Backend Production Studio API tests cover new style and existing `STYLE_CODE` flows.
+- Frontend Studio tests cover form defaults, style selection, screen type selection, and result display.
