@@ -1,0 +1,20 @@
+{
+  "style_code": "STYLE_0003",
+  "screen_type": "main_ui",
+  "generation_job_id": "14115d5fb8df4bfe91b9b2e504019167",
+  "screen_generation_mode": "auto_generate",
+  "device_type": "mobile_landscape",
+  "asset_mode": "resource_production",
+  "reference_image_path": null,
+  "prompt": "Generate one 996 legend game main_ui screen as the master style source.\nscreen_generation_mode: auto_generate\nstyle_name: Sprint 16 Dark Gold Dragon Mobile\ndevice_type: mobile_landscape\nDevice target: mobile_landscape. Use a strict 16:9 landscape horizontal mobile game UI, large touch-friendly buttons, and mobile-adapted skill bar, chat area, right menu, and minimap.\nasset_mode: resource_production. Prioritize reusable 996 production resources: clear separable buttons, icons, frames, inputs, tabs, slots, transparent-background-ready parts, and clean component boundaries for later editing.\nTarget canvas is 1536x864 pixels.\nAuto generate a new main UI from the style brief.\nThe layout may be adjusted, but the basic operation logic must not be broken.\nRequired main UI elements:\navatar, name, level, health bar, mana bar, bag, role, skills, shop, activity, settings, skill bar, shortcut bar, chat area, map entry, right-side function menu\ndo not remove core entries.\nDo not hide core entries.\nDo not block chat area, skill bar, shortcut bar, or player info.\nButtons must remain visually clickable and separated for later slicing.\nAllowed variation: color, ornament, borders, buttons, icons, font, and texture.\nOutput a single game UI screen only, suitable for annotation, component slicing, and candidate detection.\nUser prompt: 生成一张手机横屏 1536x864 的 996 传奇游戏主界面，暗黑金龙传奇风，asset_mode=resource_production。必须保留左上角色信息、血条蓝条、底部技能栏、快捷栏、聊天区、右侧功能菜单、右上小地图，主功能入口包含背包、角色、技能、商城、活动、设置。按钮和图标边界清晰，适合后续切图。",
+  "outputs": {
+    "ui_preview": "ui_preview.png",
+    "manifest": "manifest.json",
+    "annotation": "annotation.json",
+    "preview": "preview.html",
+    "candidate_manifest": "candidate_manifest.json",
+    "candidate_preview": "candidate_preview.html",
+    "components_dir": "components",
+    "candidates_dir": "candidates"
+  }
+}

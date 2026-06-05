@@ -1,0 +1,55 @@
+{
+  "mock": false,
+  "job_id": "0f95bbdd82cb408d8b9afeb9ed8669aa",
+  "project_id": "487580c1f5fa4c468e9ef46331b8c6e9",
+  "provider_id": "b6d413b31cd240acb29895c407a4dff7",
+  "device_type": "mobile_landscape",
+  "asset_mode": "resource_production",
+  "resolution": [
+    1536,
+    864
+  ],
+  "ready_dir": "assets\\uploads\\996-ready\\0f95bbdd82cb408d8b9afeb9ed8669aa",
+  "asset_ids": [
+    "eb29cda4d0064a88b23c377de522842d",
+    "387ce482daad4eb4904357f815ffd037",
+    "1dcaf34a6eb04654bab31e382aefa8f2"
+  ],
+  "assets": [
+    {
+      "id": "eb29cda4d0064a88b23c377de522842d",
+      "asset_type": "ui_preview",
+      "file_path": "assets\\uploads\\996-ready\\0f95bbdd82cb408d8b9afeb9ed8669aa\\previews\\ui_preview.png",
+      "thumbnail_path": "assets\\uploads\\996-ready\\0f95bbdd82cb408d8b9afeb9ed8669aa\\thumbnails\\ui_preview_thumb.png"
+    },
+    {
+      "id": "387ce482daad4eb4904357f815ffd037",
+      "asset_type": "annotated_preview",
+      "file_path": "assets\\uploads\\996-ready\\0f95bbdd82cb408d8b9afeb9ed8669aa\\previews\\annotated_preview.png",
+      "thumbnail_path": "assets\\uploads\\996-ready\\0f95bbdd82cb408d8b9afeb9ed8669aa\\thumbnails\\annotated_preview_thumb.png"
+    },
+    {
+      "id": "1dcaf34a6eb04654bab31e382aefa8f2",
+      "asset_type": "sliced_component",
+      "file_path": "assets\\uploads\\996-ready\\0f95bbdd82cb408d8b9afeb9ed8669aa\\components\\sliced_component.png",
+      "thumbnail_path": "assets\\uploads\\996-ready\\0f95bbdd82cb408d8b9afeb9ed8669aa\\thumbnails\\sliced_component_thumb.png"
+    }
+  ],
+  "component_processing": {
+    "manifest_path": "assets\\uploads\\996-ready\\0f95bbdd82cb408d8b9afeb9ed8669aa\\manifest.json",
+    "annotation_path": "assets\\uploads\\996-ready\\0f95bbdd82cb408d8b9afeb9ed8669aa\\annotation.json",
+    "preview_html_path": "assets\\uploads\\996-ready\\0f95bbdd82cb408d8b9afeb9ed8669aa\\preview.html",
+    "candidate_manifest_path": "assets\\uploads\\996-ready\\0f95bbdd82cb408d8b9afeb9ed8669aa\\candidate_manifest.json",
+    "candidate_preview_html_path": "assets\\uploads\\996-ready\\0f95bbdd82cb408d8b9afeb9ed8669aa\\candidate_preview.html",
+    "component_quality_report_path": "assets\\uploads\\996-ready\\0f95bbdd82cb408d8b9afeb9ed8669aa\\component_quality_report.json",
+    "component_quality_report_html_path": "assets\\uploads\\996-ready\\0f95bbdd82cb408d8b9afeb9ed8669aa\\component_quality_report.html",
+    "component_asset_ids": [
+      "296fb414baa04088b926cd6d9a891d8f",
+      "9c8458607fe24eac96498f2ad0a2a318",
+      "77db053e82994eddbe1247bbcd0ad3c9",
+      "7a47c173e1e54450a8539add0ec2c910",
+      "b1f40a09576b43c7abaed84100b2889d",
+      "318ed0cc3e8547d68b58884ed8ea98aa"
+    ]
+  }
+}

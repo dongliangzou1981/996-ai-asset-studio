@@ -1,0 +1,222 @@
+{
+  "schema_version": "1.0",
+  "package_type": "996-ready",
+  "template": "main_ui",
+  "asset_mode": "resource_production",
+  "source_asset_id": "c8a6222547f9468296e019c4b04dafd0",
+  "generation_job_id": "14115d5fb8df4bfe91b9b2e504019167",
+  "device_type": "mobile_landscape",
+  "resolution": {
+    "width": 1536,
+    "height": 864
+  },
+  "ui_preview": "ui_preview.png",
+  "components_dir": "components",
+  "transparent_policy": {
+    "required_component_types": [
+      "button",
+      "icon",
+      "frame",
+      "input"
+    ],
+    "allowed_flat_component_types": [
+      "panel",
+      "background",
+      "bar"
+    ],
+    "verification": "metadata_only"
+  },
+  "resource_summary": {
+    "mode": "resource_production",
+    "classification": "template_and_candidate",
+    "transparent_metadata": "included"
+  },
+  "components": [
+    {
+      "component_id": "main_bottom_bar",
+      "component_type": "bar",
+      "asset_mode": "resource_production",
+      "resource_category": "layout_bar",
+      "production_usage": "layout_or_full_region",
+      "resource_group": "main",
+      "file": "components/main_bottom_bar.png",
+      "bounds": {
+        "x": 0,
+        "y": 708,
+        "width": 1536,
+        "height": 156
+      },
+      "transparent": {
+        "required": false,
+        "verified": false,
+        "status": "not_required"
+      },
+      "transparent_png_required": false,
+      "transparent_png_verified": false,
+      "type": "main_bottom_bar",
+      "component_name_zh": "主功能栏",
+      "中文组件名称": "主功能栏",
+      "中文说明": "主功能栏：模板化组件标注，后续可由智能识别增强。",
+      "x": 0,
+      "y": 708,
+      "width": 1536,
+      "height": 156,
+      "file_name": "main_bottom_bar.png"
+    },
+    {
+      "component_id": "left_status_panel",
+      "component_type": "panel",
+      "asset_mode": "resource_production",
+      "resource_category": "panel_region",
+      "production_usage": "layout_or_full_region",
+      "resource_group": "main",
+      "file": "components/left_status_panel.png",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "width": 369,
+        "height": 190
+      },
+      "transparent": {
+        "required": false,
+        "verified": false,
+        "status": "not_required"
+      },
+      "transparent_png_required": false,
+      "transparent_png_verified": false,
+      "type": "left_status_panel",
+      "component_name_zh": "左侧状态栏",
+      "中文组件名称": "左侧状态栏",
+      "中文说明": "左侧状态栏：模板化组件标注，后续可由智能识别增强。",
+      "x": 0,
+      "y": 0,
+      "width": 369,
+      "height": 190,
+      "file_name": "left_status_panel.png"
+    },
+    {
+      "component_id": "right_menu_panel",
+      "component_type": "panel",
+      "asset_mode": "resource_production",
+      "resource_category": "panel_region",
+      "production_usage": "layout_or_full_region",
+      "resource_group": "main",
+      "file": "components/right_menu_panel.png",
+      "bounds": {
+        "x": 1167,
+        "y": 0,
+        "width": 369,
+        "height": 302
+      },
+      "transparent": {
+        "required": false,
+        "verified": false,
+        "status": "not_required"
+      },
+      "transparent_png_required": false,
+      "transparent_png_verified": false,
+      "type": "right_menu_panel",
+      "component_name_zh": "右侧菜单栏",
+      "中文组件名称": "右侧菜单栏",
+      "中文说明": "右侧菜单栏：模板化组件标注，后续可由智能识别增强。",
+      "x": 1167,
+      "y": 0,
+      "width": 369,
+      "height": 302,
+      "file_name": "right_menu_panel.png"
+    },
+    {
+      "component_id": "minimap_area",
+      "component_type": "panel",
+      "asset_mode": "resource_production",
+      "resource_category": "panel_region",
+      "production_usage": "layout_or_full_region",
+      "resource_group": "main",
+      "file": "components/minimap_area.png",
+      "bounds": {
+        "x": 1167,
+        "y": 311,
+        "width": 338,
+        "height": 207
+      },
+      "transparent": {
+        "required": false,
+        "verified": false,
+        "status": "not_required"
+      },
+      "transparent_png_required": false,
+      "transparent_png_verified": false,
+      "type": "minimap_area",
+      "component_name_zh": "小地图区域",
+      "中文组件名称": "小地图区域",
+      "中文说明": "小地图区域：模板化组件标注，后续可由智能识别增强。",
+      "x": 1167,
+      "y": 311,
+      "width": 338,
+      "height": 207,
+      "file_name": "minimap_area.png"
+    },
+    {
+      "component_id": "chat_panel",
+      "component_type": "panel",
+      "asset_mode": "resource_production",
+      "resource_category": "panel_region",
+      "production_usage": "layout_or_full_region",
+      "resource_group": "main",
+      "file": "components/chat_panel.png",
+      "bounds": {
+        "x": 31,
+        "y": 501,
+        "width": 522,
+        "height": 190
+      },
+      "transparent": {
+        "required": false,
+        "verified": false,
+        "status": "not_required"
+      },
+      "transparent_png_required": false,
+      "transparent_png_verified": false,
+      "type": "chat_panel",
+      "component_name_zh": "聊天区域",
+      "中文组件名称": "聊天区域",
+      "中文说明": "聊天区域：模板化组件标注，后续可由智能识别增强。",
+      "x": 31,
+      "y": 501,
+      "width": 522,
+      "height": 190,
+      "file_name": "chat_panel.png"
+    },
+    {
+      "component_id": "skill_area",
+      "component_type": "panel",
+      "asset_mode": "resource_production",
+      "resource_category": "panel_region",
+      "production_usage": "layout_or_full_region",
+      "resource_group": "main",
+      "file": "components/skill_area.png",
+      "bounds": {
+        "x": 860,
+        "y": 536,
+        "width": 645,
+        "height": 173
+      },
+      "transparent": {
+        "required": false,
+        "verified": false,
+        "status": "not_required"
+      },
+      "transparent_png_required": false,
+      "transparent_png_verified": false,
+      "type": "skill_area",
+      "component_name_zh": "技能区域",
+      "中文组件名称": "技能区域",
+      "中文说明": "技能区域：模板化组件标注，后续可由智能识别增强。",
+      "x": 860,
+      "y": 536,
+      "width": 645,
+      "height": 173,
+      "file_name": "skill_area.png"
+    }
+  ]
+}

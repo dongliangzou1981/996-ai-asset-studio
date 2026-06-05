@@ -1,0 +1,24 @@
+{
+  "style_code": "STYLE_0003",
+  "style_name": "Sprint 16 Dark Gold Dragon Mobile",
+  "source_job_id": "14115d5fb8df4bfe91b9b2e504019167",
+  "source_asset_id": "c8a6222547f9468296e019c4b04dafd0",
+  "device_type": "mobile_landscape",
+  "original_ui_preview": "assets\\uploads\\996-ready\\14115d5fb8df4bfe91b9b2e504019167\\ui_preview.png",
+  "style_summary": "Sprint 16 Dark Gold Dragon Mobile: 996 legend game UI style derived from source job output.",
+  "color_palette": [
+    "#16120F",
+    "#14120F",
+    "#15120F",
+    "#17130F",
+    "#16120E"
+  ],
+  "color_description": "Dominant palette uses #16120F, #14120F, #15120F, #17130F, #16120E.",
+  "font_style": "Bold, readable Chinese fantasy game UI typography; high contrast over dark panels.",
+  "border_style": "Layered metallic fantasy borders with gold highlights and clear panel separation.",
+  "button_style": "Readable rectangular fantasy buttons with bright trim and strong pressed-state potential.",
+  "icon_style": "High-contrast item and skill icons with clear silhouettes suitable for slicing.",
+  "texture_style": "Dark stone, aged metal, leather, and subtle ornamental texture.",
+  "created_at": "2026-06-05T15:15:19+00:00",
+  "updated_at": "2026-06-05T15:15:19+00:00"
+}

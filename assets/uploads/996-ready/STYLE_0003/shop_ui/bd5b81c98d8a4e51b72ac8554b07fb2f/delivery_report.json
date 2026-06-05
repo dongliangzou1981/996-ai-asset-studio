@@ -1,0 +1,20 @@
+{
+  "style_code": "STYLE_0003",
+  "screen_type": "shop_ui",
+  "generation_job_id": "bd5b81c98d8a4e51b72ac8554b07fb2f",
+  "screen_generation_mode": "style_inheritance",
+  "device_type": "mobile_landscape",
+  "asset_mode": "resource_production",
+  "reference_image_path": null,
+  "prompt": "Generate one 996 legend game UI screen.\nstyle_code: STYLE_0003\nstyle_name: Sprint 16 Dark Gold Dragon Mobile\nscreen_type: shop_ui\nscreen_goal: shop interface with category tabs, product cards, price labels, and purchase buttons\nNo reference image supplied. Inherit the master style and use a conventional 996 legend game layout for this screen type.\nDo not copy the reference image directly, and do not reuse its exact artwork, text, characters, or trademarks.\nUse the specified style_code as the master visual style for color, typography, border, button, icon, and texture decisions.\nstyle_summary: Sprint 16 Dark Gold Dragon Mobile: 996 legend game UI style derived from source job output.\ncolor_palette: #16120F, #14120F, #15120F, #17130F, #16120E\nfont_style: Bold, readable Chinese fantasy game UI typography; high contrast over dark panels.\nborder_style: Layered metallic fantasy borders with gold highlights and clear panel separation.\nbutton_style: Readable rectangular fantasy buttons with bright trim and strong pressed-state potential.\nicon_style: High-contrast item and skill icons with clear silhouettes suitable for slicing.\ntexture_style: Dark stone, aged metal, leather, and subtle ornamental texture.\ndevice_type: mobile_landscape\nDevice target: mobile_landscape. Use a strict 16:9 landscape horizontal mobile game UI, large touch-friendly buttons, and mobile-adapted skill bar, chat area, right menu, and minimap.\nasset_mode: resource_production. Prioritize reusable 996 production resources: clear separable buttons, icons, frames, inputs, tabs, slots, transparent-background-ready parts, and clean component boundaries for later editing.\nTarget canvas is 1536x864 pixels.\nOutput a single screen only. Do not create a collage, tutorial page, or multi-screen sheet.\nMake it suitable for later slicing and annotation: buttons, icons, inputs, frames, tabs, and inventory slots should have clear boundaries.\nUser prompt: 生成同一 STYLE_CODE 下的商城界面，手机横屏 1536x864，暗黑金龙传奇风。包含商品卡片、分类标签、价格区、购买、确认、取消按钮、关闭、返回按钮，组件边界清晰，适合切图。",
+  "outputs": {
+    "ui_preview": "ui_preview.png",
+    "manifest": "manifest.json",
+    "annotation": "annotation.json",
+    "preview": "preview.html",
+    "candidate_manifest": "candidate_manifest.json",
+    "candidate_preview": "candidate_preview.html",
+    "components_dir": "components",
+    "candidates_dir": "candidates"
+  }
+}

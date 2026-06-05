@@ -1,0 +1,141 @@
+{
+  "schema_version": "1.0",
+  "package_type": "996-ready",
+  "asset_mode": "resource_production",
+  "detection_method": "rule_and_image_feature",
+  "source_asset_id": "c8a6222547f9468296e019c4b04dafd0",
+  "generation_job_id": "14115d5fb8df4bfe91b9b2e504019167",
+  "ui_preview": "ui_preview.png",
+  "candidates_dir": "candidates",
+  "coordinate_space": "ui_preview_pixels",
+  "transparent_policy": {
+    "required_component_types": [
+      "button",
+      "icon",
+      "frame",
+      "input"
+    ],
+    "allowed_flat_component_types": [
+      "panel",
+      "background",
+      "bar"
+    ],
+    "verification": "metadata_only"
+  },
+  "candidates": [
+    {
+      "candidate_id": "button_candidate_01",
+      "candidate_type": "button_candidate",
+      "resource_category": "button_asset",
+      "bounds": {
+        "x": 884,
+        "y": 819,
+        "width": 91,
+        "height": 45
+      },
+      "confidence": 0.92,
+      "image_path": "candidates/button_candidate_01.png",
+      "transparent": {
+        "required": true,
+        "verified": false,
+        "status": "unverified"
+      },
+      "review_status": "pending"
+    },
+    {
+      "candidate_id": "icon_candidate_01",
+      "candidate_type": "icon_candidate",
+      "resource_category": "icon_asset",
+      "bounds": {
+        "x": 1243,
+        "y": 332,
+        "width": 92,
+        "height": 110
+      },
+      "confidence": 0.94,
+      "image_path": "candidates/icon_candidate_01.png",
+      "transparent": {
+        "required": true,
+        "verified": false,
+        "status": "unverified"
+      },
+      "review_status": "pending"
+    },
+    {
+      "candidate_id": "input_candidate_01",
+      "candidate_type": "input_candidate",
+      "resource_category": "input_asset",
+      "bounds": {
+        "x": 284,
+        "y": 772,
+        "width": 1034,
+        "height": 26
+      },
+      "confidence": 0.92,
+      "image_path": "candidates/input_candidate_01.png",
+      "transparent": {
+        "required": true,
+        "verified": false,
+        "status": "unverified"
+      },
+      "review_status": "pending"
+    },
+    {
+      "candidate_id": "frame_candidate_01",
+      "candidate_type": "frame_candidate",
+      "resource_category": "frame_asset",
+      "bounds": {
+        "x": 307,
+        "y": 173,
+        "width": 922,
+        "height": 467
+      },
+      "confidence": 0.95,
+      "image_path": "candidates/frame_candidate_01.png",
+      "transparent": {
+        "required": true,
+        "verified": false,
+        "status": "unverified"
+      },
+      "review_status": "pending"
+    },
+    {
+      "candidate_id": "tab_candidate_01",
+      "candidate_type": "tab_candidate",
+      "resource_category": "tab_asset",
+      "bounds": {
+        "x": 152,
+        "y": 106,
+        "width": 95,
+        "height": 34
+      },
+      "confidence": 0.93,
+      "image_path": "candidates/tab_candidate_01.png",
+      "transparent": {
+        "required": false,
+        "verified": false,
+        "status": "not_required"
+      },
+      "review_status": "pending"
+    },
+    {
+      "candidate_id": "slot_candidate_01",
+      "candidate_type": "slot_candidate",
+      "resource_category": "slot_asset",
+      "bounds": {
+        "x": 49,
+        "y": 161,
+        "width": 259,
+        "height": 311
+      },
+      "confidence": 0.95,
+      "image_path": "candidates/slot_candidate_01.png",
+      "transparent": {
+        "required": false,
+        "verified": false,
+        "status": "not_required"
+      },
+      "review_status": "pending"
+    }
+  ]
+}

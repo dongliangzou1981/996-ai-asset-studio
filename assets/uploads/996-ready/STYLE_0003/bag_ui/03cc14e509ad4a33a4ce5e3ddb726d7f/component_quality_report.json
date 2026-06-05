@@ -1,0 +1,204 @@
+{
+  "schema_version": "1.0",
+  "report_type": "component_quality",
+  "coordinate_space": "ui_preview_pixels",
+  "resolution": {
+    "width": 1536,
+    "height": 864
+  },
+  "total_components": 12,
+  "category_counts": {
+    "button": 1,
+    "icon": 1,
+    "frame": 1,
+    "tab": 1,
+    "slot": 1,
+    "input": 1,
+    "panel": 6,
+    "background": 0
+  },
+  "category_area": {
+    "button": 11935,
+    "icon": 183556,
+    "frame": 540288,
+    "tab": 8378,
+    "slot": 15375,
+    "input": 6270,
+    "panel": 701895,
+    "background": 0
+  },
+  "coverage": {
+    "total_area": 1327104,
+    "covered_area": 1154443,
+    "covered_ratio": 0.8699,
+    "uncovered_area": 172661,
+    "uncovered_ratio": 0.1301
+  },
+  "suspected_missing_regions": [
+    {
+      "region_id": "missing_r1_c3",
+      "bounds": {
+        "x": 768,
+        "y": 0,
+        "width": 384,
+        "height": 288
+      },
+      "uncovered_area": 78444,
+      "uncovered_ratio": 0.7093,
+      "reason": "large grid region has low component coverage",
+      "review_status": "pending"
+    }
+  ],
+  "components": [
+    {
+      "id": "main_bottom_bar",
+      "source": "component",
+      "component_type": "panel",
+      "bounds": {
+        "x": 0,
+        "y": 708,
+        "width": 1536,
+        "height": 156
+      },
+      "area": 239616
+    },
+    {
+      "id": "left_status_panel",
+      "source": "component",
+      "component_type": "panel",
+      "bounds": {
+        "x": 0,
+        "y": 0,
+        "width": 369,
+        "height": 190
+      },
+      "area": 70110
+    },
+    {
+      "id": "right_menu_panel",
+      "source": "component",
+      "component_type": "panel",
+      "bounds": {
+        "x": 1167,
+        "y": 0,
+        "width": 369,
+        "height": 302
+      },
+      "area": 111438
+    },
+    {
+      "id": "minimap_area",
+      "source": "component",
+      "component_type": "panel",
+      "bounds": {
+        "x": 1167,
+        "y": 311,
+        "width": 338,
+        "height": 207
+      },
+      "area": 69966
+    },
+    {
+      "id": "chat_panel",
+      "source": "component",
+      "component_type": "panel",
+      "bounds": {
+        "x": 31,
+        "y": 501,
+        "width": 522,
+        "height": 190
+      },
+      "area": 99180
+    },
+    {
+      "id": "skill_area",
+      "source": "component",
+      "component_type": "panel",
+      "bounds": {
+        "x": 860,
+        "y": 536,
+        "width": 645,
+        "height": 173
+      },
+      "area": 111585
+    },
+    {
+      "id": "button_candidate_01",
+      "source": "candidate",
+      "component_type": "button",
+      "bounds": {
+        "x": 863,
+        "y": 787,
+        "width": 155,
+        "height": 77
+      },
+      "area": 11935,
+      "confidence": 0.94
+    },
+    {
+      "id": "icon_candidate_01",
+      "source": "candidate",
+      "component_type": "icon",
+      "bounds": {
+        "x": 912,
+        "y": 230,
+        "width": 436,
+        "height": 421
+      },
+      "area": 183556,
+      "confidence": 0.92
+    },
+    {
+      "id": "input_candidate_01",
+      "source": "candidate",
+      "component_type": "input",
+      "bounds": {
+        "x": 17,
+        "y": 819,
+        "width": 209,
+        "height": 30
+      },
+      "area": 6270,
+      "confidence": 0.94
+    },
+    {
+      "id": "frame_candidate_01",
+      "source": "candidate",
+      "component_type": "frame",
+      "bounds": {
+        "x": 57,
+        "y": 92,
+        "width": 804,
+        "height": 672
+      },
+      "area": 540288,
+      "confidence": 0.95
+    },
+    {
+      "id": "tab_candidate_01",
+      "source": "candidate",
+      "component_type": "tab",
+      "bounds": {
+        "x": 60,
+        "y": 33,
+        "width": 142,
+        "height": 59
+      },
+      "area": 8378,
+      "confidence": 0.93
+    },
+    {
+      "id": "slot_candidate_01",
+      "source": "candidate",
+      "component_type": "slot",
+      "bounds": {
+        "x": 68,
+        "y": 113,
+        "width": 125,
+        "height": 123
+      },
+      "area": 15375,
+      "confidence": 0.95
+    }
+  ]
+}
