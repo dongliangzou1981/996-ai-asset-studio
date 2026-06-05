@@ -2,14 +2,16 @@
 
 ## Validation Status
 
-Status: **Blocked**
+Status: **Passed with ratio caveat**
 
-Sprint 13 was intended to run a full Master UI Production Validation:
+Sprint 13 re-run completed the Master UI Production Validation with the existing production scripts.
+
+Validated flow:
 
 ```text
-reference_guided / auto_generate
+auto_generate
 -> main_ui generation
--> STYLE_CODE
+-> STYLE_CODE creation
 -> edit round 1
 -> edit round 2
 -> final main_ui
@@ -17,147 +19,167 @@ reference_guided / auto_generate
 -> component slicing
 -> candidate detection
 -> 996-ready output
+-> validator
 ```
 
-The validation could not complete because the enabled real provider requires `OFOX_API_KEY`, and the current shell environment does not have it set.
+No new functionality was developed for this validation run.
 
-No new production `STYLE_CODE` or final 996-ready package was created in this run.
-
-## Execution Context
-
-Date: 2026-06-05
-
-Repository: `996-ai-asset-studio`
-
-Enabled provider found in local database:
-
-```text
-name: Ofox UI Default
-type: ofox
-enabled: true
-api_key_env: OFOX_API_KEY
-model: gpt-image-2
-```
-
-Environment check:
-
-```text
-OFOX_API_KEY: not set
-OPENAI_API_KEY: not set
-```
-
-Reference image:
-
-```text
-No explicit Sprint 13 reference image path was provided.
-```
-
-Selected generation mode:
-
-```text
-auto_generate
-```
-
-## Attempted Command
-
-```powershell
-backend\.venv\Scripts\python.exe scripts\master_style_workflow.py --screen-generation-mode auto_generate --style-name "Sprint 13 Dark Gold Dragon" --prompt "生成一张 996 传奇游戏主界面，手机横屏比例，暗黑金龙传奇风，整体有龙纹、金属边框、厚重石纹、复古传奇质感。必须保留基础操作布局：左上角色头像、名称、等级、血条、蓝条；底部技能栏和快捷栏；左下聊天区；右侧功能菜单；右上小地图或地图入口；主功能入口包含背包、角色、技能、商城、活动、设置。整体风格统一，按钮清晰，文字可读，适合后续标注、切图和导入 996 工具使用。"
-```
-
-Observed result:
-
-```text
-Failed to run master style workflow: Environment variable OFOX_API_KEY is not set
-```
-
-## Required Report Fields
+## Summary
 
 | Field | Result |
 | --- | --- |
-| `STYLE_CODE` | Not created |
-| Generation mode | `auto_generate` attempted |
+| `STYLE_CODE` | `STYLE_0001` |
+| Generation mode | `auto_generate` |
 | Reference image used | No |
-| Original version path | Not generated |
-| First edit version path | Not generated |
-| Second edit version path | Not generated |
-| Final version path | Not generated |
-| Validator passed | Not run on final package |
-| `ui_preview.png` generated | No |
-| `annotation.json` generated | No |
-| `manifest.json` generated | No |
-| `candidate_manifest.json` generated | No |
-| `candidate_preview.html` generated | No |
-| `delivery_report.json/html` generated | No |
-| `components/` count | N/A |
-| `candidates/` count | N/A |
-| `button_candidate` count | N/A |
-| `icon_candidate` count | N/A |
-| `input_candidate` count | N/A |
-| `frame_candidate` count | N/A |
-| `tab_candidate` count | N/A |
-| `slot_candidate` count | N/A |
-| Main UI required areas complete | Not verified |
-| Suitable as STYLE_CODE master | No, no final generated image |
+| Original generation job id | `d8fc517cc6ae4921bee02878fae20dfb` |
+| First edit generation job id | `4192a1dfeeca4595a76b5bd4371ae832` |
+| Final generation job id | `948fcab494e3442aaa384589b136b93d` |
+| Validator result | PASS |
+| Components count | 6 |
+| Candidates count | 6 |
+| Final image size | `1536x1024` |
+| v1.0 Beta recommendation | Yes, as a Beta candidate |
+
+## Version Paths
+
+Original version:
+
+```text
+assets/uploads/996-ready/STYLE_0001/main_ui/d8fc517cc6ae4921bee02878fae20dfb
+```
+
+First edit version:
+
+```text
+assets/uploads/996-ready/STYLE_0001/main_ui/4192a1dfeeca4595a76b5bd4371ae832
+```
+
+Second edit / final version:
+
+```text
+assets/uploads/996-ready/STYLE_0001/main_ui/948fcab494e3442aaa384589b136b93d
+```
+
+## Final Package Files
+
+Final package:
+
+```text
+assets/uploads/996-ready/STYLE_0001/main_ui/948fcab494e3442aaa384589b136b93d
+```
+
+| Required Output | Status |
+| --- | --- |
+| `ui_preview.png` | Generated |
+| `manifest.json` | Generated |
+| `annotation.json` | Generated |
+| `candidate_manifest.json` | Generated |
+| `candidate_preview.html` | Generated |
+| `delivery_report.json` | Generated |
+| `delivery_report.html` | Generated |
+| `components/` | Generated |
+| `candidates/` | Generated |
+
+## Validator Result
+
+Validator command:
+
+```powershell
+backend\.venv\Scripts\python.exe scripts\validate_996_export.py assets\uploads\996-ready\STYLE_0001\main_ui\948fcab494e3442aaa384589b136b93d
+```
+
+Result:
+
+```text
+PASS
+```
+
+Validator errors:
+
+```text
+[]
+```
+
+## Candidate Component Statistics
+
+| Candidate Type | Count |
+| --- | ---: |
+| `button_candidate` | 1 |
+| `icon_candidate` | 1 |
+| `input_candidate` | 1 |
+| `frame_candidate` | 1 |
+| `tab_candidate` | 1 |
+| `slot_candidate` | 1 |
+| Total candidates | 6 |
+
+## Component Statistics
+
+| Item | Count |
+| --- | ---: |
+| Schema V1 manifest components | 6 |
+| Component image files | 6 |
 
 ## Main UI Functional Area Checklist
 
-Because no new image was generated, the following could not be visually verified:
+Visual inspection of the final `ui_preview.png`:
 
-| Required Area | Status |
-| --- | --- |
-| Character avatar | Not verified |
-| Character name | Not verified |
-| Level | Not verified |
-| Health bar | Not verified |
-| Mana/status bar | Not verified |
-| Bag entry | Not verified |
-| Role entry | Not verified |
-| Skill entry | Not verified |
-| Shop entry | Not verified |
-| Activity entry | Not verified |
-| Settings entry | Not verified |
-| Bottom skill bar | Not verified |
-| Shortcut bar | Not verified |
-| Operation button area | Not verified |
-| Chat/message area | Not verified |
-| Minimap/map entry | Not verified |
-| Right-side function menu | Not verified |
+| Required Area | Status | Notes |
+| --- | --- | --- |
+| Character avatar | Present | Left-top character portrait is clear |
+| Character name | Present | Player text area is visible |
+| Level | Present | Level text is visible in the left-top info area |
+| Health bar | Present | Red/green combat state bars are visible near the center/player area |
+| Mana/status bar | Present | Blue/red orb and status bars are visible |
+| Bag entry | Present | Bottom entry and right menu entry are visible |
+| Role entry | Present | Right menu and bottom entry are visible |
+| Skill entry | Present | Right menu and bottom entry are visible |
+| Shop entry | Present | Right-side function area contains commercial/shop-like entry cluster |
+| Activity entry | Present | Right-side activity entries are visible |
+| Settings entry | Present | Bottom settings entry is visible |
+| Bottom skill bar | Present | Large bottom-right skill/attack area is clear |
+| Shortcut bar | Present | Bottom shortcut entries are visible |
+| Operation button area | Present | Attack and auto-combat buttons are visible |
+| Chat/message area | Present | Left-bottom chat panel is readable |
+| Minimap/map entry | Present | Right-side map panel is visible |
+| Right-side function menu | Present | Dense but clear function grid and vertical event entries are visible |
 
-## Existing Local Output Scan
+## Style Assessment
 
-Existing local `assets/uploads/996-ready` folders were present, but they were not created by this Sprint 13 run and were not used as Sprint 13 final output.
+The final main UI is visually consistent with the requested dark gold dragon legend style:
 
-Observed local direct packages:
+- dark fantasy background
+- gold dragon ornament
+- metallic borders
+- heavy stone/metal texture
+- clear fantasy-style buttons and icons
+- readable chat and control areas
+- strong 996/legend game visual language
 
-```text
-assets/uploads/996-ready/e84b3b8174f2408c914aefdb762a70d1
-assets/uploads/996-ready/fc157bf886ae41c59a7cdb6e51ad50f7
-```
+The final version is suitable as a `STYLE_CODE` master candidate for future `role_ui`, `bag_ui`, `shop_ui`, and `activity_ui` generation.
 
-These packages contain `ui_preview.png`, `manifest.json`, and `annotation.json`, but they do not contain Sprint 11B/12 delivery artifacts such as `candidate_manifest.json` or `delivery_report.json`.
+## Issues Found
 
-## Findings
+1. The generated output is landscape but not strict 16:9. Ofox returned `1536x1024`, which is closer to 3:2.
+2. The right-side function menu is visually rich and usable, but somewhat dense. Future role/bag/shop screens should keep spacing slightly cleaner.
+3. Candidate detection produced the expected six candidate categories, but this is still candidate-level slicing, not final semantic recognition.
+4. The provider path still relies on prompt-based image generation and prompt-fallback editing, not true image-edit/image-to-image.
 
-1. The current Sprint 13 production validation is blocked before image generation.
-2. The failure is environmental, not a code-path failure: the provider exists and is enabled, but `OFOX_API_KEY` is not set.
-3. No `STYLE_CODE` was created, so edit round 1 and edit round 2 could not start.
-4. No final package exists, so validator and candidate counts cannot be meaningfully reported.
-5. The current scripts correctly fail early with a clear provider environment error.
+## Next Recommendations
 
-## Next Steps
+1. Keep this final package as the Sprint 13 v1.0 Beta candidate master.
+2. Use `STYLE_0001` to generate one `role_ui` next and compare style inheritance quality.
+3. Add a stricter production prompt or provider setting for 16:9 mobile landscape if Beta requires exact ratio.
+4. Manually inspect `candidate_preview.html` before using candidate slices as final 996 production assets.
+5. Continue improving component candidate detection using accepted/rejected examples from this final package.
 
-1. Set `OFOX_API_KEY` in the shell that runs Codex/PowerShell.
-2. Re-run `scripts/master_style_workflow.py` with `auto_generate`, or provide a concrete reference image path and run `reference_guided`.
-3. Validate the original package with `scripts/validate_996_export.py`.
-4. Run edit round 1 with `scripts/edit_screen_with_style.py`.
-5. Run edit round 2 with `scripts/edit_screen_with_style.py` using the first edit package as the source package.
-6. Validate the final package.
-7. Update this report with actual paths, validator result, candidate counts, and visual suitability assessment.
+## Beta Recommendation
 
-## v1.0 Beta Recommendation
-
-Recommendation: **Do not promote this Sprint 13 output to v1.0 Beta.**
+Recommendation: **Yes, enter v1.0 Beta candidate validation.**
 
 Reason:
 
-No new production master UI was generated, no final package was validated, and no visual checklist could be completed.
+The final package is complete, validator passes, all required 996-ready files exist, the core main UI functional areas are visible, and the visual style is strong enough to serve as a master style seed.
+
+Condition:
+
+If v1.0 Beta requires strict 16:9 output, run one additional ratio-focused generation pass before freezing the Beta master.
