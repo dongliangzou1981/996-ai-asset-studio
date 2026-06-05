@@ -21,6 +21,19 @@ COMPONENT_RULES = [
     ("skill_area", 0.56, 0.62, 0.42, 0.2),
 ]
 
+SCHEMA_VERSION = "1.0"
+PACKAGE_TYPE = "996-ready"
+COORDINATE_SPACE = "ui_preview_pixels"
+
+COMPONENT_TYPE_BY_ID = {
+    "main_bottom_bar": "bar",
+    "left_status_panel": "panel",
+    "right_menu_panel": "panel",
+    "minimap_area": "panel",
+    "chat_panel": "panel",
+    "skill_area": "panel",
+}
+
 COMPONENT_NAME_ZH = {
     "main_bottom_bar": "主功能栏",
     "left_status_panel": "左侧状态栏",
@@ -29,6 +42,19 @@ COMPONENT_NAME_ZH = {
     "chat_panel": "聊天区域",
     "skill_area": "技能区域",
 }
+
+
+def normalize_device_type(device_type: str) -> str:
+    return "pc" if device_type in {"pc", "desktop"} else "mobile"
+
+
+def transparent_metadata(component_type: str) -> dict[str, bool | str]:
+    required = component_type in {"button", "icon", "frame", "input"}
+    return {
+        "required": required,
+        "verified": False,
+        "status": "unverified" if required else "not_required",
+    }
 
 
 def process_ui_preview_components(
@@ -55,6 +81,7 @@ def process_ui_preview_components(
     with Image.open(source_path).convert("RGBA") as image:
         source_width, source_height = image.size
         for component_type, x_ratio, y_ratio, width_ratio, height_ratio in COMPONENT_RULES:
+            schema_component_type = COMPONENT_TYPE_BY_ID[component_type]
             component_name_zh = COMPONENT_NAME_ZH[component_type]
             note_zh = f"{component_name_zh}：模板化组件标注，后续可由智能识别增强。"
             x = round(source_width * x_ratio)
@@ -67,10 +94,20 @@ def process_ui_preview_components(
             file_name = f"{component_type}.png"
             component_path = component_dir / file_name
             image.crop((x, y, x + width, y + height)).save(component_path, format="PNG")
+            component_file = f"components/{file_name}"
+            bounds = {"x": x, "y": y, "width": width, "height": height}
+            transparent = transparent_metadata(schema_component_type)
 
             manifest_components.append(
                 {
                     "component_id": component_id,
+                    "component_type": schema_component_type,
+                    "resource_group": "main",
+                    "file": component_file,
+                    "bounds": bounds,
+                    "transparent": transparent,
+                    "transparent_png_required": bool(transparent["required"]),
+                    "transparent_png_verified": bool(transparent["verified"]),
                     "type": component_type,
                     "component_name_zh": component_name_zh,
                     "中文组件名称": component_name_zh,
@@ -85,7 +122,7 @@ def process_ui_preview_components(
             annotation_components.append(
                 {
                     "component_id": component_id,
-                    "component_type": component_type,
+                    "component_type": schema_component_type,
                     "组件名称": component_name_zh,
                     "组件类型": component_name_zh,
                     "x": x,
@@ -106,6 +143,32 @@ def process_ui_preview_components(
                     "说明": note_zh,
                 }
             )
+            annotation_components[-1].update(
+                {
+                    "component_name_zh": component_name_zh,
+                    "resource_group": "main",
+                    "bounds": bounds,
+                    "style": {
+                        "font_family": "Microsoft YaHei",
+                        "font_size": 16,
+                        "font_color": "#F5D78E",
+                    },
+                    "image": {
+                        "file": component_file,
+                        "format": "png",
+                        "color_mode": "RGBA",
+                        "alpha": "optional",
+                        "transparent_background": False,
+                    },
+                    "transparent": transparent,
+                    "recognition": {
+                        "method": "template",
+                        "confidence": None,
+                    },
+                    "requires_manual_review": True,
+                    "review_status": "pending",
+                }
+            )
             component_assets.append(
                 database.create_asset(
                     AssetCreate(
@@ -119,7 +182,8 @@ def process_ui_preview_components(
                         metadata_json=json.dumps(
                             {
                                 "component_id": component_id,
-                                "component_type": component_type,
+                                "component_type": schema_component_type,
+                                "template_component_id": component_id,
                                 "source_asset_id": ui_preview.id,
                                 "template": "main_ui",
                             },
@@ -133,15 +197,25 @@ def process_ui_preview_components(
             )
 
     manifest = {
+        "schema_version": SCHEMA_VERSION,
+        "package_type": PACKAGE_TYPE,
         "template": "main_ui",
         "source_asset_id": ui_preview.id,
-        "ui_preview": str(copied_preview),
-        "components_dir": str(component_dir),
+        "generation_job_id": ui_preview.generation_job_id or ui_preview.id,
+        "device_type": normalize_device_type(ui_preview.device_type),
+        "resolution": {
+            "width": source_width,
+            "height": source_height,
+        },
+        "ui_preview": "ui_preview.png",
+        "components_dir": "components",
         "components": manifest_components,
     }
     annotation = {
+        "schema_version": SCHEMA_VERSION,
         "template": "main_ui",
         "source_asset_id": ui_preview.id,
+        "coordinate_space": COORDINATE_SPACE,
         "components": annotation_components,
     }
 

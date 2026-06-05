@@ -195,7 +195,18 @@ def test_process_ui_preview_generates_components_and_annotations(tmp_path: Path)
     annotations = json.loads(Path(payload["annotation_path"]).read_text(encoding="utf-8"))
     assert len(annotations["components"]) == 6
     first_annotation = annotations["components"][0]
-    assert first_annotation["component_type"] == "main_bottom_bar"
+    assert first_annotation["component_type"] == "bar"
+    assert first_annotation["resource_group"] == "main"
+    assert first_annotation["bounds"] == {
+        "x": first_annotation["x"],
+        "y": first_annotation["y"],
+        "width": first_annotation["width"],
+        "height": first_annotation["height"],
+    }
+    assert first_annotation["image"]["file"] == "components/main_bottom_bar.png"
+    assert first_annotation["transparent"]["status"] == "not_required"
+    assert first_annotation["recognition"]["method"] == "template"
+    assert first_annotation["review_status"] == "pending"
     assert first_annotation["font_family"] == "Microsoft YaHei"
     assert first_annotation["font_color"] == "#F5D78E"
     assert {"x", "y", "width", "height", "font_size", "notes"} <= set(first_annotation)
