@@ -425,3 +425,65 @@ Verification:
 
 - Backend Production Studio API tests cover new style and existing `STYLE_CODE` flows.
 - Frontend Studio tests cover form defaults, style selection, screen type selection, and result display.
+
+## Sprint 17B
+
+Status: complete
+
+Scope:
+
+- Add `scripts/start_local_studio.ps1` for local one-command Studio startup.
+- Add `scripts/check_studio_env.ps1` for local environment diagnostics.
+- Keep `OFOX_API_KEY` in the current PowerShell session only.
+- Avoid writing keys to the repository, `.env`, or the database.
+- Start the backend on `127.0.0.1:8001`.
+- Start the frontend on `127.0.0.1:3001` with `NEXT_PUBLIC_API_BASE_URL=http://127.0.0.1:8001`.
+- Ensure the default Ofox provider is configured through `scripts/setup_ofox_provider.py`.
+- Improve `/studio` generation failure guidance so users are pointed to the startup script.
+- Add `docs/LOCAL_STUDIO_STARTUP.md`.
+
+Out of scope:
+
+- Cloud deployment
+- User systems
+- Database changes
+- Storing real keys
+
+Verification:
+
+- PowerShell scripts parse under Windows PowerShell.
+- `scripts/check_studio_env.ps1` reports local key, backend, frontend, style-code API, and provider health status.
+- Root tests, backend tests, frontend tests, and frontend build pass.
+
+## Sprint 18
+
+Status: complete
+
+Scope:
+
+- Productize `/studio` for first-round manual acceptance.
+- Replace user-visible technical labels such as `device_type`, `asset_mode`, `screen_type`, `style_source`, `generate`, and `validator` with Chinese copy.
+- Add Chinese one-click startup entrypoint `启动工作台.ps1`.
+- Add Chinese environment check entrypoint `环境检查.ps1`.
+- Keep existing lower-level scripts for automation compatibility.
+- Add a Result Center that shows screen name, generation time, style code, preview, resource entry, report entry, and validation status.
+- Add manual acceptance status and notes in the Result Center.
+- Improve generation failure copy with a concrete next step instead of asking users to inspect environment variables or logs.
+- Document Sprint 18 productization in `docs/SPRINT_18_PRODUCTIZATION.md`.
+
+Out of scope:
+
+- Database changes
+- Cloud deployment
+- User systems
+- ZIP export
+- OCR
+- YOLO
+- SAM
+- Model training
+
+Automation principle:
+
+- Treat the user as a non-technical reviewer by default.
+- The user should only need to start the Studio and review results.
+- Codex should automate terminal setup, port checks, environment checks, and routine diagnostics whenever possible.

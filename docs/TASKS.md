@@ -418,3 +418,44 @@ Chinese-first principle:
 - [x] Add frontend Production Studio tests
 - [x] Keep Job Center compatible
 - [x] Avoid database changes, ZIP export, cloud deployment, user systems, OCR, YOLO, SAM, and model training
+
+## Sprint 17B
+
+- [x] Add `scripts/start_local_studio.ps1`
+- [x] Check that the script is run from the project root
+- [x] Check `backend\.venv\Scripts\python.exe`
+- [x] Prompt for `OFOX_API_KEY` when missing without printing the key
+- [x] Set `OFOX_API_KEY` only in the current PowerShell session
+- [x] Start backend FastAPI on `127.0.0.1:8001`
+- [x] Start frontend Studio on `127.0.0.1:3001`
+- [x] Configure frontend API base as `http://127.0.0.1:8001`
+- [x] Ensure the default Ofox provider without storing secrets
+- [x] Add `scripts/check_studio_env.ps1`
+- [x] Check `OFOX_API_KEY`
+- [x] Check backend `8001`
+- [x] Check frontend `3001`
+- [x] Check `/production-studio/style-codes`
+- [x] Check provider health
+- [x] Improve `/studio` generation failure guidance
+- [x] Add `docs/LOCAL_STUDIO_STARTUP.md`
+- [x] Avoid `.env`, real key commits, cloud deployment, user systems, and database changes
+
+## Sprint 18
+
+- [x] Fully Chinese user-visible `/studio` labels
+- [x] Replace device values with `手机横屏` and `电脑端`
+- [x] Replace output mode labels with `资源生产` and `整图预览`
+- [x] Replace style source labels with `新建风格` and `使用已有风格`
+- [x] Replace screen labels with `主界面`, `角色界面`, `背包界面`, `商城界面`, and `活动界面`
+- [x] Replace generation action with `开始生成`
+- [x] Replace validation status with `验证通过` and `验证未通过`
+- [x] Add `启动工作台.ps1`
+- [x] Add `环境检查.ps1`
+- [x] Add Chinese environment check statuses
+- [x] Remove technical generation failure guidance from `/studio`
+- [x] Add Result Center
+- [x] Show screen name, generation time, style code, preview, resource entry, report entry, and validation status
+- [x] Add manual acceptance status: `待验收`, `验收通过`, `需要修改`
+- [x] Add manual acceptance notes
+- [x] Document Sprint 18 productization
+- [x] Keep compatibility: no database changes, cloud deployment, user system, ZIP, OCR, YOLO, SAM, or model training

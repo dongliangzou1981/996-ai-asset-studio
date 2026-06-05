@@ -47,20 +47,20 @@ beforeEach(() => {
   });
 });
 
-test("renders production defaults and generates with existing STYLE_CODE selection", async () => {
+test("renders Chinese production defaults and generates with an existing style", async () => {
   const user = userEvent.setup();
   render(<ProductionStudio api={api} />);
 
   expect(await screen.findByText("生产工作台")).toBeInTheDocument();
-  expect(screen.getByLabelText("设备类型")).toHaveValue("mobile_landscape");
-  expect(screen.getByLabelText("输出模式")).toHaveValue("resource_production");
+  expect(screen.getByLabelText("设备类型")).toHaveDisplayValue("手机横屏");
+  expect(screen.getByLabelText("输出模式")).toHaveDisplayValue("资源生产");
 
-  await user.click(screen.getByLabelText("使用已有 STYLE_CODE"));
+  await user.click(screen.getByLabelText("使用已有风格"));
   expect(await screen.findByText(/Sprint 16 Dark Gold Dragon Mobile/)).toBeInTheDocument();
 
-  await user.click(screen.getByLabelText("bag_ui 背包界面"));
-  await user.click(screen.getByLabelText("main_ui 主界面"));
-  await user.click(screen.getByRole("button", { name: "生成 UI 资源" }));
+  await user.click(screen.getByLabelText("背包界面"));
+  await user.click(screen.getByLabelText("主界面"));
+  await user.click(screen.getByRole("button", { name: "开始生成" }));
 
   expect(api.generateProductionStudioPackage).toHaveBeenCalledWith({
     device_type: "mobile_landscape",
@@ -71,25 +71,28 @@ test("renders production defaults and generates with existing STYLE_CODE selecti
     style_name: "暗黑金龙传奇风",
     prompt: "手机横屏传奇 UI，暗黑金龙风格，技能栏清晰，右侧菜单明显，整体适合 996 引擎资源生产。",
   });
-  expect(await screen.findByText("device_type:")).toBeInTheDocument();
-  expect(screen.getAllByText("STYLE_0003").length).toBeGreaterThanOrEqual(1);
-  expect(screen.getByText("validator PASS")).toBeInTheDocument();
-  expect(screen.getByText("components 6 / candidates 6")).toBeInTheDocument();
-  expect(screen.getByText("仍需优化 common_icons")).toBeInTheDocument();
-  expect(screen.getByAltText("bag_ui ui_preview")).toHaveAttribute(
+  expect(await screen.findByText("结果中心")).toBeInTheDocument();
+  expect(screen.getByText("风格编号：")).toBeInTheDocument();
+  expect(screen.getByText("验证通过")).toBeInTheDocument();
+  expect(screen.getByText("组件数量")).toBeInTheDocument();
+  expect(screen.getByText("候选资源")).toBeInTheDocument();
+  expect(screen.getAllByText("待验收").length).toBeGreaterThanOrEqual(1);
+  expect(screen.getByText("查看资源")).toBeInTheDocument();
+  expect(screen.getByText("查看报告")).toBeInTheDocument();
+  expect(screen.getByAltText("背包界面预览图")).toHaveAttribute(
     "src",
     "http://127.0.0.1:8000/production-studio/files/996-ready/STYLE_0003/bag_ui/job-bag/ui_preview.png",
   );
 });
 
-test("keeps new style as the default source and sends main_ui by default", async () => {
+test("keeps new style as the default source and sends main screen by default", async () => {
   const user = userEvent.setup();
   render(<ProductionStudio api={api} />);
 
   await screen.findByText("生产工作台");
   await user.selectOptions(screen.getByLabelText("设备类型"), "pc_landscape");
   await user.selectOptions(screen.getByLabelText("输出模式"), "ui_package");
-  await user.click(screen.getByRole("button", { name: "生成 UI 资源" }));
+  await user.click(screen.getByRole("button", { name: "开始生成" }));
 
   expect(api.generateProductionStudioPackage).toHaveBeenCalledWith(
     expect.objectContaining({
@@ -100,4 +103,32 @@ test("keeps new style as the default source and sends main_ui by default", async
       screen_types: ["main_ui"],
     }),
   );
+});
+
+test("supports manual acceptance status and notes in result center", async () => {
+  const user = userEvent.setup();
+  render(<ProductionStudio api={api} />);
+
+  await screen.findByText("生产工作台");
+  await user.click(screen.getByRole("button", { name: "开始生成" }));
+  await screen.findByText("人工验收状态");
+
+  await user.selectOptions(screen.getByLabelText("人工验收状态"), "needs_change");
+  await user.type(screen.getByLabelText("验收记录"), "按钮命名需要修改");
+
+  expect(screen.getAllByText("需要修改").length).toBeGreaterThanOrEqual(1);
+  expect(screen.getByDisplayValue("按钮命名需要修改")).toBeInTheDocument();
+});
+
+test("shows clear Chinese next steps when generation fails", async () => {
+  const user = userEvent.setup();
+  api.generateProductionStudioPackage.mockRejectedValueOnce(new Error("missing key"));
+  render(<ProductionStudio api={api} />);
+
+  await screen.findByText("生产工作台");
+  await user.click(screen.getByRole("button", { name: "开始生成" }));
+
+  expect(
+    await screen.findByText("生成失败：本地工作台还没有准备好。请关闭旧窗口，在项目根目录运行 启动工作台.ps1，然后重新点击开始生成。"),
+  ).toBeInTheDocument();
 });
