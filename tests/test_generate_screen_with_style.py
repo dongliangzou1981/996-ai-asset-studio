@@ -45,13 +45,35 @@ def test_reference_guided_prompt_contains_required_generation_constraints(tmp_pa
     assert "STYLE_0001" in prompt
     assert "Dark Gold Dragon" in prompt
     assert "role_ui" in prompt
-    assert "保持参考图的布局结构" in prompt
-    assert "不要照抄参考图" in prompt
-    assert "996 传奇游戏 UI" in prompt
+    assert "Keep the reference layout structure" in prompt
+    assert "Do not copy the reference image directly" in prompt
+    assert "996 legend game UI" in prompt
     assert "4:3" in prompt
-    assert "单一界面" in prompt
-    assert "适合后续切图和标注" in prompt
+    assert "single screen" in prompt
+    assert "slicing and annotation" in prompt
     assert "角色面板需要突出装备槽和战力信息" in prompt
+
+
+def test_style_inheritance_prompt_can_omit_reference_image() -> None:
+    style = {
+        "style_code": "STYLE_0001",
+        "style_name": "Dark Gold Dragon",
+        "style_summary": "dark fantasy, gold dragon ornament, heavy game UI",
+        "color_palette": ["#1A120E", "#D9A441", "#6E1F16"],
+        "font_style": "bold readable Chinese game UI font",
+        "border_style": "gold carved border",
+        "button_style": "dark red glossy button with gold trim",
+        "icon_style": "high contrast fantasy icon",
+        "texture_style": "aged metal and leather texture",
+    }
+
+    prompt = build_reference_guided_prompt(style=style, screen_type="bag_ui", user_prompt="large item grid")
+
+    assert "STYLE_0001" in prompt
+    assert "bag_ui" in prompt
+    assert "No reference image supplied" in prompt
+    assert "Inherit the master style" in prompt
+    assert "large item grid" in prompt
 
 
 def test_target_package_dir_uses_style_and_screen_type(tmp_path: Path) -> None:

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import html
 import json
 import os
 from pathlib import Path
@@ -21,8 +22,16 @@ from app.schemas import AssetCreate, GenerationJobCreate, ProjectCreate
 from scripts.validate_996_export import validate_package
 
 
-SUPPORTED_SCREEN_TYPES = {"main_ui", "role_ui"}
+SUPPORTED_SCREEN_TYPES = {"main_ui", "role_ui", "bag_ui", "shop_ui", "activity_ui"}
 REAL_PROVIDER_TYPES = {"openai", "ofox"}
+
+SCREEN_TYPE_GOALS = {
+    "main_ui": "main game HUD with player info, core entries, chat, map, skill bar, and shortcut bar",
+    "role_ui": "role panel with character preview, equipment slots, combat power, and attribute list",
+    "bag_ui": "bag inventory with item grid, tabs, item detail area, and action buttons",
+    "shop_ui": "shop interface with category tabs, product cards, price labels, and purchase buttons",
+    "activity_ui": "activity interface with event list, reward preview, progress, and claim buttons",
+}
 
 
 def load_style(style_code: str, style_root: str | Path = "style_codes") -> dict[str, Any]:
@@ -42,7 +51,7 @@ def build_reference_guided_prompt(
     *,
     style: dict[str, Any],
     screen_type: str,
-    reference_image_path: str | Path,
+    reference_image_path: str | Path | None = None,
     user_prompt: str = "",
 ) -> str:
     if screen_type not in SUPPORTED_SCREEN_TYPES:
@@ -51,15 +60,20 @@ def build_reference_guided_prompt(
     style_name = str(style.get("style_name") or style_code)
     palette = style.get("color_palette") or []
     palette_text = ", ".join(str(color) for color in palette) if isinstance(palette, list) else str(palette)
+    reference_line = (
+        f"Reference image path: {Path(reference_image_path)}. Keep the reference layout structure, main area ratios, information hierarchy, and UI rhythm."
+        if reference_image_path
+        else "No reference image supplied. Inherit the master style and use a conventional 996 legend game layout for this screen type."
+    )
     parts = [
-        "生成一张 996 传奇游戏 UI 单一界面。",
+        "Generate one 996 legend game UI screen.",
         f"style_code: {style_code}",
         f"style_name: {style_name}",
         f"screen_type: {screen_type}",
-        f"reference_image_path: {Path(reference_image_path)}",
-        "保持参考图的布局结构、主要区域比例、信息层级和界面节奏。",
-        "不要照抄参考图的具体美术元素、文字、角色或商标。",
-        "使用 style_code 指定的统一风格继续生成新界面。",
+        f"screen_goal: {SCREEN_TYPE_GOALS[screen_type]}",
+        reference_line,
+        "Do not copy the reference image directly, and do not reuse its exact artwork, text, characters, or trademarks.",
+        "Use the specified style_code as the master visual style for color, typography, border, button, icon, and texture decisions.",
         f"style_summary: {style.get('style_summary', '')}",
         f"color_palette: {palette_text}",
         f"font_style: {style.get('font_style', '')}",
@@ -67,12 +81,12 @@ def build_reference_guided_prompt(
         f"button_style: {style.get('button_style', '')}",
         f"icon_style: {style.get('icon_style', '')}",
         f"texture_style: {style.get('texture_style', '')}",
-        "画幅必须为 4:3 比例。",
-        "输出单一界面，不要生成多屏拼图，不要生成说明页。",
-        "UI 需要适合后续切图和标注：按钮、图标、输入框、边框、标签页、背包格子边界清晰。",
+        "Canvas ratio must be 4:3.",
+        "Output a single screen only. Do not create a collage, tutorial page, or multi-screen sheet.",
+        "Make it suitable for later slicing and annotation: buttons, icons, inputs, frames, tabs, and inventory slots should have clear boundaries.",
     ]
     if user_prompt:
-        parts.append(f"用户补充需求: {user_prompt}")
+        parts.append(f"User prompt: {user_prompt}")
     return "\n".join(parts)
 
 
@@ -117,11 +131,59 @@ def copy_package_to_style_dir(source_package: Path, target_package: Path) -> Non
     shutil.copytree(source_package, target_package)
 
 
+def write_delivery_report(
+    *,
+    package_dir: str | Path,
+    style_code: str,
+    screen_type: str,
+    generation_job_id: str,
+    screen_generation_mode: str,
+    prompt: str,
+    reference_image_path: str | Path | None = None,
+) -> dict[str, Any]:
+    package_path = Path(package_dir)
+    report = {
+        "style_code": style_code,
+        "screen_type": screen_type,
+        "generation_job_id": generation_job_id,
+        "screen_generation_mode": screen_generation_mode,
+        "reference_image_path": str(reference_image_path) if reference_image_path else None,
+        "prompt": prompt,
+        "outputs": {
+            "ui_preview": "ui_preview.png",
+            "manifest": "manifest.json",
+            "annotation": "annotation.json",
+            "preview": "preview.html",
+            "candidate_manifest": "candidate_manifest.json",
+            "candidate_preview": "candidate_preview.html",
+            "components_dir": "components",
+            "candidates_dir": "candidates",
+        },
+    }
+    json_path = package_path / "delivery_report.json"
+    html_path = package_path / "delivery_report.html"
+    json_path.write_text(json.dumps(report, ensure_ascii=False, indent=2), encoding="utf-8")
+    html_path.write_text(
+        "<!doctype html><html><head><meta charset=\"utf-8\">"
+        "<title>996 delivery report</title></head><body>"
+        "<h1>996 delivery report</h1>"
+        f"<p>style_code: <code>{html.escape(style_code)}</code></p>"
+        f"<p>screen_type: <code>{html.escape(screen_type)}</code></p>"
+        f"<p>generation_job_id: <code>{html.escape(generation_job_id)}</code></p>"
+        f"<p>screen_generation_mode: <code>{html.escape(screen_generation_mode)}</code></p>"
+        "<h2>outputs</h2><ul>"
+        + "".join(f"<li><code>{html.escape(str(path))}</code></li>" for path in report["outputs"].values())
+        + "</ul></body></html>",
+        encoding="utf-8",
+    )
+    return report
+
+
 def generate_screen_with_style(
     *,
     style_code: str,
     screen_type: str,
-    reference_image: str | Path,
+    reference_image: str | Path | None = None,
     user_prompt: str = "",
     style_root: str | Path = "style_codes",
     database_path: str | Path = "backend/data/studio.db",
@@ -131,8 +193,8 @@ def generate_screen_with_style(
 ) -> dict[str, Any]:
     if screen_type not in SUPPORTED_SCREEN_TYPES:
         raise ValueError(f"screen_type must be one of {sorted(SUPPORTED_SCREEN_TYPES)}")
-    reference_path = Path(reference_image)
-    if not reference_path.exists():
+    reference_path = Path(reference_image) if reference_image else None
+    if reference_path is not None and not reference_path.exists():
         raise FileNotFoundError(f"Reference image does not exist: {reference_path}")
 
     style = load_style(style_code, style_root)
@@ -152,22 +214,27 @@ def generate_screen_with_style(
         )
         project_id = project.id
 
-    width, height = image_dimensions(reference_path)
-    reference_asset = database.create_asset(
-        AssetCreate(
-            project_id=project_id,
-            asset_type="reference_image",
-            device_type="pc",
-            width=width,
-            height=height,
-            file_path=str(reference_path),
-            original_filename=reference_path.name,
-            metadata_json=json.dumps({"style_code": style_code, "screen_type": screen_type}, ensure_ascii=False),
-            source="uploaded",
-            generation_job_id=None,
-            thumbnail_path="",
+    reference_asset_id = None
+    if reference_path is not None:
+        width, height = image_dimensions(reference_path)
+        reference_asset = database.create_asset(
+            AssetCreate(
+                project_id=project_id,
+                asset_type="reference_image",
+                device_type="pc",
+                width=width,
+                height=height,
+                file_path=str(reference_path),
+                original_filename=reference_path.name,
+                metadata_json=json.dumps({"style_code": style_code, "screen_type": screen_type}, ensure_ascii=False),
+                source="uploaded",
+                generation_job_id=None,
+                thumbnail_path="",
+            )
         )
-    )
+        reference_asset_id = reference_asset.id
+
+    screen_generation_mode = "reference_guided" if reference_path else "style_inheritance"
     job = database.create_generation_job(
         GenerationJobCreate(
             project_id=project_id,
@@ -181,8 +248,9 @@ def generate_screen_with_style(
                     "prompt": prompt,
                     "style_code": style_code,
                     "screen_type": screen_type,
-                    "reference_image_id": reference_asset.id,
-                    "reference_image_path": str(reference_path),
+                    "screen_generation_mode": screen_generation_mode,
+                    "reference_image_id": reference_asset_id,
+                    "reference_image_path": str(reference_path) if reference_path else None,
                     "device_type": "pc",
                     "width": 1024,
                     "height": 768,
@@ -217,6 +285,15 @@ def generate_screen_with_style(
         generation_job_id=completed.id,
     )
     copy_package_to_style_dir(source_package, final_package)
+    write_delivery_report(
+        package_dir=final_package,
+        style_code=style_code,
+        screen_type=screen_type,
+        generation_job_id=completed.id,
+        screen_generation_mode=screen_generation_mode,
+        prompt=prompt,
+        reference_image_path=reference_path,
+    )
     report = validate_package(final_package)
     if not report["ok"]:
         raise RuntimeError(f"Final 996-ready package validation failed: {report['errors']}")
@@ -225,7 +302,7 @@ def generate_screen_with_style(
         "style_code": style_code,
         "screen_type": screen_type,
         "generation_job_id": completed.id,
-        "reference_asset_id": reference_asset.id,
+        "reference_asset_id": reference_asset_id,
         "prompt": prompt,
         "source_package_dir": str(source_package),
         "package_dir": str(final_package),
@@ -234,10 +311,10 @@ def generate_screen_with_style(
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Generate one 996 UI screen from a style code and reference image.")
+    parser = argparse.ArgumentParser(description="Generate one 996 UI screen from a style code and optional reference image.")
     parser.add_argument("--style-code", required=True)
     parser.add_argument("--screen-type", required=True, choices=sorted(SUPPORTED_SCREEN_TYPES))
-    parser.add_argument("--reference-image", required=True)
+    parser.add_argument("--reference-image")
     parser.add_argument("--prompt", default="")
     parser.add_argument("--style-root", default="style_codes")
     parser.add_argument("--database-path", default="backend/data/studio.db")

@@ -20,6 +20,19 @@ style_codes/
 
 Style codes are allocated sequentially by scanning existing `STYLE_####` directories.
 
+In Master Style Workflow, the style directory also stores the master `main_ui` snapshot:
+
+```text
+style_codes/
+  STYLE_0001/
+    style.json
+    ui_preview.png
+    annotation.json
+    manifest.json
+    delivery_report.json
+    delivery_report.html
+```
+
 ## style.json
 
 Required fields:
