@@ -16,6 +16,7 @@ COMPONENT_TYPES = {
     "bar",
     "button",
     "icon",
+    "frame",
     "slot",
     "tab",
     "badge",
@@ -42,6 +43,9 @@ RESOURCE_GROUPS = {
 RECOGNITION_METHODS = {"template", "fixture", "manual"}
 REVIEW_STATUSES = {"pending", "reviewed", "approved", "rejected"}
 IMAGE_ALPHA_VALUES = {"required", "optional", "none"}
+TRANSPARENT_REQUIRED_TYPES = {"button", "icon", "frame", "input"}
+TRANSPARENT_OPTIONAL_TYPES = {"panel", "background"}
+TRANSPARENT_STATUSES = {"not_required", "unverified", "verified"}
 
 REQUIRED_FILES = {
     "manifest": "manifest.json",
@@ -168,12 +172,60 @@ def expect_confidence(value: Any, label: str, errors: list[str]) -> bool:
     return True
 
 
+def validate_transparent_field(
+    value: Any,
+    *,
+    component_type: Any,
+    label: str,
+    errors: list[str],
+    image: dict[str, Any] | None = None,
+) -> bool:
+    if value is None:
+        return True
+    if not isinstance(value, dict):
+        errors.append(f"{label}.transparent must be an object")
+        return False
+
+    ok = True
+    ok = expect_bool(value, "required", f"{label}.transparent", errors) and ok
+    ok = expect_bool(value, "verified", f"{label}.transparent", errors) and ok
+    ok = expect_enum(value.get("status"), TRANSPARENT_STATUSES, f"{label}.transparent.status", errors) and ok
+    required = value.get("required")
+    verified = value.get("verified")
+    status = value.get("status")
+
+    if component_type in TRANSPARENT_REQUIRED_TYPES and required is not True:
+        errors.append(f"{label}.transparent.required must be true for {component_type} components")
+        ok = False
+    if component_type in TRANSPARENT_OPTIONAL_TYPES and required is True:
+        errors.append(f"{label}.transparent.required may be false for {component_type} components")
+        ok = False
+    if verified is True and status != "verified":
+        errors.append(f"{label}.transparent.status must be verified when transparent.verified is true")
+        ok = False
+    if required is False and status == "verified":
+        errors.append(f"{label}.transparent.status must not be verified when transparent.required is false")
+        ok = False
+    if required is True and status == "not_required":
+        errors.append(f"{label}.transparent.status must not be not_required when transparent.required is true")
+        ok = False
+    if image is not None and required is True:
+        if image.get("alpha") != "required":
+            errors.append(f"{label}.image.alpha must be required when transparent.required is true")
+            ok = False
+        if image.get("transparent_background") is not True:
+            errors.append(f"{label}.image.transparent_background must be true when transparent.required is true")
+            ok = False
+    return ok
+
+
 def validate_manifest_schema(manifest: dict[str, Any], errors: list[str]) -> dict[str, bool]:
     checks = {
         "schema_v1": True,
         "manifest_required_fields": True,
         "field_types": True,
         "component_classification": True,
+        "transparent_fields": True,
     }
     required = [
         "schema_version",
@@ -246,6 +298,12 @@ def validate_manifest_schema(manifest: dict[str, Any], errors: list[str]) -> dic
         checks["field_types"] = expect_string(component, "component_name_zh", label, errors) and checks["field_types"]
         checks["field_types"] = expect_string(component, "file", label, errors) and checks["field_types"]
         checks["field_types"] = expect_bounds(component.get("bounds"), f"{label}.bounds", errors) and checks["field_types"]
+        checks["transparent_fields"] = validate_transparent_field(
+            component.get("transparent"),
+            component_type=component.get("component_type"),
+            label=label,
+            errors=errors,
+        ) and checks["transparent_fields"]
         checks["field_types"] = expect_bool(component, "transparent_png_required", label, errors) and checks["field_types"]
         checks["field_types"] = expect_bool(component, "transparent_png_verified", label, errors) and checks["field_types"]
     return checks
@@ -257,6 +315,7 @@ def validate_annotation_schema(annotation: dict[str, Any], errors: list[str]) ->
         "annotation_required_fields": True,
         "field_types": True,
         "component_classification": True,
+        "transparent_fields": True,
     }
     required = ["schema_version", "source_asset_id", "coordinate_space", "components"]
     for field in required:
@@ -325,6 +384,14 @@ def validate_annotation_schema(annotation: dict[str, Any], errors: list[str]) ->
             checks["field_types"] = expect_enum(image.get("alpha"), IMAGE_ALPHA_VALUES, f"{label}.image.alpha", errors) and checks["field_types"]
             checks["field_types"] = expect_bool(image, "transparent_background", f"{label}.image", errors) and checks["field_types"]
 
+        checks["transparent_fields"] = validate_transparent_field(
+            component.get("transparent"),
+            component_type=component.get("component_type"),
+            label=label,
+            errors=errors,
+            image=image if isinstance(image, dict) else None,
+        ) and checks["transparent_fields"]
+
         recognition = component.get("recognition")
         if not isinstance(recognition, dict):
             errors.append(f"{label}.recognition must be an object")
@@ -354,6 +421,7 @@ def validate_package(package_dir: str | Path) -> dict[str, Any]:
         "annotation_required_fields": True,
         "field_types": True,
         "component_classification": True,
+        "transparent_fields": True,
         "ui_preview_exists": False,
         "component_paths_relative": True,
         "component_files_exist": True,

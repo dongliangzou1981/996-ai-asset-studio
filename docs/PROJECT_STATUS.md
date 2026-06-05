@@ -287,3 +287,31 @@ Verification:
 Conclusion:
 
 Sprint 10A establishes the first strict 996-ready package contract without touching the Sprint 8C generation and component processing chain.
+
+## Sprint 10B
+
+Status: complete
+
+Scope:
+
+- Define transparent asset metadata in `docs/TRANSPARENT_ASSET_SCHEMA.md`.
+- Extend Schema V1 with optional `transparent` fields in `manifest.json` and `annotation.json`.
+- Preserve backward compatibility for packages without `transparent`.
+- Upgrade `scripts/validate_996_export.py` to validate transparent field legality.
+- Upgrade `tests/fixtures/996_ready_demo/` with transparent button and icon examples.
+- Add transparent asset regression coverage in `tests/test_transparent_asset_schema.py`.
+
+Rules:
+
+- `button`, `icon`, `frame`, and `input` require transparency when `transparent` metadata is present.
+- `panel` and `background` may remain non-transparent.
+
+Out of scope:
+
+- Database changes
+- Business pipeline changes
+- Component recognition upgrades
+- OCR, YOLO, or SAM
+- Automatic transparent PNG generation
+- ZIP export
+- Cloud deployment

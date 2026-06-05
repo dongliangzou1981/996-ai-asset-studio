@@ -336,3 +336,18 @@ Chinese-first principle:
 - [x] Keep database schema unchanged
 - [x] Keep business pipeline unchanged
 - [x] Avoid component recognition AI upgrades, YOLO, OCR, SAM, transparent PNG generation, ZIP export, and cloud deployment
+
+## Sprint 10B
+
+- [x] Add `docs/TRANSPARENT_ASSET_SCHEMA.md`
+- [x] Define required-transparent component types: `button`, `icon`, `frame`, `input`
+- [x] Define non-transparent-allowed component types: `panel`, `background`
+- [x] Extend Schema V1 with optional `transparent` fields in `manifest.json`
+- [x] Extend Schema V1 with optional `transparent` fields in `annotation.json`
+- [x] Keep `transparent` backward compatible
+- [x] Upgrade `scripts/validate_996_export.py` with transparent field validation
+- [x] Add transparent button and icon examples to `tests/fixtures/996_ready_demo/`
+- [x] Add transparent asset regression tests
+- [x] Keep database schema unchanged
+- [x] Keep business pipeline unchanged
+- [x] Avoid component recognition upgrades, OCR, YOLO, SAM, automatic transparent PNG generation, ZIP export, and cloud deployment

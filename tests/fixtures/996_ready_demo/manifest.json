@@ -23,6 +23,11 @@
         "width": 1024,
         "height": 184
       },
+      "transparent": {
+        "required": true,
+        "verified": true,
+        "status": "verified"
+      },
       "transparent_png_required": true,
       "transparent_png_verified": true
     },
@@ -38,8 +43,53 @@
         "width": 246,
         "height": 225
       },
+      "transparent": {
+        "required": false,
+        "verified": false,
+        "status": "not_required"
+      },
       "transparent_png_required": false,
       "transparent_png_verified": false
+    },
+    {
+      "component_id": "primary_action_button",
+      "component_type": "button",
+      "component_name_zh": "主操作按钮",
+      "resource_group": "main",
+      "file": "components/primary_action_button.png",
+      "bounds": {
+        "x": 720,
+        "y": 880,
+        "width": 180,
+        "height": 72
+      },
+      "transparent": {
+        "required": true,
+        "verified": true,
+        "status": "verified"
+      },
+      "transparent_png_required": true,
+      "transparent_png_verified": true
+    },
+    {
+      "component_id": "bag_entry_icon",
+      "component_type": "icon",
+      "component_name_zh": "背包入口图标",
+      "resource_group": "main",
+      "file": "components/bag_entry_icon.png",
+      "bounds": {
+        "x": 900,
+        "y": 820,
+        "width": 64,
+        "height": 64
+      },
+      "transparent": {
+        "required": true,
+        "verified": true,
+        "status": "verified"
+      },
+      "transparent_png_required": true,
+      "transparent_png_verified": true
     }
   ]
 }

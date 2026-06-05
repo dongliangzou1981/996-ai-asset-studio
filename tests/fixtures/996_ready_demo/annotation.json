@@ -26,6 +26,11 @@
         "alpha": "required",
         "transparent_background": true
       },
+      "transparent": {
+        "required": true,
+        "verified": true,
+        "status": "verified"
+      },
       "recognition": {
         "method": "fixture",
         "confidence": 1.0
@@ -57,6 +62,11 @@
         "alpha": "optional",
         "transparent_background": false
       },
+      "transparent": {
+        "required": false,
+        "verified": false,
+        "status": "not_required"
+      },
       "recognition": {
         "method": "fixture",
         "confidence": 1.0
@@ -64,6 +74,78 @@
       "requires_manual_review": false,
       "review_status": "approved",
       "notes": "Panel fixture used to verify relative component paths."
+    },
+    {
+      "component_id": "primary_action_button",
+      "component_type": "button",
+      "component_name_zh": "主操作按钮",
+      "resource_group": "main",
+      "bounds": {
+        "x": 720,
+        "y": 880,
+        "width": 180,
+        "height": 72
+      },
+      "style": {
+        "font_family": "Microsoft YaHei",
+        "font_size": 16,
+        "font_color": "#FFFFFF"
+      },
+      "image": {
+        "file": "components/primary_action_button.png",
+        "format": "png",
+        "color_mode": "RGBA",
+        "alpha": "required",
+        "transparent_background": true
+      },
+      "transparent": {
+        "required": true,
+        "verified": true,
+        "status": "verified"
+      },
+      "recognition": {
+        "method": "fixture",
+        "confidence": 1.0
+      },
+      "requires_manual_review": false,
+      "review_status": "approved",
+      "notes": "Transparent button fixture for Sprint 10B validation."
+    },
+    {
+      "component_id": "bag_entry_icon",
+      "component_type": "icon",
+      "component_name_zh": "背包入口图标",
+      "resource_group": "main",
+      "bounds": {
+        "x": 900,
+        "y": 820,
+        "width": 64,
+        "height": 64
+      },
+      "style": {
+        "font_family": "Microsoft YaHei",
+        "font_size": 12,
+        "font_color": "#FFFFFF"
+      },
+      "image": {
+        "file": "components/bag_entry_icon.png",
+        "format": "png",
+        "color_mode": "RGBA",
+        "alpha": "required",
+        "transparent_background": true
+      },
+      "transparent": {
+        "required": true,
+        "verified": true,
+        "status": "verified"
+      },
+      "recognition": {
+        "method": "fixture",
+        "confidence": 1.0
+      },
+      "requires_manual_review": false,
+      "review_status": "approved",
+      "notes": "Transparent icon fixture for Sprint 10B validation."
     }
   ]
 }

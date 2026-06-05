@@ -69,6 +69,7 @@ All JSON paths are relative to the package root and must use `/`.
 | `resource_group` | string | Must be one of Schema V1 resource groups |
 | `file` | string | Relative path to component PNG |
 | `bounds` | object | Component bounds in `ui_preview` pixels |
+| `transparent` | object | Optional Sprint 10B transparent asset metadata |
 | `transparent_png_required` | boolean | Whether the component should eventually be transparent |
 | `transparent_png_verified` | boolean | Whether transparency has been verified |
 
@@ -103,6 +104,7 @@ All JSON paths are relative to the package root and must use `/`.
 | `bounds` | object | Same coordinate meaning as manifest |
 | `style` | object | Font style metadata |
 | `image` | object | Component image metadata |
+| `transparent` | object | Optional Sprint 10B transparent asset metadata |
 | `recognition` | object | Recognition source metadata |
 | `requires_manual_review` | boolean | Whether manual review is required |
 | `review_status` | string | Review status enum |
@@ -133,6 +135,16 @@ All JSON paths are relative to the package root and must use `/`.
 | `method` | string | `template`, `fixture`, or `manual` |
 | `confidence` | number or null | Null or number between 0 and 1 |
 
+### transparent
+
+`transparent` is optional for backward compatibility. When present, it must follow [Transparent Asset Schema](./TRANSPARENT_ASSET_SCHEMA.md).
+
+| Field | Type | Rule |
+| --- | --- | --- |
+| `required` | boolean | Whether this component type must be transparent |
+| `verified` | boolean | Whether this component file has been verified as transparent |
+| `status` | string | `not_required`, `unverified`, or `verified` |
+
 ## Component Types
 
 Schema V1 component types:
@@ -142,6 +154,7 @@ panel
 bar
 button
 icon
+frame
 slot
 tab
 badge
@@ -216,6 +229,7 @@ components\main_bottom_bar.png
 - required component fields
 - field types
 - component type enum
+- optional transparent field
 - resource group enum
 - review status enum
 - relative path rules
