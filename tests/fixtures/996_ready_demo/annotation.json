@@ -7,6 +7,7 @@
       "component_id": "main_bottom_bar",
       "component_type": "bar",
       "component_name_zh": "主功能栏",
+      "resource_group": "main",
       "bounds": {
         "x": 0,
         "y": 840,
@@ -30,12 +31,14 @@
         "confidence": 1.0
       },
       "requires_manual_review": false,
+      "review_status": "approved",
       "notes": "Sprint 10R fixture component for export validation."
     },
     {
       "component_id": "left_status_panel",
       "component_type": "panel",
       "component_name_zh": "左上状态面板",
+      "resource_group": "main",
       "bounds": {
         "x": 0,
         "y": 0,
@@ -59,6 +62,7 @@
         "confidence": 1.0
       },
       "requires_manual_review": false,
+      "review_status": "approved",
       "notes": "Panel fixture used to verify relative component paths."
     }
   ]

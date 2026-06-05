@@ -252,3 +252,38 @@ Remaining:
 - If `gpt-image-2` is unsupported by the local Ofox account, rerun the scripts with a supported image model.
 - Template detection still needs intelligent visual recognition.
 - Transparent PNG slicing is not optimized yet.
+
+## Sprint 10A
+
+Status: complete
+
+Scope:
+
+- Solidify 996-ready Schema V1 for local package validation.
+- Define `manifest.json` required fields, types, path rules, component types, and resource groups.
+- Define `annotation.json` required fields, style metadata, image metadata, recognition metadata, review status, and notes.
+- Upgrade `scripts/validate_996_export.py` to validate Schema V1.
+- Upgrade `tests/fixtures/996_ready_demo/` to fully conform to Schema V1.
+- Add Schema V1 regression coverage in `tests/test_996_ready_schema.py`.
+
+Out of scope:
+
+- Database changes
+- Business pipeline changes
+- Component recognition AI upgrades
+- YOLO, OCR, or SAM
+- Automatic transparent PNG generation
+- ZIP export
+- Cloud deployment
+
+Verification:
+
+- Schema V1 fixture validates successfully.
+- Missing required fields fail validation.
+- Invalid field types fail validation.
+- Unsafe paths fail validation.
+- Unknown component types fail validation.
+
+Conclusion:
+
+Sprint 10A establishes the first strict 996-ready package contract without touching the Sprint 8C generation and component processing chain.

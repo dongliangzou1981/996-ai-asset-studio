@@ -316,3 +316,23 @@ Chinese-first principle:
 - [x] Document that only `OFOX_API_KEY` is required locally
 - [x] Confirm local real E2E reaches the external Ofox Images API with backend-loaded `OFOX_API_KEY`
 - [ ] Re-verify real image generation after Ofox `402` billing/quota limit is resolved
+
+## Sprint 10A
+
+- [x] Add `docs/996_READY_SCHEMA_V1.md`
+- [x] Define `manifest.json` Schema V1 required fields
+- [x] Define `annotation.json` Schema V1 required fields
+- [x] Define Schema V1 component types
+- [x] Define Schema V1 resource groups
+- [x] Define Schema V1 path rules
+- [x] Upgrade `scripts/validate_996_export.py` with Schema V1 validation
+- [x] Check required fields
+- [x] Check field types
+- [x] Check relative path safety
+- [x] Check referenced file existence
+- [x] Check component classification
+- [x] Upgrade `tests/fixtures/996_ready_demo/` to conform to Schema V1
+- [x] Add `tests/test_996_ready_schema.py`
+- [x] Keep database schema unchanged
+- [x] Keep business pipeline unchanged
+- [x] Avoid component recognition AI upgrades, YOLO, OCR, SAM, transparent PNG generation, ZIP export, and cloud deployment
