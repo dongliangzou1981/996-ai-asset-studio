@@ -139,7 +139,8 @@ def build_style_edit_prompt(
             f"texture_style: {style.get('texture_style', '')}",
             f"annotation_summary: {summarize_components(context)}",
             f"candidate_summary: {summarize_candidates(context)}",
-            "Canvas ratio must remain 4:3.",
+            "For main_ui, canvas ratio must remain strict 16:9 landscape for horizontal mobile gameplay.",
+            "Preferred main_ui target canvas is 1536x864 pixels.",
             "Output a single revised UI screen only, suitable for Component Processing, annotation, candidate detection, and 996-ready delivery.",
         ]
     )
@@ -325,8 +326,8 @@ def edit_screen_with_style(
                     "reference_image_id": reference_asset.id,
                     "reference_image_path": str(source_preview_path),
                     "device_type": "pc",
-                    "width": 1024,
-                    "height": 768,
+                    "width": 1536 if screen_type == "main_ui" else 1024,
+                    "height": 864 if screen_type == "main_ui" else 768,
                 },
                 ensure_ascii=False,
             ),

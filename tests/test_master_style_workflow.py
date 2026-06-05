@@ -67,7 +67,8 @@ def test_auto_generate_main_ui_prompt_keeps_core_operation_layout() -> None:
     ]:
         assert required in prompt
     assert "do not remove core entries" in prompt
-    assert "4:3" in prompt
+    assert "strict 16:9 landscape" in prompt
+    assert "1536x864" in prompt
     assert "strong dragon ornament" in prompt
 
 

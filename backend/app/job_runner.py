@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any
 
 import httpx
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageOps
 
 from app.component_processing import process_ui_preview_components
 from app.db import StudioDatabase
@@ -53,6 +53,31 @@ def openai_image_size(input_data: dict[str, Any]) -> str:
     if height > width:
         return "1024x1536"
     return "1024x1024"
+
+
+def requested_image_dimensions(input_data: dict[str, Any]) -> tuple[int, int] | None:
+    width = int(input_data.get("width") or 0)
+    height = int(input_data.get("height") or 0)
+    if width <= 0 or height <= 0:
+        return None
+    return width, height
+
+
+def normalize_preview_dimensions(path: Path, input_data: dict[str, Any]) -> None:
+    target = requested_image_dimensions(input_data)
+    if target is None:
+        return
+    target_width, target_height = target
+    with Image.open(path) as image:
+        if image.size == target:
+            return
+        normalized = ImageOps.fit(
+            image.convert("RGBA"),
+            target,
+            method=Image.Resampling.LANCZOS,
+            centering=(0.5, 0.5),
+        )
+        normalized.save(path, format="PNG")
 
 
 def render_placeholder_png(
@@ -553,6 +578,7 @@ class OpenAIJobRunner(BaseJobRunner):
             raise
         except Exception as exc:
             raise RuntimeError(f"Failed to save {self.provider_label} image: {exc}") from exc
+        normalize_preview_dimensions(preview_path, input_data)
         return preview_path
 
     def image_generation_url(self, config: dict[str, Any]) -> str:

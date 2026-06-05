@@ -1,0 +1,23 @@
+{
+  "style_code": "STYLE_0002",
+  "style_name": "Sprint 13B Dark Gold Dragon 16x9",
+  "source_job_id": "064aa8fd8e374525878130de9ffee528",
+  "source_asset_id": "930d4d8116ae47918121c9469e9ae674",
+  "original_ui_preview": "C:\\Users\\86186\\Documents\\996美术资产生成\\assets\\uploads\\996-ready\\064aa8fd8e374525878130de9ffee528\\ui_preview.png",
+  "style_summary": "Sprint 13B Dark Gold Dragon 16x9: 996 legend game UI style derived from source job output.",
+  "color_palette": [
+    "#E7EAED",
+    "#E6E9ED",
+    "#D7DEE5",
+    "#D8DFE6",
+    "#1D2A3C"
+  ],
+  "color_description": "Dominant palette uses #E7EAED, #E6E9ED, #D7DEE5, #D8DFE6, #1D2A3C.",
+  "font_style": "Bold, readable Chinese fantasy game UI typography; high contrast over dark panels.",
+  "border_style": "Layered metallic fantasy borders with gold highlights and clear panel separation.",
+  "button_style": "Readable rectangular fantasy buttons with bright trim and strong pressed-state potential.",
+  "icon_style": "High-contrast item and skill icons with clear silhouettes suitable for slicing.",
+  "texture_style": "Dark stone, aged metal, leather, and subtle ornamental texture.",
+  "created_at": "2026-06-05T10:33:09+00:00",
+  "updated_at": "2026-06-05T10:33:09+00:00"
+}

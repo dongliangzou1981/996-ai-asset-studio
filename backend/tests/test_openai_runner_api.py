@@ -19,6 +19,12 @@ def png_bytes() -> bytes:
     return buffer.getvalue()
 
 
+def png_bytes_with_size(width: int, height: int) -> bytes:
+    buffer = BytesIO()
+    Image.new("RGB", (width, height), color=(245, 248, 252)).save(buffer, format="PNG")
+    return buffer.getvalue()
+
+
 class FakeOpenAIResponse:
     def __init__(self, payload: dict, status_code: int = 200) -> None:
         self.payload = payload
@@ -148,6 +154,53 @@ def test_openai_runner_success_writes_ai_generated_assets(tmp_path: Path, monkey
     assert len([asset for asset in assets if asset["source"] == "component_processing"]) == 6
     assert all(asset["generation_job_id"] == job_id for asset in assets)
     assert all(Path(asset["thumbnail_path"]).exists() for asset in assets if asset["source"] == "ai_generated")
+
+
+def test_openai_runner_normalizes_requested_landscape_dimensions(tmp_path: Path, monkeypatch) -> None:
+    client = make_client(tmp_path)
+    project = client.post(
+        "/projects",
+        json={"name": "Sprint13B Landscape", "description": "16:9 main UI", "status": "active"},
+    ).json()
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-test-secret")
+    provider_id = create_openai_provider(client)
+    response = client.post(
+        "/generation_jobs",
+        json={
+            "project_id": project["id"],
+            "provider_id": provider_id,
+            "job_type": "real_ui_generation",
+            "status": "pending",
+            "progress": 0,
+            "input_json": json.dumps(
+                {
+                    "prompt": "Generate a horizontal mobile game UI",
+                    "device_type": "mobile_landscape",
+                    "screen_type": "main_ui",
+                    "width": 1536,
+                    "height": 864,
+                }
+            ),
+            "output_json": "",
+            "output_preview_path": "",
+            "error_message": "",
+            "logs": "queued",
+        },
+    )
+    assert response.status_code == 201
+    job_id = response.json()["id"]
+
+    def fake_post(url: str, **kwargs):  # type: ignore[no-untyped-def]
+        assert kwargs["json"]["size"] == "1536x1024"
+        return FakeOpenAIResponse({"data": [{"b64_json": base64.b64encode(png_bytes_with_size(1536, 1024)).decode("ascii")}]})
+
+    monkeypatch.setattr("app.job_runner.httpx.post", fake_post)
+
+    completed = client.post(f"/generation_jobs/{job_id}/run").json()
+
+    assert completed["status"] == "completed"
+    with Image.open(completed["output_preview_path"]) as image:
+        assert image.size == (1536, 864)
 
 
 def test_real_ui_generation_openai_runs_component_processing(tmp_path: Path, monkeypatch) -> None:

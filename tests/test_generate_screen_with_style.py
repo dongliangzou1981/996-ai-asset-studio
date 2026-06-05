@@ -48,7 +48,7 @@ def test_reference_guided_prompt_contains_required_generation_constraints(tmp_pa
     assert "Keep the reference layout structure" in prompt
     assert "Do not copy the reference image directly" in prompt
     assert "996 legend game UI" in prompt
-    assert "4:3" in prompt
+    assert "16:9 landscape" in prompt
     assert "single screen" in prompt
     assert "slicing and annotation" in prompt
     assert "角色面板需要突出装备槽和战力信息" in prompt
