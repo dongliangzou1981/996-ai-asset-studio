@@ -88,8 +88,12 @@ def test_component_processing_outputs_candidate_manifest_and_preview(tmp_path: P
 
     candidate_manifest_path = Path(payload["candidate_manifest_path"])
     candidate_preview_html_path = Path(payload["candidate_preview_html_path"])
+    component_quality_report_path = Path(payload["component_quality_report_path"])
+    component_quality_report_html_path = Path(payload["component_quality_report_html_path"])
     assert candidate_manifest_path.exists()
     assert candidate_preview_html_path.exists()
+    assert component_quality_report_path.exists()
+    assert component_quality_report_html_path.exists()
 
     candidate_manifest = json.loads(candidate_manifest_path.read_text(encoding="utf-8"))
     candidates = candidate_manifest["candidates"]
@@ -121,3 +125,23 @@ def test_component_processing_outputs_candidate_manifest_and_preview(tmp_path: P
     preview_html = candidate_preview_html_path.read_text(encoding="utf-8")
     for candidate_type in EXPECTED_CANDIDATE_TYPES:
         assert candidate_type in preview_html
+
+    quality_report = json.loads(component_quality_report_path.read_text(encoding="utf-8"))
+    assert quality_report["report_type"] == "component_quality"
+    assert quality_report["total_components"] == 12
+    assert quality_report["category_counts"] == {
+        "button": 1,
+        "icon": 1,
+        "frame": 1,
+        "tab": 1,
+        "slot": 1,
+        "input": 1,
+        "panel": 6,
+        "background": 0,
+    }
+    assert quality_report["coverage"]["total_area"] == 1024 * 1024
+    assert quality_report["coverage"]["covered_area"] > 0
+    assert quality_report["coverage"]["uncovered_area"] >= 0
+    assert isinstance(quality_report["suspected_missing_regions"], list)
+    assert validate_package(package_dir)["checks"]["component_quality_report_valid"] is True
+    assert "component quality report" in component_quality_report_html_path.read_text(encoding="utf-8")

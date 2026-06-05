@@ -86,11 +86,42 @@ Important boundary:
   preview.html
   candidate_manifest.json
   candidate_preview.html
+  component_quality_report.json
+  component_quality_report.html
   components/
   candidates/
 ```
 
 New fields are backward-compatible. Older packages without `asset_mode` remain valid.
+
+## Component Quality Report
+
+Sprint 15A adds a quality report to help decide whether the current package is useful enough for 996 follow-up production.
+
+Generated files:
+
+- `component_quality_report.json`
+- `component_quality_report.html`
+
+The report combines:
+
+- template components from `manifest.json`
+- candidate components from `candidate_manifest.json`
+
+It tracks:
+
+- total component count
+- counts for `button`, `icon`, `frame`, `tab`, `slot`, `input`, `panel`, and `background`
+- raw area by category
+- covered area
+- uncovered area
+- suspected missing regions based on coarse low-coverage grid cells
+
+Current limitation:
+
+- The report is coverage analysis, not semantic AI recognition.
+- It does not use OCR, YOLO, SAM, or model training.
+- Suspected missing regions are review hints for humans, not final labels.
 
 ## Simple Operation UI
 
@@ -119,5 +150,6 @@ The default UI choice is `resource_production` for real generation, because this
 - `resource_category`
 - `production_usage`
 - `transparent_policy`
+- `component_quality_report.json`
 
 Legacy packages remain valid because these fields are optional.

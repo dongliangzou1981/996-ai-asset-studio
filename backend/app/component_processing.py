@@ -6,7 +6,7 @@ import shutil
 from pathlib import Path
 from typing import Any
 
-from PIL import Image, ImageFilter, ImageStat
+from PIL import Image, ImageDraw, ImageFilter, ImageStat
 
 from app.db import StudioDatabase
 from app.schemas import Asset, AssetCreate
@@ -30,6 +30,7 @@ CANDIDATE_RULES = [
     ("slot_candidate", 0.12, 0.62, 0.07, 0.07),
 ]
 
+QUALITY_COMPONENT_TYPES = ["button", "icon", "frame", "tab", "slot", "input", "panel", "background"]
 SCHEMA_VERSION = "1.0"
 PACKAGE_TYPE = "996-ready"
 COORDINATE_SPACE = "ui_preview_pixels"
@@ -127,6 +128,167 @@ def transparent_metadata(component_type: str) -> dict[str, bool | str]:
         "required": required,
         "verified": False,
         "status": "unverified" if required else "not_required",
+    }
+
+
+def component_quality_type(component_type: str) -> str | None:
+    normalized = component_type.replace("_candidate", "")
+    if normalized == "bar":
+        return "panel"
+    return normalized if normalized in QUALITY_COMPONENT_TYPES else None
+
+
+def bounds_area(bounds: dict[str, int]) -> int:
+    return max(0, bounds["width"]) * max(0, bounds["height"])
+
+
+def union_covered_area(
+    *,
+    source_width: int,
+    source_height: int,
+    bounds_list: list[dict[str, int]],
+) -> int:
+    mask = Image.new("1", (source_width, source_height), 0)
+    draw = ImageDraw.Draw(mask)
+    for bounds in bounds_list:
+        x1 = max(0, bounds["x"])
+        y1 = max(0, bounds["y"])
+        x2 = min(source_width, bounds["x"] + bounds["width"])
+        y2 = min(source_height, bounds["y"] + bounds["height"])
+        if x2 <= x1 or y2 <= y1:
+            continue
+        draw.rectangle((x1, y1, x2 - 1, y2 - 1), fill=1)
+    return int(mask.histogram()[1])
+
+
+def suspected_missing_regions(
+    *,
+    source_width: int,
+    source_height: int,
+    covered_bounds: list[dict[str, int]],
+) -> list[dict[str, Any]]:
+    regions: list[dict[str, Any]] = []
+    columns = 4
+    rows = 3
+    minimum_area = max(1, round(source_width * source_height * 0.04))
+    for row in range(rows):
+        for column in range(columns):
+            x = round(source_width * column / columns)
+            y = round(source_height * row / rows)
+            next_x = round(source_width * (column + 1) / columns)
+            next_y = round(source_height * (row + 1) / rows)
+            bounds = {"x": x, "y": y, "width": next_x - x, "height": next_y - y}
+            cell_area = bounds_area(bounds)
+            covered_area = union_covered_area(
+                source_width=bounds["width"],
+                source_height=bounds["height"],
+                bounds_list=[
+                    {
+                        "x": max(0, item["x"] - x),
+                        "y": max(0, item["y"] - y),
+                        "width": min(next_x, item["x"] + item["width"]) - max(x, item["x"]),
+                        "height": min(next_y, item["y"] + item["height"]) - max(y, item["y"]),
+                    }
+                    for item in covered_bounds
+                    if item["x"] < next_x
+                    and item["x"] + item["width"] > x
+                    and item["y"] < next_y
+                    and item["y"] + item["height"] > y
+                ],
+            )
+            uncovered_area = cell_area - covered_area
+            if uncovered_area >= minimum_area and uncovered_area / cell_area >= 0.65:
+                regions.append(
+                    {
+                        "region_id": f"missing_r{row + 1}_c{column + 1}",
+                        "bounds": bounds,
+                        "uncovered_area": uncovered_area,
+                        "uncovered_ratio": round(uncovered_area / cell_area, 4),
+                        "reason": "large grid region has low component coverage",
+                        "review_status": "pending",
+                    }
+                )
+    return regions
+
+
+def build_component_quality_report(
+    *,
+    source_width: int,
+    source_height: int,
+    manifest_components: list[dict[str, Any]],
+    candidate_components: list[dict[str, Any]],
+) -> dict[str, Any]:
+    category_counts = {component_type: 0 for component_type in QUALITY_COMPONENT_TYPES}
+    category_area = {component_type: 0 for component_type in QUALITY_COMPONENT_TYPES}
+    report_components: list[dict[str, Any]] = []
+
+    for component in manifest_components:
+        component_type = component_quality_type(str(component.get("component_type") or ""))
+        bounds = component.get("bounds")
+        if component_type is None or not isinstance(bounds, dict):
+            continue
+        area = bounds_area(bounds)
+        category_counts[component_type] += 1
+        category_area[component_type] += area
+        report_components.append(
+            {
+                "id": str(component.get("component_id") or ""),
+                "source": "component",
+                "component_type": component_type,
+                "bounds": bounds,
+                "area": area,
+            }
+        )
+
+    for candidate in candidate_components:
+        component_type = component_quality_type(str(candidate.get("candidate_type") or ""))
+        bounds = candidate.get("bounds")
+        if component_type is None or not isinstance(bounds, dict):
+            continue
+        area = bounds_area(bounds)
+        category_counts[component_type] += 1
+        category_area[component_type] += area
+        report_components.append(
+            {
+                "id": str(candidate.get("candidate_id") or ""),
+                "source": "candidate",
+                "component_type": component_type,
+                "bounds": bounds,
+                "area": area,
+                "confidence": candidate.get("confidence"),
+            }
+        )
+
+    covered_bounds = [component["bounds"] for component in report_components]
+    total_area = source_width * source_height
+    covered_area = union_covered_area(
+        source_width=source_width,
+        source_height=source_height,
+        bounds_list=covered_bounds,
+    )
+    uncovered_area = max(0, total_area - covered_area)
+
+    return {
+        "schema_version": SCHEMA_VERSION,
+        "report_type": "component_quality",
+        "coordinate_space": COORDINATE_SPACE,
+        "resolution": {"width": source_width, "height": source_height},
+        "total_components": len(report_components),
+        "category_counts": category_counts,
+        "category_area": category_area,
+        "coverage": {
+            "total_area": total_area,
+            "covered_area": covered_area,
+            "covered_ratio": round(covered_area / total_area, 4) if total_area else 0,
+            "uncovered_area": uncovered_area,
+            "uncovered_ratio": round(uncovered_area / total_area, 4) if total_area else 0,
+        },
+        "suspected_missing_regions": suspected_missing_regions(
+            source_width=source_width,
+            source_height=source_height,
+            covered_bounds=covered_bounds,
+        ),
+        "components": report_components,
     }
 
 
@@ -440,6 +602,12 @@ def process_ui_preview_components(
                 )
             )
         candidate_components = detect_component_candidates(image, candidate_dir)
+        component_quality_report = build_component_quality_report(
+            source_width=source_width,
+            source_height=source_height,
+            manifest_components=manifest_components,
+            candidate_components=candidate_components,
+        )
 
     manifest = {
         "schema_version": SCHEMA_VERSION,
@@ -492,6 +660,8 @@ def process_ui_preview_components(
     preview_html_path = output_root / "preview.html"
     candidate_manifest_path = output_root / "candidate_manifest.json"
     candidate_preview_html_path = output_root / "candidate_preview.html"
+    component_quality_report_path = output_root / "component_quality_report.json"
+    component_quality_report_html_path = output_root / "component_quality_report.html"
     manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2), encoding="utf-8")
     annotation_path.write_text(json.dumps(annotation, ensure_ascii=False, indent=2), encoding="utf-8")
     preview_html_path.write_text(render_preview_html(manifest_components), encoding="utf-8")
@@ -503,6 +673,14 @@ def process_ui_preview_components(
         render_candidate_preview_html(candidate_components, source_width, source_height),
         encoding="utf-8",
     )
+    component_quality_report_path.write_text(
+        json.dumps(component_quality_report, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+    component_quality_report_html_path.write_text(
+        render_component_quality_report_html(component_quality_report),
+        encoding="utf-8",
+    )
 
     return {
         "manifest_path": str(manifest_path),
@@ -510,6 +688,8 @@ def process_ui_preview_components(
         "preview_html_path": str(preview_html_path),
         "candidate_manifest_path": str(candidate_manifest_path),
         "candidate_preview_html_path": str(candidate_preview_html_path),
+        "component_quality_report_path": str(component_quality_report_path),
+        "component_quality_report_html_path": str(component_quality_report_html_path),
         "component_asset_ids": [asset.id for asset in component_assets],
     }
 
@@ -582,5 +762,60 @@ def render_candidate_preview_html(
         "<table><thead><tr><th>candidate_id</th><th>candidate_type</th>"
         "<th>confidence</th><th>image_path</th><th>review_status</th></tr></thead>"
         f"<tbody>{rows}</tbody></table>"
+        "</body></html>"
+    )
+
+
+def render_component_quality_report_html(report: dict[str, Any]) -> str:
+    counts = report["category_counts"]
+    areas = report["category_area"]
+    coverage = report["coverage"]
+    rows = "\n".join(
+        (
+            f"<tr><td>{html.escape(component_type)}</td>"
+            f"<td>{counts[component_type]}</td>"
+            f"<td>{areas[component_type]}</td></tr>"
+        )
+        for component_type in QUALITY_COMPONENT_TYPES
+    )
+    missing_rows = "\n".join(
+        (
+            f"<tr><td>{html.escape(region['region_id'])}</td>"
+            f"<td>{region['bounds']['x']}, {region['bounds']['y']}, "
+            f"{region['bounds']['width']}x{region['bounds']['height']}</td>"
+            f"<td>{region['uncovered_area']}</td>"
+            f"<td>{region['uncovered_ratio']}</td>"
+            f"<td>{html.escape(region['review_status'])}</td></tr>"
+        )
+        for region in report["suspected_missing_regions"]
+    )
+    if not missing_rows:
+        missing_rows = "<tr><td colspan=\"5\">No large low-coverage grid regions detected.</td></tr>"
+
+    return (
+        "<!doctype html><html><head><meta charset=\"utf-8\">"
+        "<title>996-ready component quality report</title>"
+        "<style>"
+        "body{font-family:Arial,'Microsoft YaHei',sans-serif;margin:24px;background:#f8fafc;color:#172033;}"
+        "h1,h2{margin:0 0 12px;}section{margin-top:24px;}"
+        ".summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;max-width:960px;}"
+        ".metric{border:1px solid #d9e2ef;border-radius:6px;background:white;padding:12px;}"
+        ".metric strong{display:block;font-size:20px;margin-top:4px;}table{border-collapse:collapse;min-width:720px;background:white;}"
+        "td,th{border:1px solid #d9e2ef;padding:8px 10px;text-align:left;}th{background:#e8eef7;}"
+        "</style></head><body>"
+        "<h1>996-ready component quality report</h1>"
+        "<div class=\"summary\">"
+        f"<div class=\"metric\">Total components<strong>{report['total_components']}</strong></div>"
+        f"<div class=\"metric\">Covered area<strong>{coverage['covered_area']}</strong></div>"
+        f"<div class=\"metric\">Uncovered area<strong>{coverage['uncovered_area']}</strong></div>"
+        f"<div class=\"metric\">Covered ratio<strong>{coverage['covered_ratio']}</strong></div>"
+        "</div>"
+        "<section><h2>Category statistics</h2>"
+        "<table><thead><tr><th>category</th><th>count</th><th>raw area</th></tr></thead>"
+        f"<tbody>{rows}</tbody></table></section>"
+        "<section><h2>Suspected missing regions</h2>"
+        "<table><thead><tr><th>region</th><th>bounds</th><th>uncovered area</th>"
+        "<th>uncovered ratio</th><th>review</th></tr></thead>"
+        f"<tbody>{missing_rows}</tbody></table></section>"
         "</body></html>"
     )

@@ -344,3 +344,32 @@ Verification:
 
 - Resource Production package metadata is covered by `tests/test_resource_production.py`.
 - Validator remains backward-compatible with older packages.
+
+## Sprint 15A
+
+Status: complete
+
+Scope:
+
+- Add `component_quality_report.json`.
+- Add `component_quality_report.html`.
+- Report combined template component and candidate component statistics.
+- Track counts for `button`, `icon`, `frame`, `tab`, `slot`, `input`, `panel`, and `background`.
+- Calculate total component count, category area, covered area, and uncovered area.
+- Add coarse suspected missing regions for manual review.
+- Validate quality report structure when present.
+
+Out of scope:
+
+- Database changes
+- ZIP export
+- Cloud deployment
+- OCR
+- YOLO
+- SAM
+- Model training
+
+Verification:
+
+- `tests/test_candidate_detection.py` covers quality report generation and validator compatibility.
+- Existing packages without quality reports remain valid.

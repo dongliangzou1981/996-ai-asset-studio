@@ -366,3 +366,16 @@ Chinese-first principle:
 - [x] Add Resource Production regression tests
 - [x] Keep database schema unchanged
 - [x] Avoid style extraction, OCR, YOLO, SAM, ZIP export, cloud deployment, and user systems
+
+## Sprint 15A
+
+- [x] Add `component_quality_report.json`
+- [x] Add `component_quality_report.html`
+- [x] Count `button`, `icon`, `frame`, `tab`, `slot`, `input`, `panel`, and `background`
+- [x] Report total component count
+- [x] Report category area
+- [x] Report covered area and uncovered area
+- [x] Report suspected missing regions
+- [x] Validate quality report structure when present
+- [x] Keep older packages without quality reports valid
+- [x] Avoid database changes, ZIP export, cloud deployment, OCR, YOLO, SAM, and model training

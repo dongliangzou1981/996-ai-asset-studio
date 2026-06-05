@@ -155,6 +155,10 @@ export type ComponentProcessingResult = {
   manifest_path: string;
   annotation_path: string;
   preview_html_path: string;
+  candidate_manifest_path?: string;
+  candidate_preview_html_path?: string;
+  component_quality_report_path?: string;
+  component_quality_report_html_path?: string;
   component_asset_ids: string[];
 };
 

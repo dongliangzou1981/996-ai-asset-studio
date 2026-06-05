@@ -65,6 +65,11 @@ REQUIRED_FILES = {
     "annotation": "annotation.json",
     "preview": "preview.html",
 }
+OPTIONAL_COMPONENT_QUALITY_FILES = {
+    "json": "component_quality_report.json",
+    "html": "component_quality_report.html",
+}
+QUALITY_COMPONENT_TYPES = {"button", "icon", "frame", "tab", "slot", "input", "panel", "background"}
 
 
 def detect_package_layout(root: Path) -> dict[str, str | None]:
@@ -516,6 +521,72 @@ def validate_annotation_schema(annotation: dict[str, Any], errors: list[str]) ->
     return checks
 
 
+def validate_component_quality_report(report: dict[str, Any], errors: list[str]) -> dict[str, bool]:
+    checks = {
+        "component_quality_report_valid": True,
+    }
+    if report.get("schema_version") != SCHEMA_VERSION:
+        errors.append("component_quality_report.schema_version must be 1.0")
+        checks["component_quality_report_valid"] = False
+    if report.get("report_type") != "component_quality":
+        errors.append("component_quality_report.report_type must be component_quality")
+        checks["component_quality_report_valid"] = False
+    if report.get("coordinate_space") != COORDINATE_SPACE:
+        errors.append("component_quality_report.coordinate_space must be ui_preview_pixels")
+        checks["component_quality_report_valid"] = False
+    if not expect_non_negative_int(report.get("total_components"), "component_quality_report.total_components", errors):
+        checks["component_quality_report_valid"] = False
+
+    category_counts = report.get("category_counts")
+    category_area = report.get("category_area")
+    for field_name, value in [("category_counts", category_counts), ("category_area", category_area)]:
+        if not isinstance(value, dict):
+            errors.append(f"component_quality_report.{field_name} must be an object")
+            checks["component_quality_report_valid"] = False
+            continue
+        for component_type in QUALITY_COMPONENT_TYPES:
+            if not expect_non_negative_int(value.get(component_type), f"component_quality_report.{field_name}.{component_type}", errors):
+                checks["component_quality_report_valid"] = False
+
+    coverage = report.get("coverage")
+    if not isinstance(coverage, dict):
+        errors.append("component_quality_report.coverage must be an object")
+        checks["component_quality_report_valid"] = False
+    else:
+        for field in ["total_area", "covered_area", "uncovered_area"]:
+            if not expect_non_negative_int(coverage.get(field), f"component_quality_report.coverage.{field}", errors):
+                checks["component_quality_report_valid"] = False
+        for field in ["covered_ratio", "uncovered_ratio"]:
+            value = coverage.get(field)
+            if not isinstance(value, (int, float)) or isinstance(value, bool) or value < 0 or value > 1:
+                errors.append(f"component_quality_report.coverage.{field} must be a number between 0 and 1")
+                checks["component_quality_report_valid"] = False
+
+    suspected = report.get("suspected_missing_regions")
+    if not isinstance(suspected, list):
+        errors.append("component_quality_report.suspected_missing_regions must be a list")
+        checks["component_quality_report_valid"] = False
+    else:
+        for index, region in enumerate(suspected):
+            label = f"component_quality_report.suspected_missing_regions[{index}]"
+            if not isinstance(region, dict):
+                errors.append(f"{label} must be an object")
+                checks["component_quality_report_valid"] = False
+                continue
+            if not expect_string(region, "region_id", label, errors):
+                checks["component_quality_report_valid"] = False
+            if not expect_bounds(region.get("bounds"), f"{label}.bounds", errors):
+                checks["component_quality_report_valid"] = False
+            if not expect_non_negative_int(region.get("uncovered_area"), f"{label}.uncovered_area", errors):
+                checks["component_quality_report_valid"] = False
+
+    components = report.get("components")
+    if not isinstance(components, list):
+        errors.append("component_quality_report.components must be a list")
+        checks["component_quality_report_valid"] = False
+    return checks
+
+
 def validate_package(package_dir: str | Path) -> dict[str, Any]:
     root = Path(package_dir)
     errors: list[str] = []
@@ -524,6 +595,8 @@ def validate_package(package_dir: str | Path) -> dict[str, Any]:
     manifest_path = root / REQUIRED_FILES["manifest"]
     annotation_path = root / REQUIRED_FILES["annotation"]
     preview_path = root / REQUIRED_FILES["preview"]
+    component_quality_report_path = root / OPTIONAL_COMPONENT_QUALITY_FILES["json"]
+    component_quality_report_html_path = root / OPTIONAL_COMPONENT_QUALITY_FILES["html"]
 
     checks: dict[str, bool] = {
         "package_dir_exists": root.exists() and root.is_dir(),
@@ -542,6 +615,7 @@ def validate_package(package_dir: str | Path) -> dict[str, Any]:
         "component_paths_relative": True,
         "component_files_exist": True,
         "annotation_component_files_exist": True,
+        "component_quality_report_valid": True,
     }
 
     if not checks["package_dir_exists"]:
@@ -549,6 +623,7 @@ def validate_package(package_dir: str | Path) -> dict[str, Any]:
 
     manifest = load_json(manifest_path, errors) if checks["manifest_exists"] else {}
     annotation = load_json(annotation_path, errors) if checks["annotation_exists"] else {}
+    component_quality_report = load_json(component_quality_report_path, errors) if component_quality_report_path.exists() else {}
 
     if not checks["manifest_exists"]:
         errors.append("Missing manifest.json")
@@ -572,6 +647,14 @@ def validate_package(package_dir: str | Path) -> dict[str, Any]:
     else:
         checks["schema_v1"] = False
         checks["annotation_required_fields"] = False
+
+    if component_quality_report:
+        if not component_quality_report_html_path.exists():
+            errors.append("Missing component_quality_report.html")
+            checks["component_quality_report_valid"] = False
+        quality_checks = validate_component_quality_report(component_quality_report, errors)
+        for name, passed in quality_checks.items():
+            checks[name] = checks[name] and passed
 
     ui_preview_value = manifest.get("ui_preview") if isinstance(manifest.get("ui_preview"), str) else "ui_preview.png"
     ui_preview_rel = safe_relative_path(ui_preview_value, "ui_preview", errors)
@@ -643,6 +726,8 @@ def validate_package(package_dir: str | Path) -> dict[str, Any]:
             "manifest": str(manifest_path),
             "annotation": str(annotation_path),
             "preview": str(preview_path),
+            "component_quality_report": str(component_quality_report_path) if component_quality_report_path.exists() else "",
+            "component_quality_report_html": str(component_quality_report_html_path) if component_quality_report_html_path.exists() else "",
             "ui_preview": ui_preview_value,
             "components": component_files,
         },
