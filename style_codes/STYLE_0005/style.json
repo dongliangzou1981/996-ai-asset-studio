@@ -1,0 +1,24 @@
+{
+  "style_code": "STYLE_0005",
+  "style_name": "复古1.76传奇风",
+  "source_job_id": "0d36022494c14ba0aa685b710eb445c6",
+  "source_asset_id": "474d7bb7ef1649c6b046622d61adc6e4",
+  "device_type": "mobile_landscape",
+  "original_ui_preview": "C:\\Users\\86186\\Documents\\996美术资产生成\\assets\\uploads\\996-ready\\0d36022494c14ba0aa685b710eb445c6\\ui_preview.png",
+  "style_summary": "复古1.76传奇风: 996 legend game UI style derived from source job output.",
+  "color_palette": [
+    "#74644A",
+    "#75654B",
+    "#736349",
+    "#726248",
+    "#75654A"
+  ],
+  "color_description": "Dominant palette uses #74644A, #75654B, #736349, #726248, #75654A.",
+  "font_style": "Bold, readable Chinese fantasy game UI typography; high contrast over dark panels.",
+  "border_style": "Layered metallic fantasy borders with gold highlights and clear panel separation.",
+  "button_style": "Readable rectangular fantasy buttons with bright trim and strong pressed-state potential.",
+  "icon_style": "High-contrast item and skill icons with clear silhouettes suitable for slicing.",
+  "texture_style": "Dark stone, aged metal, leather, and subtle ornamental texture.",
+  "created_at": "2026-06-06T04:26:50+00:00",
+  "updated_at": "2026-06-06T04:26:50+00:00"
+}

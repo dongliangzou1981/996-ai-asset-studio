@@ -1,0 +1,20 @@
+{
+  "style_code": "STYLE_0005",
+  "screen_type": "main_ui",
+  "generation_job_id": "0d36022494c14ba0aa685b710eb445c6",
+  "screen_generation_mode": "auto_generate",
+  "device_type": "mobile_landscape",
+  "asset_mode": "resource_production",
+  "reference_image_path": null,
+  "prompt": "Generate one 996 legend game main_ui screen as the master style source.\nscreen_generation_mode: auto_generate\nstyle_name: 复古1.76传奇风\ndevice_type: mobile_landscape\nDevice target: mobile_landscape. Use a strict 16:9 landscape horizontal mobile game UI, large touch-friendly buttons, and mobile-adapted skill bar, chat area, right menu, and minimap.\nasset_mode: resource_production. Prioritize reusable 996 production resources: clear separable buttons, icons, frames, inputs, tabs, slots, transparent-background-ready parts, and clean component boundaries for later editing.\nTarget canvas is 1536x864 pixels.\nAuto generate a new main UI from the style brief.\nThe layout may be adjusted, but the basic operation logic must not be broken.\nRequired main UI elements:\navatar, name, level, health bar, mana bar, bag, role, skills, shop, activity, settings, skill bar, shortcut bar, chat area, map entry, right-side function menu\ndo not remove core entries.\nDo not hide core entries.\nDo not block chat area, skill bar, shortcut bar, or player info.\nButtons must remain visually clickable and separated for later slicing.\nAllowed variation: color, ornament, borders, buttons, icons, font, and texture.\nOutput a single game UI screen only, suitable for annotation, component slicing, and candidate detection.\nUser prompt: 手机横屏传奇 UI，复古1.76风格，技能栏清晰，右侧菜单明显，整体适合 996 引擎资源生产。",
+  "outputs": {
+    "ui_preview": "ui_preview.png",
+    "manifest": "manifest.json",
+    "annotation": "annotation.json",
+    "preview": "preview.html",
+    "candidate_manifest": "candidate_manifest.json",
+    "candidate_preview": "candidate_preview.html",
+    "components_dir": "components",
+    "candidates_dir": "candidates"
+  }
+}
