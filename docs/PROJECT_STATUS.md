@@ -487,3 +487,24 @@ Automation principle:
 - Treat the user as a non-technical reviewer by default.
 - The user should only need to start the Studio and review results.
 - Codex should automate terminal setup, port checks, environment checks, and routine diagnostics whenever possible.
+
+## Sprint 18B
+
+Status: complete with one local credential blocker
+
+Scope:
+
+- Restart the local frontend on `127.0.0.1:3001`.
+- Confirm the backend on `127.0.0.1:8001`.
+- Confirm `/production-studio/style-codes` returns local `STYLE_CODE` entries.
+- Convert `scripts/check_studio_env.ps1` to Chinese status output.
+- Keep `环境检查.ps1` as a Chinese entrypoint wrapper.
+- Keep keys out of the repository, `.env`, and logs.
+
+Local result:
+
+- Backend is reachable.
+- Frontend `/studio` is reachable.
+- Style code API is reachable.
+- `OFOX_API_KEY` is not present in the current process, user environment, or machine environment.
+- Provider health is therefore not ready for real generation until an authorized local key is supplied to the running backend process.

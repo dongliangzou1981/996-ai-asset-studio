@@ -47,8 +47,11 @@ def test_chinese_startup_entrypoint_wraps_local_studio_script() -> None:
 
 
 def test_chinese_environment_check_uses_user_facing_statuses() -> None:
-    script = ROOT / "环境检查.ps1"
+    entrypoint = ROOT / "环境检查.ps1"
+    script = ROOT / "scripts" / "check_studio_env.ps1"
 
+    assert entrypoint.exists()
+    assert "scripts\\check_studio_env.ps1" in entrypoint.read_text(encoding="utf-8")
     assert script.exists()
     content = script.read_text(encoding="utf-8")
 

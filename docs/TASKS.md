@@ -459,3 +459,15 @@ Chinese-first principle:
 - [x] Add manual acceptance notes
 - [x] Document Sprint 18 productization
 - [x] Keep compatibility: no database changes, cloud deployment, user system, ZIP, OCR, YOLO, SAM, or model training
+
+## Sprint 18B
+
+- [x] Check backend on port `8001`
+- [x] Confirm `/production-studio/style-codes`
+- [x] Check provider health without printing keys
+- [x] Restart frontend on port `3001`
+- [x] Confirm `/studio` is reachable
+- [x] Convert `scripts/check_studio_env.ps1` to Chinese output
+- [x] Run Chinese environment check
+- [x] Avoid writing keys to repository or `.env`
+- [x] Avoid database changes, cloud deployment, ZIP, OCR, YOLO, SAM, and model training
