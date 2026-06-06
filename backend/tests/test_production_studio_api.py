@@ -144,12 +144,19 @@ def write_package(root: Path, style_code: str, screen_type: str, job_id: str) ->
 def test_production_studio_new_style_generates_master_then_selected_screens(tmp_path: Path, monkeypatch) -> None:
     client = make_client(tmp_path)
     upload_root = tmp_path / "uploads"
+    master_call: dict[str, object] = {}
+    screen_call: dict[str, object] = {}
 
     def fake_master(**kwargs):  # type: ignore[no-untyped-def]
+        master_call.update(kwargs)
         package = write_package(upload_root, "STYLE_TEST", "main_ui", "job-main")
-        return {"style_code": "STYLE_TEST", "package_dir": str(package)}
+        style_dir = tmp_path / "styles" / "STYLE_TEST"
+        style_dir.parent.mkdir(parents=True)
+        shutil.copytree(package, style_dir)
+        return {"style_code": "STYLE_TEST", "package_dir": str(package), "style_dir": str(style_dir)}
 
     def fake_screen(**kwargs):  # type: ignore[no-untyped-def]
+        screen_call.update(kwargs)
         package = write_package(upload_root, "STYLE_TEST", kwargs["screen_type"], f"job-{kwargs['screen_type']}")
         return {"package_dir": str(package)}
 
@@ -164,6 +171,8 @@ def test_production_studio_new_style_generates_master_then_selected_screens(tmp_
             "screen_types": ["main_ui", "role_ui"],
             "device_type": "mobile_landscape",
             "asset_mode": "resource_production",
+            "layout_template": "classic_legend_mobile",
+            "generation_mode": "auto_generate",
             "prompt": "Generate production UI",
         },
     )
@@ -177,6 +186,21 @@ def test_production_studio_new_style_generates_master_then_selected_screens(tmp_
     assert body["results"][0]["candidates_count"] == 1
     assert body["results"][0]["missing_semantic_icons"] is True
     assert body["results"][0]["ui_preview_url"].startswith("/production-studio/files/996-ready/")
+    assert body["layout_template"] == "classic_legend_mobile"
+    assert body["generation_mode"] == "auto_generate"
+    assert body["final_prompt"].startswith("Generate production UI")
+    assert "固定布局规则已应用" in body["final_prompt"]
+    assert master_call["screen_generation_mode"] == "auto_generate"
+    assert "左下摇杆区" in str(master_call["prompt"])
+    assert "右下环绕式技能操作区" in str(master_call["prompt"])
+    assert "左下摇杆区" in str(screen_call["user_prompt"])
+
+    delivery_report = json.loads((upload_root / "996-ready" / "STYLE_TEST" / "main_ui" / "job-main" / "delivery_report.json").read_text(encoding="utf-8"))
+    assert delivery_report["layout_template"] == "classic_legend_mobile"
+    assert delivery_report["generation_mode"] == "auto_generate"
+    assert delivery_report["reference_image_path"] is None
+    assert delivery_report["fixed_layout_rules_applied"] is True
+    assert "Generate production UI" in delivery_report["final_prompt"]
 
 
 def test_production_studio_existing_style_uses_selected_style_code(tmp_path: Path, monkeypatch) -> None:
@@ -209,6 +233,51 @@ def test_production_studio_existing_style_uses_selected_style_code(tmp_path: Pat
     body = response.json()
     assert body["style_code"] == "STYLE_0003"
     assert body["results"][0]["screen_type"] == "bag_ui"
+
+
+def test_production_studio_reference_mode_passes_reference_image_and_prompt(tmp_path: Path, monkeypatch) -> None:
+    client = make_client(tmp_path)
+    upload_root = tmp_path / "uploads"
+    calls: list[dict[str, object]] = []
+    reference_image = tmp_path / "reference.png"
+    write_png(reference_image)
+
+    def fake_master(**kwargs):  # type: ignore[no-untyped-def]
+        calls.append(kwargs)
+        package = write_package(upload_root, "STYLE_REF", "main_ui", "job-main")
+        return {"style_code": "STYLE_REF", "package_dir": str(package)}
+
+    monkeypatch.setattr(production_studio, "run_master_style_workflow", fake_master)
+
+    response = client.post(
+        "/production-studio/generate",
+        json={
+            "style_source": "new_style",
+            "style_name": "Reference Dark Gold",
+            "screen_types": ["main_ui"],
+            "device_type": "mobile_landscape",
+            "asset_mode": "resource_production",
+            "layout_template": "legend_176",
+            "generation_mode": "reference_guided",
+            "reference_image_path": str(reference_image),
+            "prompt": "参考上传的传奇手游界面截图，保留核心操作布局。",
+        },
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["style_code"] == "STYLE_REF"
+    assert body["layout_template"] == "legend_176"
+    assert body["generation_mode"] == "reference_guided"
+    assert body["reference_image_path"] == str(reference_image)
+    assert "参考上传的传奇手游界面截图" in body["final_prompt"]
+    assert calls[0]["screen_generation_mode"] == "reference_guided"
+    assert calls[0]["reference_image"] == str(reference_image)
+
+    delivery_report = json.loads((upload_root / "996-ready" / "STYLE_REF" / "main_ui" / "job-main" / "delivery_report.json").read_text(encoding="utf-8"))
+    assert delivery_report["layout_template"] == "legend_176"
+    assert delivery_report["generation_mode"] == "reference_guided"
+    assert delivery_report["reference_image_path"] == str(reference_image)
 
 
 def test_production_studio_lists_style_codes() -> None:

@@ -301,6 +301,14 @@ ProductionDeviceType = Literal["mobile_landscape", "pc_landscape"]
 ProductionAssetMode = Literal["ui_package", "resource_production"]
 ProductionStyleSource = Literal["new_style", "existing_style"]
 ProductionScreenType = Literal["main_ui", "role_ui", "bag_ui", "shop_ui", "activity_ui"]
+ProductionLayoutTemplate = Literal[
+    "classic_legend_mobile",
+    "legend_176",
+    "legend_185_combo",
+    "silent_version",
+    "hot_blood",
+]
+ProductionGenerationMode = Literal["auto_generate", "reference_guided"]
 
 
 class ProductionStudioStyleCode(BaseModel):
@@ -320,6 +328,9 @@ class ProductionStudioRequest(BaseModel):
     style_source: ProductionStyleSource = "new_style"
     style_code: str | None = None
     screen_types: list[ProductionScreenType] = Field(default_factory=lambda: ["main_ui"])
+    layout_template: ProductionLayoutTemplate = "classic_legend_mobile"
+    generation_mode: ProductionGenerationMode = "auto_generate"
+    reference_image_path: str | None = None
     style_name: str = "996 UI Style"
     prompt: str = ""
 
@@ -329,6 +340,8 @@ class ProductionStudioRequest(BaseModel):
             raise ValueError("screen_types must include at least one screen")
         if self.style_source == "existing_style" and not self.style_code:
             raise ValueError("style_code is required when style_source is existing_style")
+        if self.generation_mode == "reference_guided" and not self.reference_image_path:
+            raise ValueError("reference_image_path is required when generation_mode is reference_guided")
         return self
 
 
@@ -353,4 +366,8 @@ class ProductionStudioResponse(BaseModel):
     device_type: ProductionDeviceType
     asset_mode: ProductionAssetMode
     style_source: ProductionStyleSource
+    layout_template: ProductionLayoutTemplate
+    generation_mode: ProductionGenerationMode
+    reference_image_path: str | None = None
+    final_prompt: str
     results: list[ProductionStudioScreenResult]

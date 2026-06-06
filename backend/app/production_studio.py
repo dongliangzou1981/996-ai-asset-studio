@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import html
 import sys
 from pathlib import Path
 from typing import Any
@@ -33,6 +34,71 @@ SEMANTIC_ICON_IDS = {
     "confirm",
     "cancel",
 }
+
+
+LAYOUT_TEMPLATE_LABELS = {
+    "classic_legend_mobile": "经典传奇手游布局",
+    "legend_176": "1.76经典版",
+    "legend_185_combo": "1.85合击版",
+    "silent_version": "沉默版本",
+    "hot_blood": "热血版本",
+}
+
+FIXED_LAYOUT_RULES = (
+    "手机横屏传奇手游界面，采用经典传奇手游固定布局：左下摇杆区、右下环绕式技能操作区、"
+    "右上小地图区、顶部信息区、底部状态信息区、右侧系统入口区、左下聊天区。"
+    "保持布局稳定，只改变美术风格、按钮材质、边框纹饰和整体色调。"
+)
+
+
+def final_prompt_for_payload(payload: ProductionStudioRequest) -> str:
+    prompt = payload.prompt.strip() or FIXED_LAYOUT_RULES
+    template_label = LAYOUT_TEMPLATE_LABELS.get(payload.layout_template, payload.layout_template)
+    return f"{prompt}\n布局模板：{template_label}\n固定布局规则已应用：{FIXED_LAYOUT_RULES}"
+
+
+def record_generation_context(
+    package_dir: str | Path,
+    *,
+    layout_template: str,
+    generation_mode: str,
+    reference_image_path: str | None,
+    final_prompt: str,
+) -> None:
+    package_path = Path(package_dir)
+    if not package_path.is_absolute():
+        package_path = ROOT / package_path
+    context = {
+        "layout_template": layout_template,
+        "generation_mode": generation_mode,
+        "reference_image_path": reference_image_path,
+        "final_prompt": final_prompt,
+        "fixed_layout_rules_applied": True,
+    }
+    for name in ["manifest.json", "annotation.json", "delivery_report.json"]:
+        path = package_path / name
+        if not path.exists():
+            continue
+        data = json.loads(path.read_text(encoding="utf-8"))
+        if isinstance(data, dict):
+            data.update(context)
+            path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    html_path = package_path / "delivery_report.html"
+    if html_path.exists():
+        html_text = html_path.read_text(encoding="utf-8")
+        context_html = (
+            "<h2>Sprint 19 generation context</h2>"
+            f"<p>layout_template: <code>{html.escape(layout_template)}</code></p>"
+            f"<p>generation_mode: <code>{html.escape(generation_mode)}</code></p>"
+            f"<p>reference_image_path: <code>{html.escape(reference_image_path or '')}</code></p>"
+            f"<p>fixed_layout_rules_applied: <code>true</code></p>"
+        )
+        if "</body>" in html_text:
+            html_text = html_text.replace("</body>", context_html + "</body>")
+        else:
+            html_text += context_html
+        html_path.write_text(html_text, encoding="utf-8")
 
 
 def list_style_codes(style_root: str | Path | None = None) -> list[ProductionStudioStyleCode]:
@@ -134,12 +200,15 @@ def run_production_studio(
     results: list[ProductionStudioScreenResult] = []
     style_code = payload.style_code or ""
     generated_screen_types: set[str] = set()
+    final_prompt = final_prompt_for_payload(payload)
+    reference_image = payload.reference_image_path if payload.generation_mode == "reference_guided" else None
 
     if payload.style_source == "new_style":
         master = run_master_style_workflow(
-            screen_generation_mode="auto_generate",
+            screen_generation_mode=payload.generation_mode,
             style_name=payload.style_name,
-            prompt=payload.prompt,
+            prompt=final_prompt,
+            reference_image=reference_image,
             style_root=style_root_path,
             database_path=database_path_value,
             upload_root=upload_path,
@@ -147,6 +216,21 @@ def run_production_studio(
             asset_mode=payload.asset_mode,
         )
         style_code = str(master["style_code"])
+        record_generation_context(
+            master["package_dir"],
+            layout_template=payload.layout_template,
+            generation_mode=payload.generation_mode,
+            reference_image_path=reference_image,
+            final_prompt=final_prompt,
+        )
+        if master.get("style_dir"):
+            record_generation_context(
+                master["style_dir"],
+                layout_template=payload.layout_template,
+                generation_mode=payload.generation_mode,
+                reference_image_path=reference_image,
+                final_prompt=final_prompt,
+            )
         results.append(summarize_package(master["package_dir"], upload_path, "main_ui"))
         generated_screen_types.add("main_ui")
 
@@ -156,12 +240,20 @@ def run_production_studio(
         generated = generate_screen_with_style(
             style_code=style_code,
             screen_type=screen_type,
-            user_prompt=payload.prompt,
+            reference_image=reference_image,
+            user_prompt=final_prompt,
             style_root=style_root_path,
             database_path=database_path_value,
             upload_root=upload_path,
             device_type=payload.device_type,
             asset_mode=payload.asset_mode,
+        )
+        record_generation_context(
+            generated["package_dir"],
+            layout_template=payload.layout_template,
+            generation_mode=payload.generation_mode,
+            reference_image_path=reference_image,
+            final_prompt=final_prompt,
         )
         results.append(summarize_package(generated["package_dir"], upload_path, screen_type))
 
@@ -170,5 +262,9 @@ def run_production_studio(
         device_type=payload.device_type,
         asset_mode=payload.asset_mode,
         style_source=payload.style_source,
+        layout_template=payload.layout_template,
+        generation_mode=payload.generation_mode,
+        reference_image_path=reference_image,
+        final_prompt=final_prompt,
         results=results,
     )

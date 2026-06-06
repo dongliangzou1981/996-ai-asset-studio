@@ -166,6 +166,13 @@ export type ProductionDeviceType = "mobile_landscape" | "pc_landscape";
 export type ProductionAssetMode = "ui_package" | "resource_production";
 export type ProductionStyleSource = "new_style" | "existing_style";
 export type ProductionScreenType = "main_ui" | "role_ui" | "bag_ui" | "shop_ui" | "activity_ui";
+export type ProductionLayoutTemplate =
+  | "classic_legend_mobile"
+  | "legend_176"
+  | "legend_185_combo"
+  | "silent_version"
+  | "hot_blood";
+export type ProductionGenerationMode = "auto_generate" | "reference_guided";
 
 export type ProductionStudioStyleCode = {
   style_code: string;
@@ -180,6 +187,9 @@ export type ProductionStudioInput = {
   style_source: ProductionStyleSource;
   style_code?: string | null;
   screen_types: ProductionScreenType[];
+  layout_template: ProductionLayoutTemplate;
+  generation_mode: ProductionGenerationMode;
+  reference_image_path?: string | null;
   style_name: string;
   prompt: string;
 };
@@ -205,6 +215,10 @@ export type ProductionStudioResult = {
   device_type: ProductionDeviceType;
   asset_mode: ProductionAssetMode;
   style_source: ProductionStyleSource;
+  layout_template: ProductionLayoutTemplate;
+  generation_mode: ProductionGenerationMode;
+  reference_image_path?: string | null;
+  final_prompt: string;
   results: ProductionStudioScreenResult[];
 };
 
