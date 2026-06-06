@@ -44,6 +44,7 @@ from app.schemas import (
     StyleProfileCreate,
     StyleProfileList,
 )
+from scripts.analyze_production_package import analyze_package, utc_now
 
 
 def default_database_path() -> Path:
@@ -146,6 +147,100 @@ def create_app(database_path: str | Path | None = None, upload_dir: str | Path |
         if not candidate.exists() or not candidate.is_file():
             raise HTTPException(status_code=404, detail="Production studio file not found")
         return FileResponse(candidate)
+
+    def resolve_production_package_dir(package_dir: str) -> Path:
+        raw_path = Path(package_dir)
+        upload_root_resolved = upload_root.resolve()
+        if raw_path.is_absolute():
+            candidate = raw_path.resolve()
+        else:
+            parts = raw_path.parts
+            if "996-ready" in parts:
+                candidate = (upload_root / Path(*parts[parts.index("996-ready"):])).resolve()
+            else:
+                candidate = (upload_root / raw_path).resolve()
+        if not candidate.is_relative_to(upload_root_resolved):
+            raise HTTPException(status_code=400, detail="Package path must stay inside upload root")
+        if not candidate.exists() or not candidate.is_dir():
+            raise HTTPException(status_code=404, detail="Production package not found")
+        return candidate
+
+    def read_package_json(package_dir: Path, filename: str) -> dict:
+        path = package_dir / filename
+        if not path.exists():
+            raise HTTPException(status_code=404, detail=f"{filename} not found")
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as exc:
+            raise HTTPException(status_code=400, detail=f"{filename} is invalid JSON") from exc
+        return data if isinstance(data, dict) else {}
+
+    def pending_manual_acceptance() -> dict:
+        return {
+            "schema_version": "1.0",
+            "review_status": "pending",
+            "reviewer": "",
+            "remarks": "",
+            "updated_at": utc_now(),
+            "accepted_at": None,
+            "accepted_by": "",
+            "components": [],
+        }
+
+    @app.post("/production-studio/analyze")
+    def analyze_production_studio_package(package_dir: str) -> dict[str, str]:
+        package_path = resolve_production_package_dir(package_dir)
+        try:
+            return analyze_package(package_path)
+        except (FileNotFoundError, ValueError) as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    @app.get("/production-studio/production-review")
+    def get_production_review(package_dir: str) -> dict:
+        package_path = resolve_production_package_dir(package_dir)
+        return read_package_json(package_path, "production_review.json")
+
+    @app.get("/production-studio/component-review")
+    def get_component_review(package_dir: str) -> dict:
+        package_path = resolve_production_package_dir(package_dir)
+        return read_package_json(package_path, "component_review_analysis.json")
+
+    @app.get("/production-studio/manual-acceptance")
+    def get_manual_acceptance(package_dir: str) -> dict:
+        package_path = resolve_production_package_dir(package_dir)
+        path = package_path / "manual_acceptance.json"
+        if not path.exists():
+            return pending_manual_acceptance()
+        return read_package_json(package_path, "manual_acceptance.json")
+
+    @app.put("/production-studio/manual-acceptance")
+    def update_manual_acceptance(package_dir: str, payload: dict) -> dict:
+        package_path = resolve_production_package_dir(package_dir)
+        existing = pending_manual_acceptance()
+        path = package_path / "manual_acceptance.json"
+        if path.exists():
+            existing.update(read_package_json(package_path, "manual_acceptance.json"))
+        review_status = str(payload.get("review_status") or existing.get("review_status") or "pending")
+        if review_status not in {"pending", "accepted", "rejected"}:
+            raise HTTPException(status_code=400, detail="review_status must be pending, accepted, or rejected")
+        reviewer = str(payload.get("reviewer") if payload.get("reviewer") is not None else existing.get("reviewer") or "")
+        updated = {
+            **existing,
+            "review_status": review_status,
+            "reviewer": reviewer,
+            "remarks": str(payload.get("remarks") if payload.get("remarks") is not None else existing.get("remarks") or ""),
+            "updated_at": utc_now(),
+        }
+        if "components" in payload and isinstance(payload["components"], list):
+            updated["components"] = payload["components"]
+        if review_status == "accepted":
+            updated["accepted_at"] = updated.get("accepted_at") or utc_now()
+            updated["accepted_by"] = str(payload.get("accepted_by") or reviewer or existing.get("accepted_by") or "")
+        else:
+            updated["accepted_at"] = None
+            updated["accepted_by"] = ""
+        path.write_text(json.dumps(updated, ensure_ascii=False, indent=2), encoding="utf-8")
+        return updated
 
     @app.post("/projects", response_model=Project, status_code=status.HTTP_201_CREATED)
     def create_project(payload: ProjectCreate) -> Project:
