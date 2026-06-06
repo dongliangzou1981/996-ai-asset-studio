@@ -7,6 +7,7 @@ const api = {
   generateProductionStudioPackage: jest.fn(),
   getProductionStudioFileUrl: jest.fn((path: string) => `http://127.0.0.1:8000${path}`),
   listProductionStyleCodes: jest.fn(),
+  updateProductionManualAcceptance: jest.fn(),
   uploadAsset: jest.fn(),
 };
 
@@ -43,6 +44,15 @@ beforeEach(() => {
     created_at: "",
     updated_at: "",
   });
+  api.updateProductionManualAcceptance.mockResolvedValue({
+    review_status: "accepted",
+    reviewer: "",
+    remarks: "",
+    updated_at: "2026-06-07T00:00:00Z",
+    accepted_at: "2026-06-07T00:00:00Z",
+    accepted_by: "",
+    components: [],
+  });
   api.generateProductionStudioPackage.mockResolvedValue({
     style_code: "STYLE_0003",
     device_type: "mobile_landscape",
@@ -68,6 +78,29 @@ beforeEach(() => {
         validator_ok: true,
         missing_semantic_icons: true,
         common_icons_note: "common_icons semantic naming still needs improvement; current slices are generic candidates.",
+        production_review: {
+          production_score: 72,
+          production_ready: false,
+          level_a_count: 2,
+          level_b_count: 3,
+          level_c_count: 1,
+          screen_count: 1,
+          panel_count: 3,
+          atomic_count: 2,
+          effect_count: 0,
+          ignore_count: 1,
+          blockers: ["primary_action_button: required transparent PNG is fully opaque"],
+          warnings: ["Optional package file missing: delivery_report.json"],
+          transparent_issues: 1,
+        },
+        manual_acceptance_status: "pending",
+        production_review_url: "/production-studio/files/996-ready/STYLE_0003/bag_ui/job-bag/production_review.json",
+        component_review_url:
+          "/production-studio/files/996-ready/STYLE_0003/bag_ui/job-bag/component_review_analysis.json",
+        manual_acceptance_url: "/production-studio/files/996-ready/STYLE_0003/bag_ui/job-bag/manual_acceptance.json",
+        production_review_html_url:
+          "/production-studio/files/996-ready/STYLE_0003/bag_ui/job-bag/production_review.html",
+        production_review_warning: "",
       },
     ],
   });
@@ -154,9 +187,9 @@ test("结果中心优先显示完整图预览、资源入口和验收记录", as
   expect(screen.getByRole("dialog")).toBeInTheDocument();
   expect(screen.getByAltText("背包界面放大预览")).toBeInTheDocument();
 
-  await user.selectOptions(screen.getByLabelText("人工验收状态"), "needs_change");
+  await user.selectOptions(screen.getByLabelText("人工验收状态"), "rejected");
   await user.type(screen.getByLabelText("验收记录"), "右下技能区需要更环绕。");
 
-  expect(screen.getAllByText("需要修改").length).toBeGreaterThanOrEqual(1);
+  expect(screen.getAllByText("验收拒绝").length).toBeGreaterThanOrEqual(1);
   expect(screen.getByDisplayValue("右下技能区需要更环绕。")).toBeInTheDocument();
 });

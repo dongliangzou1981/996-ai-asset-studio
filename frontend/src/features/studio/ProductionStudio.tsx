@@ -6,6 +6,7 @@ import {
   ProductionAssetMode,
   ProductionDeviceType,
   ProductionGenerationMode,
+  ManualAcceptanceStatus,
   ProductionLayoutTemplate,
   ProductionScreenType,
   ProductionStudioResult,
@@ -61,20 +62,22 @@ const GENERATION_MODE_LABELS: Record<ProductionGenerationMode, string> = {
 
 const ACCEPTANCE_LABELS = {
   pending: "待验收",
-  approved: "验收通过",
-  needs_change: "需要修改",
+  accepted: "验收通过",
+  rejected: "验收拒绝",
 } as const;
 
-type AcceptanceStatus = keyof typeof ACCEPTANCE_LABELS;
-
 type AcceptanceRecord = {
-  status: AcceptanceStatus;
+  status: ManualAcceptanceStatus;
   notes: string;
 };
 
 type ProductionStudioApi = Pick<
   typeof studioApi,
-  "generateProductionStudioPackage" | "getProductionStudioFileUrl" | "listProductionStyleCodes" | "uploadAsset"
+  | "generateProductionStudioPackage"
+  | "getProductionStudioFileUrl"
+  | "listProductionStyleCodes"
+  | "updateProductionManualAcceptance"
+  | "uploadAsset"
 >;
 
 function defaultAcceptanceRecord(): AcceptanceRecord {
@@ -144,6 +147,18 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
         ...patch,
       },
     }));
+  }
+
+  async function persistAcceptance(packageDir: string, jobId: string, patch: Partial<AcceptanceRecord>) {
+    updateAcceptance(jobId, patch);
+    try {
+      await api.updateProductionManualAcceptance(packageDir, {
+        review_status: patch.status,
+        remarks: patch.notes,
+      });
+    } catch {
+      setError("人工验收写入失败。请确认后端工作台仍在运行。");
+    }
   }
 
   function chooseGenerationMode(nextMode: ProductionGenerationMode) {
@@ -217,7 +232,12 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
       setResult(response);
       setGeneratedAt(new Date().toLocaleString("zh-CN"));
       setAcceptance(
-        Object.fromEntries(response.results.map((item) => [item.generation_job_id, defaultAcceptanceRecord()])),
+        Object.fromEntries(
+          response.results.map((item) => [
+            item.generation_job_id,
+            { ...defaultAcceptanceRecord(), status: item.manual_acceptance_status ?? "pending" },
+          ]),
+        ),
       );
     } catch {
       setError("生成失败：本地工作台还没有准备好。请关闭旧窗口，在项目根目录运行 启动工作台.ps1，然后重新点击开始生成。");
@@ -450,6 +470,9 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
             {result.results.map((item) => {
               const record = acceptance[item.generation_job_id] ?? defaultAcceptanceRecord();
               const previewSrc = api.getProductionStudioFileUrl(item.ui_preview_url);
+              const review = item.production_review ?? {};
+              const blockersCount = review.blockers?.length ?? 0;
+              const warningsCount = review.warnings?.length ?? 0;
               return (
                 <article className="grid gap-3 rounded-md border border-studio-line p-4" key={item.generation_job_id}>
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
@@ -493,6 +516,98 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
                       <dd className="text-studio-muted">{ACCEPTANCE_LABELS[record.status]}</dd>
                     </div>
                   </dl>
+                  <section className="grid gap-3 rounded-md border border-studio-line bg-white p-3 text-sm">
+                    <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                      <h4 className="font-semibold">Production Review Card</h4>
+                      <span className={review.production_ready ? "font-semibold text-green-700" : "font-semibold text-red-700"}>
+                        {review.production_ready ? "ready" : "blocked"}
+                      </span>
+                    </div>
+                    <dl className="grid gap-2 sm:grid-cols-2">
+                      <div>
+                        <dt className="font-medium">Production Score</dt>
+                        <dd className="text-studio-muted">{review.production_score ?? "n/a"}</dd>
+                      </div>
+                      <div>
+                        <dt className="font-medium">Ready Status</dt>
+                        <dd className="text-studio-muted">{review.production_ready ? "ready" : "blocked"}</dd>
+                      </div>
+                      <div>
+                        <dt className="font-medium">A/B/C</dt>
+                        <dd className="text-studio-muted">
+                          {review.level_a_count ?? 0} / {review.level_b_count ?? 0} / {review.level_c_count ?? 0}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="font-medium">Screen/Panel/Atomic/Effect/Ignore</dt>
+                        <dd className="text-studio-muted">
+                          {review.screen_count ?? 0} / {review.panel_count ?? 0} / {review.atomic_count ?? 0} /{" "}
+                          {review.effect_count ?? 0} / {review.ignore_count ?? 0}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="font-medium">blockers</dt>
+                        <dd className="text-studio-muted">{blockersCount}</dd>
+                      </div>
+                      <div>
+                        <dt className="font-medium">warnings</dt>
+                        <dd className="text-studio-muted">{warningsCount}</dd>
+                      </div>
+                      <div>
+                        <dt className="font-medium">transparent_issues</dt>
+                        <dd className="text-studio-muted">{review.transparent_issues ?? 0}</dd>
+                      </div>
+                      <div>
+                        <dt className="font-medium">manual_acceptance_status</dt>
+                        <dd className="text-studio-muted">{record.status}</dd>
+                      </div>
+                    </dl>
+                    {item.production_review_warning ? (
+                      <p className="text-sm text-amber-700">{item.production_review_warning}</p>
+                    ) : null}
+                    <div className="flex flex-wrap gap-2">
+                      {item.production_review_url ? (
+                        <a
+                          className="rounded-md border border-studio-line px-3 py-2 text-sm"
+                          href={api.getProductionStudioFileUrl(item.production_review_url)}
+                          rel="noreferrer"
+                          target="_blank"
+                        >
+                          View production_review.json
+                        </a>
+                      ) : null}
+                      {item.component_review_url ? (
+                        <a
+                          className="rounded-md border border-studio-line px-3 py-2 text-sm"
+                          href={api.getProductionStudioFileUrl(item.component_review_url)}
+                          rel="noreferrer"
+                          target="_blank"
+                        >
+                          View component_review_analysis.json
+                        </a>
+                      ) : null}
+                      {item.manual_acceptance_url ? (
+                        <a
+                          className="rounded-md border border-studio-line px-3 py-2 text-sm"
+                          href={api.getProductionStudioFileUrl(item.manual_acceptance_url)}
+                          rel="noreferrer"
+                          target="_blank"
+                        >
+                          View manual_acceptance.json
+                        </a>
+                      ) : null}
+                      {item.production_review_html_url ? (
+                        <a
+                          className="rounded-md border border-studio-line px-3 py-2 text-sm"
+                          href={api.getProductionStudioFileUrl(item.production_review_html_url)}
+                          rel="noreferrer"
+                          target="_blank"
+                        >
+                          View production_review.html
+                        </a>
+                      ) : null}
+                    </div>
+                  </section>
                   <div className="flex flex-wrap gap-2">
                     <a
                       className="rounded-md border border-studio-line px-3 py-2 text-sm"
@@ -525,13 +640,16 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
                       <select
                         className="rounded-md border border-studio-line px-3 py-2 font-normal"
                         onChange={(event) =>
-                          updateAcceptance(item.generation_job_id, { status: event.target.value as AcceptanceStatus })
+                          persistAcceptance(item.package_dir, item.generation_job_id, {
+                            status: event.target.value as ManualAcceptanceStatus,
+                            notes: record.notes,
+                          })
                         }
                         value={record.status}
                       >
                         <option value="pending">待验收</option>
-                        <option value="approved">验收通过</option>
-                        <option value="needs_change">需要修改</option>
+                        <option value="accepted">验收通过</option>
+                        <option value="rejected">验收拒绝</option>
                       </select>
                     </label>
                     <label className="grid gap-1 font-medium">

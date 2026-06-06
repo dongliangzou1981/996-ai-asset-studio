@@ -184,6 +184,10 @@ def test_production_studio_new_style_generates_master_then_selected_screens(tmp_
     assert all(item["validator_ok"] for item in body["results"])
     assert body["results"][0]["components_count"] == 1
     assert body["results"][0]["candidates_count"] == 1
+    assert body["results"][0]["production_review"]["components_count"] == 1
+    assert body["results"][0]["manual_acceptance_status"] == "pending"
+    assert body["results"][0]["production_review_url"].endswith("/production_review.json")
+    assert body["results"][0]["production_review_html_url"].endswith("/production_review.html")
     assert body["results"][0]["missing_semantic_icons"] is True
     assert body["results"][0]["ui_preview_url"].startswith("/production-studio/files/996-ready/")
     assert body["layout_template"] == "classic_legend_mobile"

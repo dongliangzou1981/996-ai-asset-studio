@@ -18,6 +18,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from scripts.generate_screen_with_style import generate_screen_with_style
+from scripts.analyze_production_package import analyze_package
 from scripts.master_style_workflow import run_master_style_workflow
 from scripts.validate_996_export import validate_package
 
@@ -149,6 +150,17 @@ def has_semantic_icons(manifest: dict[str, Any], candidate_manifest: dict[str, A
     return all(any(icon in name for name in names) for icon in SEMANTIC_ICON_IDS)
 
 
+def read_package_json(package_dir: Path, filename: str) -> dict[str, Any]:
+    path = package_dir / filename
+    if not path.exists():
+        return {}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
 def summarize_package(package_dir: str | Path, upload_root: str | Path, screen_type: str) -> ProductionStudioScreenResult:
     package_path = Path(package_dir)
     if not package_path.is_absolute():
@@ -161,6 +173,13 @@ def summarize_package(package_dir: str | Path, upload_root: str | Path, screen_t
     candidate_manifest = json.loads((package_path / "candidate_manifest.json").read_text(encoding="utf-8"))
     validation = validate_package(package_path)
     semantic_icons_ready = has_semantic_icons(manifest, candidate_manifest)
+    production_review_warning = ""
+    try:
+        analyze_package(package_path)
+    except (FileNotFoundError, RuntimeError, ValueError, OSError) as exc:
+        production_review_warning = str(exc)
+    production_review = read_package_json(package_path, "production_review.json")
+    manual_acceptance = read_package_json(package_path, "manual_acceptance.json")
     return ProductionStudioScreenResult(
         screen_type=screen_type,  # type: ignore[arg-type]
         generation_job_id=str(manifest.get("generation_job_id") or package_path.name),
@@ -179,6 +198,13 @@ def summarize_package(package_dir: str | Path, upload_root: str | Path, screen_t
             if semantic_icons_ready
             else "common_icons semantic naming still needs improvement; current slices are generic candidates."
         ),
+        production_review=production_review,
+        manual_acceptance_status=str(manual_acceptance.get("review_status") or "pending"),
+        production_review_url=package_file_url(package_path, upload_path, "production_review.json"),
+        component_review_url=package_file_url(package_path, upload_path, "component_review_analysis.json"),
+        manual_acceptance_url=package_file_url(package_path, upload_path, "manual_acceptance.json"),
+        production_review_html_url=package_file_url(package_path, upload_path, "production_review.html"),
+        production_review_warning=production_review_warning,
     )
 
 

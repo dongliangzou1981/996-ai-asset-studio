@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import Any, Literal
 
 import json
 
@@ -359,6 +359,13 @@ class ProductionStudioScreenResult(BaseModel):
     validator_ok: bool
     missing_semantic_icons: bool
     common_icons_note: str
+    production_review: dict[str, Any] = Field(default_factory=dict)
+    manual_acceptance_status: str = "pending"
+    production_review_url: str = ""
+    component_review_url: str = ""
+    manual_acceptance_url: str = ""
+    production_review_html_url: str = ""
+    production_review_warning: str = ""
 
 
 class ProductionStudioResponse(BaseModel):

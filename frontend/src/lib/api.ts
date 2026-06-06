@@ -194,6 +194,34 @@ export type ProductionStudioInput = {
   prompt: string;
 };
 
+export type ManualAcceptanceStatus = "pending" | "accepted" | "rejected";
+
+export type ManualAcceptance = {
+  review_status: ManualAcceptanceStatus;
+  reviewer: string;
+  remarks: string;
+  updated_at: string;
+  accepted_at: string | null;
+  accepted_by: string;
+  components: unknown[];
+};
+
+export type ProductionReviewSummary = {
+  production_score?: number;
+  production_ready?: boolean;
+  level_a_count?: number;
+  level_b_count?: number;
+  level_c_count?: number;
+  screen_count?: number;
+  panel_count?: number;
+  atomic_count?: number;
+  effect_count?: number;
+  ignore_count?: number;
+  blockers?: string[];
+  warnings?: string[];
+  transparent_issues?: number;
+};
+
 export type ProductionStudioScreenResult = {
   screen_type: ProductionScreenType;
   generation_job_id: string;
@@ -208,6 +236,13 @@ export type ProductionStudioScreenResult = {
   validator_ok: boolean;
   missing_semantic_icons: boolean;
   common_icons_note: string;
+  production_review?: ProductionReviewSummary;
+  manual_acceptance_status?: ManualAcceptanceStatus;
+  production_review_url?: string;
+  component_review_url?: string;
+  manual_acceptance_url?: string;
+  production_review_html_url?: string;
+  production_review_warning?: string;
 };
 
 export type ProductionStudioResult = {
@@ -376,6 +411,12 @@ export const studioApi = {
   generateProductionStudioPackage(payload: ProductionStudioInput) {
     return request<ProductionStudioResult>("/production-studio/generate", {
       method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+  updateProductionManualAcceptance(packageDir: string, payload: Partial<ManualAcceptance>) {
+    return request<ManualAcceptance>(`/production-studio/manual-acceptance?package_dir=${encodeURIComponent(packageDir)}`, {
+      method: "PUT",
       body: JSON.stringify(payload),
     });
   },
