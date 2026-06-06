@@ -432,7 +432,7 @@ def main() -> int:
         print(f"Failed to generate style-guided screen: {exc}", file=sys.stderr)
         return 1
 
-    print(json.dumps(result, ensure_ascii=False, indent=2))
+    print(json.dumps(result, ensure_ascii=True, indent=2))
     return 0
 
 

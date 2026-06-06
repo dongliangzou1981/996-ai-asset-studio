@@ -189,6 +189,7 @@ class BaseJobRunner(ABC):
             project_name = project.name if project else "Loose Project"
             device_type = str(input_data.get("device_type") or "mobile")
             asset_mode = str(input_data.get("asset_mode") or "ui_package")
+            screen_type = str(input_data.get("screen_type") or "main_ui")
             width = int(input_data.get("width") or 1080)
             height = int(input_data.get("height") or 1920)
             ready_dir = self.upload_root / "996-ready" / running.id
@@ -213,6 +214,7 @@ class BaseJobRunner(ABC):
                     "generation_job_id": running.id,
                     "ready_dir": str(ready_dir),
                     "asset_mode": asset_mode,
+                    "screen_type": screen_type,
                 },
             )
             assets.append(preview_asset)
@@ -249,6 +251,7 @@ class BaseJobRunner(ABC):
                 "provider_id": running.provider_id,
                 "device_type": device_type,
                 "asset_mode": asset_mode,
+                "screen_type": screen_type,
                 "resolution": [preview_width, preview_height],
                 "ready_dir": str(ready_dir),
                 "asset_ids": [asset.id for asset in assets],

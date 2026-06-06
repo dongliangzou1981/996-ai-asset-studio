@@ -36,6 +36,8 @@ PACKAGE_TYPE = "996-ready"
 COORDINATE_SPACE = "ui_preview_pixels"
 ASSET_MODES = {"ui_package", "resource_production"}
 DEFAULT_ASSET_MODE = "ui_package"
+DEFAULT_SCREEN_TYPE = "main_ui"
+SUPPORTED_SCREEN_TYPES = {"main_ui", "role_ui", "bag_ui", "shop_ui", "activity_ui"}
 
 COMPONENT_TYPE_BY_ID = {
     "main_bottom_bar": "bar",
@@ -100,6 +102,11 @@ def asset_metadata(asset: Asset) -> dict[str, Any]:
 
 def asset_mode_from_preview(ui_preview: Asset) -> str:
     return normalize_asset_mode(asset_metadata(ui_preview).get("asset_mode"))
+
+
+def screen_type_from_preview(ui_preview: Asset) -> str:
+    value = str(asset_metadata(ui_preview).get("screen_type") or DEFAULT_SCREEN_TYPE)
+    return value if value in SUPPORTED_SCREEN_TYPES else DEFAULT_SCREEN_TYPE
 
 
 def resource_category(component_type: str) -> str:
@@ -477,6 +484,7 @@ def process_ui_preview_components(
     annotation_components: list[dict[str, Any]] = []
     candidate_components: list[dict[str, Any]] = []
     asset_mode = asset_mode_from_preview(ui_preview)
+    screen_type = screen_type_from_preview(ui_preview)
 
     with Image.open(source_path).convert("RGBA") as image:
         source_width, source_height = image.size
@@ -591,7 +599,7 @@ def process_ui_preview_components(
                                 "component_type": schema_component_type,
                                 "template_component_id": component_id,
                                 "source_asset_id": ui_preview.id,
-                                "template": "main_ui",
+                                "template": screen_type,
                             },
                             ensure_ascii=False,
                         ),
@@ -612,7 +620,7 @@ def process_ui_preview_components(
     manifest = {
         "schema_version": SCHEMA_VERSION,
         "package_type": PACKAGE_TYPE,
-        "template": "main_ui",
+        "template": screen_type,
         "asset_mode": asset_mode,
         "source_asset_id": ui_preview.id,
         "generation_job_id": ui_preview.generation_job_id or ui_preview.id,
@@ -633,7 +641,7 @@ def process_ui_preview_components(
     }
     annotation = {
         "schema_version": SCHEMA_VERSION,
-        "template": "main_ui",
+        "template": screen_type,
         "asset_mode": asset_mode,
         "source_asset_id": ui_preview.id,
         "device_type": normalize_device_type(ui_preview.device_type),
@@ -644,6 +652,7 @@ def process_ui_preview_components(
     candidate_manifest = {
         "schema_version": SCHEMA_VERSION,
         "package_type": PACKAGE_TYPE,
+        "template": screen_type,
         "asset_mode": asset_mode,
         "detection_method": "rule_and_image_feature",
         "source_asset_id": ui_preview.id,
