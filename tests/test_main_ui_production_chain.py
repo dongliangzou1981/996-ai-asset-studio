@@ -1,0 +1,86 @@
+from __future__ import annotations
+
+import json
+from pathlib import Path
+import sys
+
+from PIL import Image
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from scripts.main_ui_production_chain import create_main_ui_package
+from scripts.main_ui_production_chain import export_confirmed_components
+from scripts.main_ui_production_chain import update_candidate_confirmation
+
+
+def write_source(path: Path, *, mode: str = "RGB") -> None:
+    image = Image.new(mode, (640, 360), (24, 32, 48, 255) if mode == "RGBA" else (24, 32, 48))
+    image.save(path)
+
+
+def test_main_ui_package_generates_required_files(tmp_path: Path) -> None:
+    source = tmp_path / "main.jpg"
+    write_source(source)
+
+    result = create_main_ui_package(tmp_path / "uploads", source_image=source, job_id="job-main-ui")
+    package = Path(result["package_dir"])
+
+    assert (package / "main_ui.jpg").exists()
+    assert (package / "ui_preview.png").exists()
+    assert (package / "candidate_preview.jpg").exists()
+    assert (package / "candidate_manifest.json").exists()
+    assert (package / "manual_acceptance.json").exists()
+    assert (package / "production_review.json").exists()
+    assert (package / "confirmed_components").is_dir()
+
+
+def test_main_ui_candidates_include_levels_and_categories(tmp_path: Path) -> None:
+    source = tmp_path / "main.jpg"
+    write_source(source)
+
+    result = create_main_ui_package(tmp_path / "uploads", source_image=source, job_id="job-candidates")
+    manifest = json.loads((Path(result["package_dir"]) / "candidate_manifest.json").read_text(encoding="utf-8"))
+    by_id = {item["component_id"]: item for item in manifest["candidates"]}
+
+    assert by_id["skill_01"]["level"] == "A"
+    assert by_id["skill_01"]["production_category"] == "Atomic"
+    assert by_id["bottom_hud"]["level"] == "B"
+    assert by_id["bottom_hud"]["production_category"] == "Panel"
+    assert by_id["screen_main_ui"]["production_category"] == "Screen"
+    assert by_id["dynamic_text"]["level"] == "C"
+    assert by_id["dynamic_text"]["production_category"] == "Ignore"
+
+
+def test_confirmed_components_follow_png_and_jpg_rules(tmp_path: Path) -> None:
+    source = tmp_path / "main.jpg"
+    write_source(source)
+
+    result = create_main_ui_package(tmp_path / "uploads", source_image=source, job_id="job-export")
+    package = Path(result["package_dir"])
+    manifest = json.loads((package / "candidate_manifest.json").read_text(encoding="utf-8"))
+    by_id = {item["component_id"]: item for item in manifest["candidates"]}
+
+    assert by_id["skill_01"]["image_path"].endswith(".png")
+    assert by_id["skill_01"]["transparent_warning"]
+    assert (package / by_id["skill_01"]["image_path"]).exists()
+    assert by_id["bottom_hud"]["image_path"].endswith(".jpg")
+    assert (package / by_id["bottom_hud"]["image_path"]).exists()
+    assert by_id["dynamic_text"]["image_path"] == ""
+
+
+def test_manual_confirmation_controls_export(tmp_path: Path) -> None:
+    source = tmp_path / "main.jpg"
+    write_source(source)
+
+    result = create_main_ui_package(tmp_path / "uploads", source_image=source, job_id="job-confirm", auto_export=False)
+    package = Path(result["package_dir"])
+    update_candidate_confirmation(package, "skill_01", False)
+    export_confirmed_components(package)
+
+    manifest = json.loads((package / "candidate_manifest.json").read_text(encoding="utf-8"))
+    by_id = {item["component_id"]: item for item in manifest["candidates"]}
+
+    assert by_id["skill_01"]["confirmed"] is False
+    assert by_id["skill_01"]["image_path"] == ""
+    assert by_id["skill_02"]["confirmed"] is True
+    assert by_id["skill_02"]["image_path"].endswith(".png")

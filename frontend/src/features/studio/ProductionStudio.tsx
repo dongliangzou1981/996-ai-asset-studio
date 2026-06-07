@@ -6,6 +6,7 @@ import {
   ProductionAssetMode,
   ProductionDeviceType,
   ProductionGenerationMode,
+  MainUiProductionResult,
   ManualAcceptanceStatus,
   ProductionLayoutTemplate,
   ProductionScreenType,
@@ -74,6 +75,9 @@ type AcceptanceRecord = {
 type ProductionStudioApi = Pick<
   typeof studioApi,
   | "generateProductionStudioPackage"
+  | "runMainUiProduction"
+  | "updateMainUiCandidate"
+  | "exportMainUiProduction"
   | "getProductionStudioFileUrl"
   | "listProductionStyleCodes"
   | "updateProductionManualAcceptance"
@@ -100,6 +104,8 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
   const [referenceFileName, setReferenceFileName] = useState("");
   const [uploadingReference, setUploadingReference] = useState(false);
   const [result, setResult] = useState<ProductionStudioResult | null>(null);
+  const [mainUiProduction, setMainUiProduction] = useState<MainUiProductionResult | null>(null);
+  const [mainUiLoading, setMainUiLoading] = useState(false);
   const [generatedAt, setGeneratedAt] = useState("");
   const [acceptance, setAcceptance] = useState<Record<string, AcceptanceRecord>>({});
   const [expandedPreview, setExpandedPreview] = useState<{ src: string; label: string } | null>(null);
@@ -158,6 +164,51 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
       });
     } catch {
       setError("人工验收写入失败。请确认后端工作台仍在运行。");
+    }
+  }
+
+  async function runMainUiProduction() {
+    setMainUiLoading(true);
+    setError("");
+    try {
+      setMainUiProduction(await api.runMainUiProduction());
+    } catch {
+      setError("主界面实验包生成失败，请确认 P5 主界面参考资源可访问。");
+    } finally {
+      setMainUiLoading(false);
+    }
+  }
+
+  async function updateMainUiCandidate(candidateId: string, confirmed: boolean) {
+    if (!mainUiProduction) {
+      return;
+    }
+    const packageDir = mainUiProduction.package_dir;
+    setMainUiProduction({
+      ...mainUiProduction,
+      candidates: mainUiProduction.candidates.map((candidate) =>
+        candidate.candidate_id === candidateId ? { ...candidate, confirmed } : candidate,
+      ),
+    });
+    try {
+      await api.updateMainUiCandidate(packageDir, candidateId, confirmed);
+    } catch {
+      setError("主界面候选确认状态保存失败。");
+    }
+  }
+
+  async function exportMainUiProduction() {
+    if (!mainUiProduction) {
+      return;
+    }
+    setMainUiLoading(true);
+    setError("");
+    try {
+      setMainUiProduction(await api.exportMainUiProduction(mainUiProduction.package_dir));
+    } catch {
+      setError("确认组件切图失败，请检查 candidate_manifest.json。");
+    } finally {
+      setMainUiLoading(false);
     }
   }
 
@@ -441,6 +492,149 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
 
       <div className="rounded-md border border-studio-line bg-white p-5">
         <h2 className="text-lg font-semibold">结果中心</h2>
+        <section className="mt-4 grid gap-3 rounded-md border border-studio-line bg-slate-50 p-4">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h3 className="font-semibold">主界面生产</h3>
+              <p className="mt-1 text-xs text-studio-muted">生成、标号、确认、切图、透明 PNG、输出。</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <button
+                className="rounded-md bg-studio-action px-3 py-2 text-sm font-semibold text-white disabled:opacity-60"
+                disabled={mainUiLoading}
+                onClick={runMainUiProduction}
+                type="button"
+              >
+                {mainUiLoading ? "处理中..." : "生成主界面实验包"}
+              </button>
+              <button
+                className="rounded-md border border-studio-line bg-white px-3 py-2 text-sm disabled:opacity-60"
+                disabled={!mainUiProduction || mainUiLoading}
+                onClick={exportMainUiProduction}
+                type="button"
+              >
+                执行确认切图
+              </button>
+            </div>
+          </div>
+          {mainUiProduction ? (
+            <div className="grid gap-4">
+              <div className="grid gap-3 lg:grid-cols-2">
+                <div className="grid gap-2">
+                  <div className="text-sm font-medium">主界面</div>
+                  <img
+                    alt="主界面"
+                    className="aspect-video w-full rounded-md border border-studio-line bg-slate-950 object-contain"
+                    src={api.getProductionStudioFileUrl(mainUiProduction.main_ui_url)}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <div className="text-sm font-medium">编号候选组件</div>
+                  <img
+                    alt="编号候选组件"
+                    className="aspect-video w-full rounded-md border border-studio-line bg-slate-950 object-contain"
+                    src={api.getProductionStudioFileUrl(mainUiProduction.candidate_preview_url)}
+                  />
+                </div>
+              </div>
+              <div className="overflow-x-auto rounded-md border border-studio-line bg-white">
+                <table className="w-full min-w-[780px] text-left text-sm">
+                  <thead className="bg-slate-100 text-xs text-studio-muted">
+                    <tr>
+                      <th className="px-3 py-2">确认</th>
+                      <th className="px-3 py-2">编号</th>
+                      <th className="px-3 py-2">component_id</th>
+                      <th className="px-3 py-2">类型</th>
+                      <th className="px-3 py-2">动作</th>
+                      <th className="px-3 py-2">等级</th>
+                      <th className="px-3 py-2">分类</th>
+                      <th className="px-3 py-2">输出</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {mainUiProduction.candidates.map((candidate) => (
+                      <tr className="border-t border-studio-line" key={candidate.candidate_id}>
+                        <td className="px-3 py-2">
+                          <input
+                            aria-label={`确认切图 ${candidate.component_id}`}
+                            checked={candidate.confirmed}
+                            onChange={(event) => updateMainUiCandidate(candidate.candidate_id, event.target.checked)}
+                            type="checkbox"
+                          />
+                        </td>
+                        <td className="px-3 py-2">{candidate.number}</td>
+                        <td className="px-3 py-2 font-mono text-xs">{candidate.component_id}</td>
+                        <td className="px-3 py-2">{candidate.component_type}</td>
+                        <td className="px-3 py-2">{candidate.recommended_action}</td>
+                        <td className="px-3 py-2">{candidate.level}</td>
+                        <td className="px-3 py-2">{candidate.production_category}</td>
+                        <td className="px-3 py-2">{candidate.output_name}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="grid gap-2 rounded-md border border-studio-line bg-white p-3 text-sm">
+                <div className="font-semibold">切图结果</div>
+                {mainUiProduction.confirmed_components.filter((item) => item.file).length ? (
+                  <ul className="grid gap-2">
+                    {mainUiProduction.confirmed_components
+                      .filter((item) => item.file)
+                      .map((item) => (
+                        <li className="grid gap-1 rounded-md bg-slate-50 p-2" key={`${item.component_id}-${item.file}`}>
+                          <a
+                            className="font-mono text-xs text-studio-action"
+                            href={api.getProductionStudioFileUrl(item.url)}
+                            rel="noreferrer"
+                            target="_blank"
+                          >
+                            {item.file}
+                          </a>
+                          {item.transparent_warning ? (
+                            <span className="text-xs text-amber-700">transparent_warning: {item.transparent_warning}</span>
+                          ) : null}
+                        </li>
+                      ))}
+                  </ul>
+                ) : (
+                  <p className="text-studio-muted">还没有 confirmed_components 输出。</p>
+                )}
+                <div className="flex flex-wrap gap-2">
+                  <a
+                    className="rounded-md border border-studio-line px-3 py-2"
+                    href={api.getProductionStudioFileUrl(mainUiProduction.candidate_manifest_url)}
+                    rel="noreferrer"
+                    target="_blank"
+                  >
+                    查看 candidate_manifest.json
+                  </a>
+                  {mainUiProduction.production_review_url ? (
+                    <a
+                      className="rounded-md border border-studio-line px-3 py-2"
+                      href={api.getProductionStudioFileUrl(mainUiProduction.production_review_url)}
+                      rel="noreferrer"
+                      target="_blank"
+                    >
+                      查看 production_review.json
+                    </a>
+                  ) : null}
+                  {mainUiProduction.manual_acceptance_url ? (
+                    <a
+                      className="rounded-md border border-studio-line px-3 py-2"
+                      href={api.getProductionStudioFileUrl(mainUiProduction.manual_acceptance_url)}
+                      rel="noreferrer"
+                      target="_blank"
+                    >
+                      查看 manual_acceptance.json
+                    </a>
+                  ) : null}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm leading-6 text-studio-muted">点击生成主界面实验包后，这里会显示主界面、编号图、候选组件、确认状态和切图结果。</p>
+          )}
+        </section>
         {result ? (
           <div className="mt-4 grid gap-4">
             <div className="grid gap-2 rounded-md border border-studio-line bg-slate-50 p-3 text-sm sm:grid-cols-2">

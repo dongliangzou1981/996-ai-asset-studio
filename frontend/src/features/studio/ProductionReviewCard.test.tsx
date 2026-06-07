@@ -5,6 +5,9 @@ import { ProductionStudio } from "./ProductionStudio";
 
 const api = {
   generateProductionStudioPackage: jest.fn(),
+  runMainUiProduction: jest.fn(),
+  updateMainUiCandidate: jest.fn(),
+  exportMainUiProduction: jest.fn(),
   getProductionStudioFileUrl: jest.fn((path: string) => `http://127.0.0.1:8000${path}`),
   listProductionStyleCodes: jest.fn(),
   updateProductionManualAcceptance: jest.fn(),
@@ -31,6 +34,37 @@ beforeEach(() => {
     accepted_at: "2026-06-07T00:00:00Z",
     accepted_by: "",
     components: [],
+  });
+  api.runMainUiProduction.mockResolvedValue({
+    package_dir: "assets/uploads/996-ready/SPRINT20B_MAIN_UI/main_ui/job-main-ui",
+    main_ui_url: "/production-studio/files/996-ready/SPRINT20B_MAIN_UI/main_ui/job-main-ui/main_ui.jpg",
+    candidate_preview_url:
+      "/production-studio/files/996-ready/SPRINT20B_MAIN_UI/main_ui/job-main-ui/candidate_preview.jpg",
+    candidate_manifest_url:
+      "/production-studio/files/996-ready/SPRINT20B_MAIN_UI/main_ui/job-main-ui/candidate_manifest.json",
+    production_review_url:
+      "/production-studio/files/996-ready/SPRINT20B_MAIN_UI/main_ui/job-main-ui/production_review.json",
+    manual_acceptance_url:
+      "/production-studio/files/996-ready/SPRINT20B_MAIN_UI/main_ui/job-main-ui/manual_acceptance.json",
+    confirmed_components_url: "",
+    candidates: [],
+    confirmed_components: [],
+  });
+  api.updateMainUiCandidate.mockResolvedValue({});
+  api.exportMainUiProduction.mockResolvedValue({
+    package_dir: "assets/uploads/996-ready/SPRINT20B_MAIN_UI/main_ui/job-main-ui",
+    main_ui_url: "/production-studio/files/996-ready/SPRINT20B_MAIN_UI/main_ui/job-main-ui/main_ui.jpg",
+    candidate_preview_url:
+      "/production-studio/files/996-ready/SPRINT20B_MAIN_UI/main_ui/job-main-ui/candidate_preview.jpg",
+    candidate_manifest_url:
+      "/production-studio/files/996-ready/SPRINT20B_MAIN_UI/main_ui/job-main-ui/candidate_manifest.json",
+    production_review_url:
+      "/production-studio/files/996-ready/SPRINT20B_MAIN_UI/main_ui/job-main-ui/production_review.json",
+    manual_acceptance_url:
+      "/production-studio/files/996-ready/SPRINT20B_MAIN_UI/main_ui/job-main-ui/manual_acceptance.json",
+    confirmed_components_url: "",
+    candidates: [],
+    confirmed_components: [],
   });
   api.generateProductionStudioPackage.mockResolvedValue({
     style_code: "STYLE_0003",

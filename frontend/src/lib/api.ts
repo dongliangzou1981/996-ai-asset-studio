@@ -257,6 +257,48 @@ export type ProductionStudioResult = {
   results: ProductionStudioScreenResult[];
 };
 
+export type MainUiProductionCandidate = {
+  candidate_id: string;
+  component_id: string;
+  component_name?: string;
+  component_type: string;
+  number: number;
+  bounds: { x: number; y: number; width: number; height: number };
+  level: "A" | "B" | "C";
+  production_category: "Screen" | "Panel" | "Atomic" | "Effect" | "Ignore";
+  recommended_action: string;
+  confirmed: boolean;
+  output_format: "png" | "jpg";
+  output_name: string;
+  transparent_required: boolean;
+  transparent_warning?: string;
+  image_path?: string;
+};
+
+export type MainUiConfirmedComponent = {
+  component_id: string;
+  component_type: string;
+  number: number;
+  confirmed: boolean;
+  file: string;
+  format: string;
+  transparent_warning: string;
+  url: string;
+};
+
+export type MainUiProductionResult = {
+  package_dir: string;
+  main_ui_url: string;
+  candidate_preview_url: string;
+  candidate_manifest_url: string;
+  production_review_url: string;
+  manual_acceptance_url: string;
+  confirmed_components_url: string;
+  candidates: MainUiProductionCandidate[];
+  confirmed_components: MainUiConfirmedComponent[];
+  exported_count?: number;
+};
+
 export type ListResponse<T> = {
   items: T[];
 };
@@ -419,6 +461,29 @@ export const studioApi = {
       method: "PUT",
       body: JSON.stringify(payload),
     });
+  },
+  runMainUiProduction() {
+    return request<MainUiProductionResult>("/production-studio/main-ui-production/run", { method: "POST" });
+  },
+  getMainUiProduction(packageDir: string) {
+    return request<MainUiProductionResult>(
+      `/production-studio/main-ui-production?package_dir=${encodeURIComponent(packageDir)}`,
+    );
+  },
+  updateMainUiCandidate(packageDir: string, candidateId: string, confirmed: boolean) {
+    return request<MainUiProductionCandidate>(
+      `/production-studio/main-ui-production/candidate?package_dir=${encodeURIComponent(packageDir)}&candidate_id=${encodeURIComponent(candidateId)}`,
+      {
+        method: "PUT",
+        body: JSON.stringify({ confirmed }),
+      },
+    );
+  },
+  exportMainUiProduction(packageDir: string) {
+    return request<MainUiProductionResult>(
+      `/production-studio/main-ui-production/export?package_dir=${encodeURIComponent(packageDir)}`,
+      { method: "POST" },
+    );
   },
   listAssets(projectId?: string, assetType?: string, deviceType?: string, generationJobId?: string) {
     const params = new URLSearchParams();
