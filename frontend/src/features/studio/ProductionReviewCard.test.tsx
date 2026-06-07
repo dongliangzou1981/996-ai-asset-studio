@@ -5,7 +5,12 @@ import { ProductionStudio } from "./ProductionStudio";
 
 const api = {
   generateProductionStudioPackage: jest.fn(),
+  generateUiProductionPackage: jest.fn(),
+  markUiProductionCandidates: jest.fn(),
+  updateUiProductionCandidate: jest.fn(),
+  exportUiProductionComponents: jest.fn(),
   runMainUiProduction: jest.fn(),
+  getMainUiProduction: jest.fn(),
   updateMainUiCandidate: jest.fn(),
   exportMainUiProduction: jest.fn(),
   getProductionStudioFileUrl: jest.fn((path: string) => `http://127.0.0.1:8000${path}`),
@@ -50,6 +55,25 @@ beforeEach(() => {
     candidates: [],
     confirmed_components: [],
   });
+  api.getMainUiProduction.mockRejectedValue(new Error("no saved package"));
+  api.generateUiProductionPackage.mockResolvedValue({
+    package_dir: "assets/uploads/996-ready/SPRINT20B_MAIN_UI/main_ui/job-main-ui",
+    main_ui_url: "/production-studio/files/996-ready/SPRINT20B_MAIN_UI/main_ui/job-main-ui/main_ui.jpg",
+    candidate_preview_url: "",
+    candidate_manifest_url: "",
+    manifest_url: "/production-studio/files/996-ready/SPRINT20B_MAIN_UI/main_ui/job-main-ui/manifest.json",
+    annotation_url: "/production-studio/files/996-ready/SPRINT20B_MAIN_UI/main_ui/job-main-ui/annotation.json",
+    production_review_url:
+      "/production-studio/files/996-ready/SPRINT20B_MAIN_UI/main_ui/job-main-ui/production_review.json",
+    manual_acceptance_url:
+      "/production-studio/files/996-ready/SPRINT20B_MAIN_UI/main_ui/job-main-ui/manual_acceptance.json",
+    confirmed_components_url: "",
+    candidates: [],
+    confirmed_components: [],
+  });
+  api.markUiProductionCandidates.mockResolvedValue(api.runMainUiProduction.getMockImplementation()?.() ?? {});
+  api.updateUiProductionCandidate.mockResolvedValue({});
+  api.exportUiProductionComponents.mockResolvedValue(api.runMainUiProduction.getMockImplementation()?.() ?? {});
   api.updateMainUiCandidate.mockResolvedValue({});
   api.exportMainUiProduction.mockResolvedValue({
     package_dir: "assets/uploads/996-ready/SPRINT20B_MAIN_UI/main_ui/job-main-ui",

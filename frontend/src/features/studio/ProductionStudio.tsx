@@ -75,7 +75,12 @@ type AcceptanceRecord = {
 type ProductionStudioApi = Pick<
   typeof studioApi,
   | "generateProductionStudioPackage"
+  | "generateUiProductionPackage"
+  | "markUiProductionCandidates"
+  | "updateUiProductionCandidate"
+  | "exportUiProductionComponents"
   | "runMainUiProduction"
+  | "getMainUiProduction"
   | "updateMainUiCandidate"
   | "exportMainUiProduction"
   | "getProductionStudioFileUrl"
@@ -83,6 +88,28 @@ type ProductionStudioApi = Pick<
   | "updateProductionManualAcceptance"
   | "uploadAsset"
 >;
+
+type UiProductionScreenType = "main_ui" | "bag_ui" | "role_ui" | "shop_ui" | "activity_ui";
+
+const UI_PRODUCTION_SCREEN_OPTIONS: { value: UiProductionScreenType; label: string; enabled: boolean }[] = [
+  { value: "main_ui", label: "主界面", enabled: true },
+  { value: "bag_ui", label: "背包（即将支持）", enabled: false },
+  { value: "role_ui", label: "角色（即将支持）", enabled: false },
+  { value: "shop_ui", label: "商城（即将支持）", enabled: false },
+  { value: "activity_ui", label: "活动（即将支持）", enabled: false },
+];
+
+const STYLE_REFERENCE_OPTIONS = [
+  { value: "none", label: "不参考风格" },
+  { value: "30", label: "30%参考" },
+  { value: "60", label: "60%参考" },
+  { value: "90", label: "90%参考" },
+  { value: "copy", label: "高复刻" },
+];
+
+function isUiProductionResult(value: unknown): value is MainUiProductionResult {
+  return Boolean(value && typeof value === "object" && "package_dir" in value);
+}
 
 function defaultAcceptanceRecord(): AcceptanceRecord {
   return { status: "pending", notes: "" };
@@ -106,6 +133,13 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
   const [result, setResult] = useState<ProductionStudioResult | null>(null);
   const [mainUiProduction, setMainUiProduction] = useState<MainUiProductionResult | null>(null);
   const [mainUiLoading, setMainUiLoading] = useState(false);
+  const [uiProductionScreenType, setUiProductionScreenType] = useState<UiProductionScreenType>("main_ui");
+  const [uiProductionRequirement, setUiProductionRequirement] = useState("手机横屏传奇主界面，顶部信息、右上地图、右侧入口、右下技能、左下摇杆、聊天区清晰。");
+  const [uiProductionStyleReference, setUiProductionStyleReference] = useState("none");
+  const [uiProductionReferencePath, setUiProductionReferencePath] = useState<string | null>(null);
+  const [uiProductionReferencePreviewUrl, setUiProductionReferencePreviewUrl] = useState("");
+  const [uiProductionReferenceFileName, setUiProductionReferenceFileName] = useState("");
+  const [uiProductionMessage, setUiProductionMessage] = useState("");
   const [generatedAt, setGeneratedAt] = useState("");
   const [acceptance, setAcceptance] = useState<Record<string, AcceptanceRecord>>({});
   const [expandedPreview, setExpandedPreview] = useState<{ src: string; label: string } | null>(null);
@@ -129,6 +163,25 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
       }
     };
   }, [referencePreviewUrl]);
+
+  useEffect(() => {
+    return () => {
+      if (uiProductionReferencePreviewUrl) {
+        URL.revokeObjectURL(uiProductionReferencePreviewUrl);
+      }
+    };
+  }, [uiProductionReferencePreviewUrl]);
+
+  useEffect(() => {
+    const savedPackageDir = window.localStorage.getItem("uiProductionPackageDir");
+    if (!savedPackageDir) {
+      return;
+    }
+    api
+      .getMainUiProduction(savedPackageDir)
+      .then((response) => setMainUiProduction(response))
+      .catch(() => window.localStorage.removeItem("uiProductionPackageDir"));
+  }, [api]);
 
   const selectedStyle = useMemo(
     () => styleCodes.find((style) => style.style_code === selectedStyleCode),
@@ -167,6 +220,88 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
     }
   }
 
+  async function uploadUiProductionReference(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+    setError("");
+    setUiProductionMessage("");
+    const previewUrl = URL.createObjectURL(file);
+    setUiProductionReferencePreviewUrl((current) => {
+      if (current) {
+        URL.revokeObjectURL(current);
+      }
+      return previewUrl;
+    });
+    setUiProductionReferenceFileName(file.name);
+    try {
+      const asset = await api.uploadAsset({
+        file,
+        project_id: null,
+        asset_type: "reference_image",
+        device_type: deviceType,
+      });
+      setUiProductionReferencePath(asset.file_path);
+      setUiProductionReferenceFileName(asset.original_filename || file.name);
+    } catch {
+      setUiProductionReferencePath(null);
+      setError("参考图上传失败，请使用 JPG 或 PNG。");
+    } finally {
+      event.target.value = "";
+    }
+  }
+
+  function removeUiProductionReference() {
+    if (uiProductionReferencePreviewUrl) {
+      URL.revokeObjectURL(uiProductionReferencePreviewUrl);
+    }
+    setUiProductionReferencePreviewUrl("");
+    setUiProductionReferencePath(null);
+    setUiProductionReferenceFileName("");
+  }
+
+  async function generateUiProductionInterface() {
+    setMainUiLoading(true);
+    setError("");
+    setUiProductionMessage("");
+    try {
+      const response = await api.generateUiProductionPackage({
+        screen_type: uiProductionScreenType,
+        reference_image_path: uiProductionReferencePath,
+        requirement: uiProductionRequirement,
+        style_reference_strength: uiProductionStyleReference,
+      });
+      if (!isUiProductionResult(response)) {
+        setUiProductionMessage(response.message);
+        return;
+      }
+      setMainUiProduction(response);
+      window.localStorage.setItem("uiProductionPackageDir", response.package_dir);
+    } catch {
+      setError("生成界面失败，请确认参考图或本地 P5 主界面素材可访问。");
+    } finally {
+      setMainUiLoading(false);
+    }
+  }
+
+  async function markUiProductionCandidates() {
+    if (!mainUiProduction) {
+      return;
+    }
+    setMainUiLoading(true);
+    setError("");
+    try {
+      const response = await api.markUiProductionCandidates(mainUiProduction.package_dir);
+      setMainUiProduction(response);
+      window.localStorage.setItem("uiProductionPackageDir", response.package_dir);
+    } catch {
+      setError("标记候选组件失败。");
+    } finally {
+      setMainUiLoading(false);
+    }
+  }
+
   async function runMainUiProduction() {
     setMainUiLoading(true);
     setError("");
@@ -191,7 +326,7 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
       ),
     });
     try {
-      await api.updateMainUiCandidate(packageDir, candidateId, confirmed);
+      await api.updateUiProductionCandidate(packageDir, candidateId, confirmed);
     } catch {
       setError("主界面候选确认状态保存失败。");
     }
@@ -204,7 +339,7 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
     setMainUiLoading(true);
     setError("");
     try {
-      setMainUiProduction(await api.exportMainUiProduction(mainUiProduction.package_dir));
+      setMainUiProduction(await api.exportUiProductionComponents(mainUiProduction.package_dir));
     } catch {
       setError("确认组件切图失败，请检查 candidate_manifest.json。");
     } finally {
@@ -492,7 +627,224 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
 
       <div className="rounded-md border border-studio-line bg-white p-5">
         <h2 className="text-lg font-semibold">结果中心</h2>
-        <section className="mt-4 grid gap-3 rounded-md border border-studio-line bg-slate-50 p-4">
+        <section className="mt-4 grid gap-4 rounded-md border border-studio-line bg-white p-4">
+          <div>
+            <h3 className="font-semibold">UI素材生产</h3>
+            <p className="mt-1 text-sm text-studio-muted">选择界面、上传参考、生成完整界面、标记候选、人工确认、执行切图、查看输出包。</p>
+          </div>
+          <div className="grid gap-3 rounded-md bg-slate-50 p-3 sm:grid-cols-2">
+            <label className="grid gap-1 text-sm font-medium">
+              1. 选择界面类型
+              <select
+                className="rounded-md border border-studio-line px-3 py-2 font-normal"
+                onChange={(event) => setUiProductionScreenType(event.target.value as UiProductionScreenType)}
+                value={uiProductionScreenType}
+              >
+                {UI_PRODUCTION_SCREEN_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              {uiProductionScreenType !== "main_ui" ? (
+                <span className="text-xs font-normal text-amber-700">该界面类型即将支持，本轮仅主界面完整跑通。</span>
+              ) : null}
+            </label>
+            <label className="grid gap-1 text-sm font-medium">
+              风格参考
+              <select
+                className="rounded-md border border-studio-line px-3 py-2 font-normal"
+                onChange={(event) => setUiProductionStyleReference(event.target.value)}
+                value={uiProductionStyleReference}
+              >
+                {STYLE_REFERENCE_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <div className="grid gap-3 rounded-md border border-studio-line p-3">
+            <label className="grid gap-1 text-sm font-medium">
+              2. 上传参考图
+              <input
+                accept="image/png,image/jpeg"
+                className="rounded-md border border-studio-line px-3 py-2 font-normal"
+                onChange={uploadUiProductionReference}
+                type="file"
+              />
+            </label>
+            {uiProductionReferencePreviewUrl ? (
+              <div className="grid gap-2">
+                <img
+                  alt="UI素材生产参考图预览"
+                  className="aspect-video w-full rounded-md border border-studio-line object-contain"
+                  src={uiProductionReferencePreviewUrl}
+                />
+                <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                  <span className="text-studio-muted">{uiProductionReferenceFileName}</span>
+                  <button className="rounded-md border border-studio-line px-3 py-2" onClick={removeUiProductionReference} type="button">
+                    移除参考图
+                  </button>
+                </div>
+              </div>
+            ) : null}
+          </div>
+          <label className="grid gap-1 text-sm font-medium">
+            3. 输入生成需求
+            <textarea
+              className="min-h-24 rounded-md border border-studio-line px-3 py-2 font-normal leading-6"
+              onChange={(event) => setUiProductionRequirement(event.target.value)}
+              value={uiProductionRequirement}
+            />
+          </label>
+          <div className="flex flex-wrap gap-2">
+            <button
+              className="rounded-md bg-studio-action px-3 py-2 text-sm font-semibold text-white disabled:opacity-60"
+              disabled={mainUiLoading || uiProductionScreenType !== "main_ui"}
+              onClick={generateUiProductionInterface}
+              type="button"
+            >
+              生成界面
+            </button>
+            <button
+              className="rounded-md border border-studio-line px-3 py-2 text-sm disabled:opacity-60"
+              disabled={mainUiLoading || !mainUiProduction}
+              onClick={markUiProductionCandidates}
+              type="button"
+            >
+              标记候选组件
+            </button>
+            <button
+              className="rounded-md border border-studio-line px-3 py-2 text-sm disabled:opacity-60"
+              disabled={mainUiLoading || !mainUiProduction || !mainUiProduction.candidates.length}
+              onClick={exportMainUiProduction}
+              type="button"
+            >
+              执行切图
+            </button>
+          </div>
+          {uiProductionMessage ? <p className="text-sm text-amber-700">{uiProductionMessage}</p> : null}
+          {mainUiProduction ? (
+            <div className="grid gap-4">
+              <div className="grid gap-3 lg:grid-cols-2">
+                <div className="grid gap-2">
+                  <div className="text-sm font-medium">完整界面预览</div>
+                  <img
+                    alt="完整界面预览"
+                    className="aspect-video w-full rounded-md border border-studio-line bg-slate-950 object-contain"
+                    src={api.getProductionStudioFileUrl(mainUiProduction.main_ui_url)}
+                  />
+                </div>
+                {mainUiProduction.candidate_preview_url ? (
+                  <div className="grid gap-2">
+                    <div className="text-sm font-medium">编号图</div>
+                    <img
+                      alt="候选组件编号图"
+                      className="aspect-video w-full rounded-md border border-studio-line bg-slate-950 object-contain"
+                      src={api.getProductionStudioFileUrl(mainUiProduction.candidate_preview_url)}
+                    />
+                  </div>
+                ) : null}
+              </div>
+              {mainUiProduction.candidates.length ? (
+                <div className="overflow-x-auto rounded-md border border-studio-line">
+                  <table className="w-full min-w-[820px] text-left text-sm">
+                    <thead className="bg-slate-100 text-xs text-studio-muted">
+                      <tr>
+                        <th className="px-3 py-2">确认</th>
+                        <th className="px-3 py-2">编号</th>
+                        <th className="px-3 py-2">组件名称</th>
+                        <th className="px-3 py-2">组件类型</th>
+                        <th className="px-3 py-2">A/B/C</th>
+                        <th className="px-3 py-2">输出格式</th>
+                        <th className="px-3 py-2">建议动作</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {mainUiProduction.candidates.map((candidate) => (
+                        <tr className="border-t border-studio-line" key={candidate.candidate_id}>
+                          <td className="px-3 py-2">
+                            <input
+                              aria-label={`确认切图 ${candidate.component_id}`}
+                              checked={candidate.confirmed}
+                              onChange={(event) => updateMainUiCandidate(candidate.candidate_id, event.target.checked)}
+                              type="checkbox"
+                            />
+                          </td>
+                          <td className="px-3 py-2">{candidate.number}</td>
+                          <td className="px-3 py-2">{candidate.component_name ?? candidate.component_id}</td>
+                          <td className="px-3 py-2">{candidate.component_type}</td>
+                          <td className="px-3 py-2">{candidate.level}</td>
+                          <td className="px-3 py-2 uppercase">{candidate.output_format}</td>
+                          <td className="px-3 py-2">{candidate.recommended_action}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : null}
+              {mainUiProduction.confirmed_components.filter((item) => item.file).length ? (
+                <div className="grid gap-3">
+                  <div className="font-semibold">PNG / JPG 输出预览</div>
+                  <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                    {mainUiProduction.confirmed_components
+                      .filter((item) => item.file)
+                      .map((item) => (
+                        <article className="grid gap-2 rounded-md border border-studio-line p-3" key={`${item.component_id}-${item.file}`}>
+                          <img
+                            alt={`${item.component_id} 输出预览`}
+                            className="aspect-video w-full rounded-md bg-slate-950 object-contain"
+                            src={api.getProductionStudioFileUrl(item.url)}
+                          />
+                          <div className="font-mono text-xs">{item.file}</div>
+                          <div className="text-xs text-studio-muted">
+                            {item.component_type} / {item.format.toUpperCase()} / 透明：
+                            {item.has_transparent_pixels ? "是" : "否"}
+                          </div>
+                          {item.transparent_warning ? <div className="text-xs text-amber-700">透明警告：{item.transparent_warning}</div> : null}
+                        </article>
+                      ))}
+                  </div>
+                </div>
+              ) : null}
+              <div className="flex flex-wrap gap-2">
+                {mainUiProduction.manifest_url ? (
+                  <a
+                    className="rounded-md border border-studio-line px-3 py-2 text-sm"
+                    href={api.getProductionStudioFileUrl(mainUiProduction.manifest_url)}
+                    rel="noreferrer"
+                    target="_blank"
+                  >
+                    查看输出包 manifest.json
+                  </a>
+                ) : null}
+                {mainUiProduction.annotation_url ? (
+                  <a
+                    className="rounded-md border border-studio-line px-3 py-2 text-sm"
+                    href={api.getProductionStudioFileUrl(mainUiProduction.annotation_url)}
+                    rel="noreferrer"
+                    target="_blank"
+                  >
+                    查看 annotation.json
+                  </a>
+                ) : null}
+                {mainUiProduction.candidate_manifest_url ? (
+                  <a
+                    className="rounded-md border border-studio-line px-3 py-2 text-sm"
+                    href={api.getProductionStudioFileUrl(mainUiProduction.candidate_manifest_url)}
+                    rel="noreferrer"
+                    target="_blank"
+                  >
+                    查看 candidate_manifest.json
+                  </a>
+                ) : null}
+              </div>
+            </div>
+          ) : null}
+        </section>
+        <section className="hidden">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h3 className="font-semibold">主界面生产</h3>

@@ -282,6 +282,8 @@ export type MainUiConfirmedComponent = {
   confirmed: boolean;
   file: string;
   format: string;
+  transparent_required?: boolean;
+  has_transparent_pixels?: boolean;
   transparent_warning: string;
   url: string;
 };
@@ -291,6 +293,8 @@ export type MainUiProductionResult = {
   main_ui_url: string;
   candidate_preview_url: string;
   candidate_manifest_url: string;
+  manifest_url?: string;
+  annotation_url?: string;
   production_review_url: string;
   manual_acceptance_url: string;
   confirmed_components_url: string;
@@ -464,6 +468,41 @@ export const studioApi = {
   },
   runMainUiProduction() {
     return request<MainUiProductionResult>("/production-studio/main-ui-production/run", { method: "POST" });
+  },
+  generateUiProductionPackage(payload: {
+    screen_type: string;
+    reference_image_path?: string | null;
+    requirement: string;
+    style_reference_strength: string;
+  }) {
+    return request<MainUiProductionResult | { status: "placeholder"; screen_type: string; message: string }>(
+      "/production-studio/ui-production/generate",
+      {
+        method: "POST",
+        body: JSON.stringify(payload),
+      },
+    );
+  },
+  markUiProductionCandidates(packageDir: string) {
+    return request<MainUiProductionResult>(
+      `/production-studio/ui-production/mark-candidates?package_dir=${encodeURIComponent(packageDir)}`,
+      { method: "POST" },
+    );
+  },
+  updateUiProductionCandidate(packageDir: string, candidateId: string, confirmed: boolean) {
+    return request<MainUiProductionCandidate>(
+      `/production-studio/ui-production/candidate?package_dir=${encodeURIComponent(packageDir)}&candidate_id=${encodeURIComponent(candidateId)}`,
+      {
+        method: "PUT",
+        body: JSON.stringify({ confirmed }),
+      },
+    );
+  },
+  exportUiProductionComponents(packageDir: string) {
+    return request<MainUiProductionResult>(
+      `/production-studio/ui-production/export?package_dir=${encodeURIComponent(packageDir)}`,
+      { method: "POST" },
+    );
   },
   getMainUiProduction(packageDir: string) {
     return request<MainUiProductionResult>(

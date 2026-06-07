@@ -81,3 +81,59 @@ def test_main_ui_endpoint_rejects_outside_package_path(tmp_path: Path) -> None:
     response = client.get("/production-studio/main-ui-production", params={"package_dir": str(outside)})
 
     assert response.status_code == 400
+
+
+def test_ui_production_generate_mark_and_export_main_ui(tmp_path: Path, monkeypatch) -> None:
+    source = tmp_path / "source.jpg"
+    write_source(source)
+
+    def fake_default_source(upload_root):  # type: ignore[no-untyped-def]
+        return source
+
+    monkeypatch.setattr("scripts.main_ui_production_chain.default_source_image", fake_default_source)
+    client = make_client(tmp_path)
+
+    generated = client.post(
+        "/production-studio/ui-production/generate",
+        json={
+            "screen_type": "main_ui",
+            "requirement": "main ui layout",
+            "style_reference_strength": "60",
+        },
+    )
+    assert generated.status_code == 200
+    package_dir = generated.json()["package_dir"]
+    assert generated.json()["main_ui_url"].endswith("/main_ui.jpg")
+    assert generated.json()["candidates"] == []
+
+    marked = client.post("/production-studio/ui-production/mark-candidates", params={"package_dir": package_dir})
+    assert marked.status_code == 200
+    assert marked.json()["candidate_preview_url"].endswith("/candidate_preview.jpg")
+    assert marked.json()["candidates"]
+
+    updated = client.put(
+        "/production-studio/ui-production/candidate",
+        params={"package_dir": package_dir, "candidate_id": "skill_01"},
+        json={"confirmed": False},
+    )
+    assert updated.status_code == 200
+    assert updated.json()["confirmed"] is False
+
+    exported = client.post("/production-studio/ui-production/export", params={"package_dir": package_dir})
+    assert exported.status_code == 200
+    by_id = {item["component_id"]: item for item in exported.json()["confirmed_components"]}
+    assert by_id["skill_01"]["file"] == ""
+    assert any(item["file"].endswith(".jpg") for item in exported.json()["confirmed_components"] if item["file"])
+
+
+def test_ui_production_other_screen_types_are_placeholders(tmp_path: Path) -> None:
+    client = make_client(tmp_path)
+
+    response = client.post(
+        "/production-studio/ui-production/generate",
+        json={"screen_type": "bag_ui", "requirement": "bag", "style_reference_strength": "none"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["status"] == "placeholder"
+    assert response.json()["screen_type"] == "bag_ui"

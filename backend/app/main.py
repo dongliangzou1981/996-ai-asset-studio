@@ -45,8 +45,10 @@ from app.schemas import (
     StyleProfileList,
 )
 from scripts.analyze_production_package import analyze_package, utc_now
+from scripts.main_ui_production_chain import create_ui_package
 from scripts.main_ui_production_chain import create_main_ui_package
 from scripts.main_ui_production_chain import export_confirmed_components
+from scripts.main_ui_production_chain import mark_candidate_components
 from scripts.main_ui_production_chain import update_candidate_confirmation
 
 
@@ -194,8 +196,34 @@ def create_app(database_path: str | Path | None = None, upload_dir: str | Path |
         relative_package = package_dir.resolve().relative_to(upload_root.resolve())
         return "/production-studio/files/" + (relative_package / filename).as_posix()
 
+    def resolve_uploaded_source_file(file_path: str | None) -> Path | None:
+        if not file_path:
+            return None
+        raw_path = Path(file_path)
+        upload_root_resolved = upload_root.resolve()
+        candidate = raw_path.resolve() if raw_path.is_absolute() else (Path.cwd() / raw_path).resolve()
+        if not candidate.is_relative_to(upload_root_resolved):
+            raise HTTPException(status_code=400, detail="Reference image must stay inside upload root")
+        if not candidate.exists() or not candidate.is_file():
+            raise HTTPException(status_code=404, detail="Reference image not found")
+        return candidate
+
+    def image_has_alpha_pixels(path: Path) -> bool:
+        if not path.exists() or path.suffix.lower() != ".png":
+            return False
+        try:
+            from PIL import Image
+
+            with Image.open(path) as image:
+                alpha = image.convert("RGBA").getchannel("A")
+                minimum, _ = alpha.getextrema()
+                return minimum < 255
+        except OSError:
+            return False
+
     def main_ui_package_response(package_dir: Path) -> dict:
-        candidate_manifest = read_package_json(package_dir, "candidate_manifest.json")
+        candidate_path = package_dir / "candidate_manifest.json"
+        candidate_manifest = read_package_json(package_dir, "candidate_manifest.json") if candidate_path.exists() else {"candidates": []}
         candidates = candidate_manifest.get("candidates") if isinstance(candidate_manifest.get("candidates"), list) else []
         confirmed_components = [
             {
@@ -205,19 +233,26 @@ def create_app(database_path: str | Path | None = None, upload_dir: str | Path |
                 "confirmed": bool(candidate.get("confirmed")),
                 "file": candidate.get("image_path") or "",
                 "format": candidate.get("output_format") or "",
+                "transparent_required": bool(candidate.get("transparent_required")),
+                "has_transparent_pixels": image_has_alpha_pixels(package_dir / str(candidate.get("image_path") or "")),
                 "transparent_warning": candidate.get("transparent_warning") or "",
                 "url": package_file_url(package_dir, str(candidate["image_path"])) if candidate.get("image_path") else "",
             }
             for candidate in candidates
             if isinstance(candidate, dict)
         ]
+        candidate_preview_path = package_dir / "candidate_preview.jpg"
         review_path = package_dir / "production_review.json"
         manual_path = package_dir / "manual_acceptance.json"
+        manifest_path = package_dir / "manifest.json"
+        annotation_path = package_dir / "annotation.json"
         return {
             "package_dir": str(package_dir),
             "main_ui_url": package_file_url(package_dir, "main_ui.jpg"),
-            "candidate_preview_url": package_file_url(package_dir, "candidate_preview.jpg"),
-            "candidate_manifest_url": package_file_url(package_dir, "candidate_manifest.json"),
+            "candidate_preview_url": package_file_url(package_dir, "candidate_preview.jpg") if candidate_preview_path.exists() else "",
+            "candidate_manifest_url": package_file_url(package_dir, "candidate_manifest.json") if candidate_path.exists() else "",
+            "manifest_url": package_file_url(package_dir, "manifest.json") if manifest_path.exists() else "",
+            "annotation_url": package_file_url(package_dir, "annotation.json") if annotation_path.exists() else "",
             "production_review_url": package_file_url(package_dir, "production_review.json") if review_path.exists() else "",
             "manual_acceptance_url": package_file_url(package_dir, "manual_acceptance.json") if manual_path.exists() else "",
             "confirmed_components_url": package_file_url(package_dir, "confirmed_components/screen_main_ui.jpg")
@@ -283,15 +318,66 @@ def create_app(database_path: str | Path | None = None, upload_dir: str | Path |
         return updated
 
     @app.post("/production-studio/main-ui-production/run")
-    def run_main_ui_production() -> dict:
+    def run_main_ui_production(payload: dict | None = None) -> dict:
         try:
-            result = create_main_ui_package(upload_root=upload_root)
+            source = resolve_uploaded_source_file((payload or {}).get("reference_image_path"))
+            result = create_main_ui_package(upload_root=upload_root, source_image=source)
         except (FileNotFoundError, RuntimeError, ValueError) as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         package_path = resolve_production_package_dir(str(result["package_dir"]))
         response = main_ui_package_response(package_path)
         response["exported_count"] = result.get("exported_count", 0)
         return response
+
+    @app.post("/production-studio/ui-production/generate")
+    def generate_ui_production_package(payload: dict) -> dict:
+        screen_type = str(payload.get("screen_type") or "main_ui")
+        if screen_type != "main_ui":
+            return {
+                "status": "placeholder",
+                "screen_type": screen_type,
+                "message": "该界面类型即将支持，本轮仅 main_ui 可完整跑通",
+            }
+        try:
+            source = resolve_uploaded_source_file(payload.get("reference_image_path"))
+            result = create_ui_package(
+                upload_root=upload_root,
+                screen_type=screen_type,
+                source_image=source,
+                requirement=str(payload.get("requirement") or ""),
+                style_reference_strength=str(payload.get("style_reference_strength") or "none"),
+            )
+        except (FileNotFoundError, RuntimeError, ValueError) as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        return main_ui_package_response(resolve_production_package_dir(str(result["package_dir"])))
+
+    @app.post("/production-studio/ui-production/mark-candidates")
+    def mark_ui_production_candidates(package_dir: str) -> dict:
+        package_path = resolve_production_package_dir(package_dir)
+        try:
+            mark_candidate_components(package_path)
+        except (FileNotFoundError, RuntimeError, ValueError) as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        return main_ui_package_response(package_path)
+
+    @app.put("/production-studio/ui-production/candidate")
+    def update_ui_production_candidate(package_dir: str, candidate_id: str, payload: dict) -> dict:
+        package_path = resolve_production_package_dir(package_dir)
+        if "confirmed" not in payload:
+            raise HTTPException(status_code=400, detail="confirmed is required")
+        try:
+            return update_candidate_confirmation(package_path, candidate_id, bool(payload["confirmed"]))
+        except ValueError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    @app.post("/production-studio/ui-production/export")
+    def export_ui_production_components(package_dir: str) -> dict:
+        package_path = resolve_production_package_dir(package_dir)
+        try:
+            export_confirmed_components(package_path)
+        except (FileNotFoundError, RuntimeError, ValueError) as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        return main_ui_package_response(package_path)
 
     @app.get("/production-studio/main-ui-production")
     def get_main_ui_production(package_dir: str) -> dict:

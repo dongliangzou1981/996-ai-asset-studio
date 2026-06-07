@@ -5,7 +5,12 @@ import { ProductionStudio } from "./ProductionStudio";
 
 const api = {
   generateProductionStudioPackage: jest.fn(),
+  generateUiProductionPackage: jest.fn(),
+  markUiProductionCandidates: jest.fn(),
+  updateUiProductionCandidate: jest.fn(),
+  exportUiProductionComponents: jest.fn(),
   runMainUiProduction: jest.fn(),
+  getMainUiProduction: jest.fn(),
   updateMainUiCandidate: jest.fn(),
   exportMainUiProduction: jest.fn(),
   getProductionStudioFileUrl: jest.fn((path: string) => `http://127.0.0.1:8000${path}`),
@@ -21,6 +26,8 @@ const mainUiProductionResult = {
     "/production-studio/files/996-ready/SPRINT20B_MAIN_UI/main_ui/job-main-ui/candidate_preview.jpg",
   candidate_manifest_url:
     "/production-studio/files/996-ready/SPRINT20B_MAIN_UI/main_ui/job-main-ui/candidate_manifest.json",
+  manifest_url: "/production-studio/files/996-ready/SPRINT20B_MAIN_UI/main_ui/job-main-ui/manifest.json",
+  annotation_url: "/production-studio/files/996-ready/SPRINT20B_MAIN_UI/main_ui/job-main-ui/annotation.json",
   production_review_url:
     "/production-studio/files/996-ready/SPRINT20B_MAIN_UI/main_ui/job-main-ui/production_review.json",
   manual_acceptance_url:
@@ -54,6 +61,8 @@ const mainUiProductionResult = {
       confirmed: true,
       file: "confirmed_components/btn_skill_01.png",
       format: "png",
+      transparent_required: true,
+      has_transparent_pixels: false,
       transparent_warning: "源图无透明像素，已输出 PNG 但需要人工抠透明背景",
       url: "/production-studio/files/996-ready/SPRINT20B_MAIN_UI/main_ui/job-main-ui/confirmed_components/btn_skill_01.png",
     },
@@ -104,6 +113,23 @@ beforeEach(() => {
     components: [],
   });
   api.runMainUiProduction.mockResolvedValue(mainUiProductionResult);
+  api.getMainUiProduction.mockRejectedValue(new Error("no saved package"));
+  api.generateUiProductionPackage.mockResolvedValue({
+    ...mainUiProductionResult,
+    candidate_preview_url: "",
+    candidate_manifest_url: "",
+    candidates: [],
+    confirmed_components: [],
+  });
+  api.markUiProductionCandidates.mockResolvedValue({
+    ...mainUiProductionResult,
+    confirmed_components: [],
+  });
+  api.updateUiProductionCandidate.mockResolvedValue({
+    ...mainUiProductionResult.candidates[0],
+    confirmed: false,
+  });
+  api.exportUiProductionComponents.mockResolvedValue(mainUiProductionResult);
   api.updateMainUiCandidate.mockResolvedValue({
     ...mainUiProductionResult.candidates[0],
     confirmed: false,
@@ -162,35 +188,65 @@ beforeEach(() => {
   });
 });
 
-test("主界面生产区块可生成、确认候选并执行切图", async () => {
+test("UI素材生产流程可生成、标记、确认、切图并预览输出", async () => {
   const user = userEvent.setup();
   render(<ProductionStudio api={api} />);
 
-  expect(await screen.findByText("主界面生产")).toBeInTheDocument();
-  await user.click(screen.getByRole("button", { name: "生成主界面实验包" }));
+  expect(await screen.findByText("UI素材生产")).toBeInTheDocument();
+  expect(screen.getByLabelText("1. 选择界面类型")).toHaveDisplayValue("主界面");
 
-  expect(api.runMainUiProduction).toHaveBeenCalled();
-  expect(await screen.findByAltText("主界面")).toHaveAttribute(
+  const file = new File(["fake"], "reference-main-ui.png", { type: "image/png" });
+  await user.upload(screen.getByLabelText("2. 上传参考图"), file);
+
+  expect(api.uploadAsset).toHaveBeenCalledWith({
+    file,
+    project_id: null,
+    asset_type: "reference_image",
+    device_type: "mobile_landscape",
+  });
+  expect(await screen.findByAltText("UI素材生产参考图预览")).toHaveAttribute("src", "blob:reference-preview");
+
+  await user.selectOptions(screen.getByLabelText("风格参考"), "60");
+  await user.clear(screen.getByLabelText("3. 输入生成需求"));
+  await user.type(screen.getByLabelText("3. 输入生成需求"), "主界面布局清晰，技能区和地图区优先。");
+  await user.click(screen.getByRole("button", { name: "生成界面" }));
+
+  expect(api.generateUiProductionPackage).toHaveBeenCalledWith(
+    expect.objectContaining({
+      screen_type: "main_ui",
+      reference_image_path: "assets/uploads/reference-main-ui.png",
+      requirement: "主界面布局清晰，技能区和地图区优先。",
+      style_reference_strength: "60",
+    }),
+  );
+  expect(await screen.findByAltText("完整界面预览")).toHaveAttribute(
     "src",
     "http://127.0.0.1:8000/production-studio/files/996-ready/SPRINT20B_MAIN_UI/main_ui/job-main-ui/main_ui.jpg",
   );
-  expect(screen.getByAltText("编号候选组件")).toBeInTheDocument();
+
+  await user.click(screen.getByRole("button", { name: "标记候选组件" }));
+  expect(api.markUiProductionCandidates).toHaveBeenCalledWith(
+    "assets/uploads/996-ready/SPRINT20B_MAIN_UI/main_ui/job-main-ui",
+  );
+  expect(await screen.findByAltText("候选组件编号图")).toBeInTheDocument();
   expect(screen.getByText("skill_01")).toBeInTheDocument();
-  expect(screen.getByText("确认切图")).toBeInTheDocument();
+  expect(screen.getAllByText("确认切图").length).toBeGreaterThanOrEqual(1);
   expect(screen.getByText("Atomic")).toBeInTheDocument();
 
-  await user.click(screen.getByLabelText("确认切图 skill_01"));
-  expect(api.updateMainUiCandidate).toHaveBeenCalledWith(
+  await user.click(screen.getAllByLabelText("确认切图 skill_01")[0]);
+  expect(api.updateUiProductionCandidate).toHaveBeenCalledWith(
     "assets/uploads/996-ready/SPRINT20B_MAIN_UI/main_ui/job-main-ui",
     "skill_01",
     false,
   );
 
-  await user.click(screen.getByRole("button", { name: "执行确认切图" }));
-  expect(api.exportMainUiProduction).toHaveBeenCalledWith(
+  await user.click(screen.getByRole("button", { name: "执行切图" }));
+  expect(api.exportUiProductionComponents).toHaveBeenCalledWith(
     "assets/uploads/996-ready/SPRINT20B_MAIN_UI/main_ui/job-main-ui",
   );
-  expect(screen.getByText(/transparent_warning/)).toBeInTheDocument();
+  expect(screen.getByAltText("skill_01 输出预览")).toBeInTheDocument();
+  expect(screen.getByText(/透明警告/)).toBeInTheDocument();
+  expect(screen.getByText("查看输出包 manifest.json")).toBeInTheDocument();
 });
 
 test("显示布局模板、中文字段和可编辑自动生成提示词", async () => {
