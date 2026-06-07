@@ -288,6 +288,13 @@ export type MainUiConfirmedComponent = {
   url: string;
 };
 
+export type MainUiPackageFile = {
+  label: string;
+  file: string;
+  exists: boolean;
+  url: string;
+};
+
 export type MainUiProductionResult = {
   package_dir: string;
   main_ui_url: string;
@@ -300,6 +307,7 @@ export type MainUiProductionResult = {
   confirmed_components_url: string;
   candidates: MainUiProductionCandidate[];
   confirmed_components: MainUiConfirmedComponent[];
+  package_files?: MainUiPackageFile[];
   exported_count?: number;
 };
 

@@ -225,6 +225,35 @@ def create_app(database_path: str | Path | None = None, upload_dir: str | Path |
         candidate_path = package_dir / "candidate_manifest.json"
         candidate_manifest = read_package_json(package_dir, "candidate_manifest.json") if candidate_path.exists() else {"candidates": []}
         candidates = candidate_manifest.get("candidates") if isinstance(candidate_manifest.get("candidates"), list) else []
+        package_files = []
+        for label, filename in [
+            ("main_ui.jpg", "main_ui.jpg"),
+            ("candidate_preview.jpg", "candidate_preview.jpg"),
+            ("candidate_manifest.json", "candidate_manifest.json"),
+            ("manifest.json", "manifest.json"),
+            ("annotation.json", "annotation.json"),
+            ("production_review.json", "production_review.json"),
+            ("manual_acceptance.json", "manual_acceptance.json"),
+        ]:
+            file_path = package_dir / filename
+            package_files.append(
+                {
+                    "label": label,
+                    "file": filename,
+                    "exists": file_path.exists(),
+                    "url": package_file_url(package_dir, filename) if file_path.exists() else "",
+                }
+            )
+        confirmed_dir = package_dir / "confirmed_components"
+        confirmed_screen = confirmed_dir / "screen_main_ui.jpg"
+        package_files.append(
+            {
+                "label": "confirmed_components/",
+                "file": "confirmed_components/",
+                "exists": confirmed_dir.is_dir(),
+                "url": package_file_url(package_dir, "confirmed_components/screen_main_ui.jpg") if confirmed_screen.exists() else "",
+            }
+        )
         confirmed_components = [
             {
                 "component_id": candidate.get("component_id") or candidate.get("candidate_id"),
@@ -260,6 +289,7 @@ def create_app(database_path: str | Path | None = None, upload_dir: str | Path |
             else "",
             "candidates": candidates,
             "confirmed_components": confirmed_components,
+            "package_files": package_files,
         }
 
     @app.post("/production-studio/analyze")

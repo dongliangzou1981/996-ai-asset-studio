@@ -259,6 +259,7 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
     setUiProductionReferencePreviewUrl("");
     setUiProductionReferencePath(null);
     setUiProductionReferenceFileName("");
+    setUiProductionMessage("已移除参考图。");
   }
 
   async function generateUiProductionInterface() {
@@ -278,6 +279,7 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
       }
       setMainUiProduction(response);
       window.localStorage.setItem("uiProductionPackageDir", response.package_dir);
+      setUiProductionMessage("生成完成：已输出 main_ui.jpg，请继续标记候选组件。");
     } catch {
       setError("生成界面失败，请确认参考图或本地 P5 主界面素材可访问。");
     } finally {
@@ -295,6 +297,7 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
       const response = await api.markUiProductionCandidates(mainUiProduction.package_dir);
       setMainUiProduction(response);
       window.localStorage.setItem("uiProductionPackageDir", response.package_dir);
+      setUiProductionMessage("标记完成：已输出 candidate_preview.jpg，请确认需要切图的组件。");
     } catch {
       setError("标记候选组件失败。");
     } finally {
@@ -327,6 +330,7 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
     });
     try {
       await api.updateUiProductionCandidate(packageDir, candidateId, confirmed);
+      setUiProductionMessage("确认状态已保存。");
     } catch {
       setError("主界面候选确认状态保存失败。");
     }
@@ -340,6 +344,7 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
     setError("");
     try {
       setMainUiProduction(await api.exportUiProductionComponents(mainUiProduction.package_dir));
+      setUiProductionMessage("切图完成：已输出 confirmed_components，并生成 996-ready 包。");
     } catch {
       setError("确认组件切图失败，请检查 candidate_manifest.json。");
     } finally {
@@ -724,6 +729,14 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
             >
               执行切图
             </button>
+            <button
+              className="rounded-md border border-studio-line px-3 py-2 text-sm font-semibold disabled:opacity-60"
+              disabled={mainUiLoading || !mainUiProduction || !mainUiProduction.candidates.length}
+              onClick={exportMainUiProduction}
+              type="button"
+            >
+              导出 996-ready
+            </button>
           </div>
           {uiProductionMessage ? <p className="text-sm text-amber-700">{uiProductionMessage}</p> : null}
           {mainUiProduction ? (
@@ -806,6 +819,31 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
                           {item.transparent_warning ? <div className="text-xs text-amber-700">透明警告：{item.transparent_warning}</div> : null}
                         </article>
                       ))}
+                  </div>
+                </div>
+              ) : null}
+              {mainUiProduction.package_files?.length ? (
+                <div className="grid gap-2 rounded-md border border-studio-line p-3">
+                  <div className="font-semibold">996-ready 包清单</div>
+                  <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                    {mainUiProduction.package_files.map((item) => (
+                      <div className="rounded-md bg-slate-50 p-3 text-sm" key={item.file}>
+                        <div className="font-mono text-xs">{item.label}</div>
+                        <div className={item.exists ? "mt-1 text-emerald-700" : "mt-1 text-studio-muted"}>
+                          {item.exists ? "已生成" : "待生成"}
+                        </div>
+                        {item.url ? (
+                          <a
+                            className="mt-2 inline-flex rounded-md border border-studio-line px-2 py-1 text-xs"
+                            href={api.getProductionStudioFileUrl(item.url)}
+                            rel="noreferrer"
+                            target="_blank"
+                          >
+                            查看
+                          </a>
+                        ) : null}
+                      </div>
+                    ))}
                   </div>
                 </div>
               ) : null}

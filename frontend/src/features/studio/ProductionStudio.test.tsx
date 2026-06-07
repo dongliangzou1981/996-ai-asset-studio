@@ -67,6 +67,26 @@ const mainUiProductionResult = {
       url: "/production-studio/files/996-ready/SPRINT20B_MAIN_UI/main_ui/job-main-ui/confirmed_components/btn_skill_01.png",
     },
   ],
+  package_files: [
+    {
+      label: "main_ui.jpg",
+      file: "main_ui.jpg",
+      exists: true,
+      url: "/production-studio/files/996-ready/SPRINT20B_MAIN_UI/main_ui/job-main-ui/main_ui.jpg",
+    },
+    {
+      label: "candidate_preview.jpg",
+      file: "candidate_preview.jpg",
+      exists: true,
+      url: "/production-studio/files/996-ready/SPRINT20B_MAIN_UI/main_ui/job-main-ui/candidate_preview.jpg",
+    },
+    {
+      label: "confirmed_components/",
+      file: "confirmed_components/",
+      exists: true,
+      url: "/production-studio/files/996-ready/SPRINT20B_MAIN_UI/main_ui/job-main-ui/confirmed_components/screen_main_ui.jpg",
+    },
+  ],
   exported_count: 1,
 } as const;
 
@@ -246,6 +266,10 @@ test("UI素材生产流程可生成、标记、确认、切图并预览输出", 
   );
   expect(screen.getByAltText("skill_01 输出预览")).toBeInTheDocument();
   expect(screen.getByText(/透明警告/)).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "导出 996-ready" })).toBeInTheDocument();
+  expect(screen.getByText("996-ready 包清单")).toBeInTheDocument();
+  expect(screen.getByText("main_ui.jpg")).toBeInTheDocument();
+  expect(screen.getByText("confirmed_components/")).toBeInTheDocument();
   expect(screen.getByText("查看输出包 manifest.json")).toBeInTheDocument();
 });
 

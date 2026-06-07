@@ -40,6 +40,12 @@ def test_main_ui_run_endpoint_generates_package(tmp_path: Path, monkeypatch) -> 
     assert body["main_ui_url"].endswith("/main_ui.jpg")
     assert body["candidate_preview_url"].endswith("/candidate_preview.jpg")
     assert body["candidates"]
+    package_files = {item["file"]: item for item in body["package_files"]}
+    assert package_files["main_ui.jpg"]["exists"] is True
+    assert package_files["candidate_preview.jpg"]["exists"] is True
+    assert package_files["manifest.json"]["exists"] is True
+    assert package_files["manual_acceptance.json"]["exists"] is True
+    assert package_files["confirmed_components/"]["exists"] is True
     assert any(item["file"].endswith(".png") for item in body["confirmed_components"] if item["file"])
 
 
@@ -105,11 +111,16 @@ def test_ui_production_generate_mark_and_export_main_ui(tmp_path: Path, monkeypa
     package_dir = generated.json()["package_dir"]
     assert generated.json()["main_ui_url"].endswith("/main_ui.jpg")
     assert generated.json()["candidates"] == []
+    generated_files = {item["file"]: item for item in generated.json()["package_files"]}
+    assert generated_files["main_ui.jpg"]["exists"] is True
+    assert generated_files["candidate_preview.jpg"]["exists"] is False
 
     marked = client.post("/production-studio/ui-production/mark-candidates", params={"package_dir": package_dir})
     assert marked.status_code == 200
     assert marked.json()["candidate_preview_url"].endswith("/candidate_preview.jpg")
     assert marked.json()["candidates"]
+    marked_files = {item["file"]: item for item in marked.json()["package_files"]}
+    assert marked_files["candidate_manifest.json"]["exists"] is True
 
     updated = client.put(
         "/production-studio/ui-production/candidate",
@@ -124,6 +135,9 @@ def test_ui_production_generate_mark_and_export_main_ui(tmp_path: Path, monkeypa
     by_id = {item["component_id"]: item for item in exported.json()["confirmed_components"]}
     assert by_id["skill_01"]["file"] == ""
     assert any(item["file"].endswith(".jpg") for item in exported.json()["confirmed_components"] if item["file"])
+    exported_files = {item["file"]: item for item in exported.json()["package_files"]}
+    assert exported_files["confirmed_components/"]["exists"] is True
+    assert exported_files["production_review.json"]["exists"] is True
 
 
 def test_ui_production_other_screen_types_are_placeholders(tmp_path: Path) -> None:
