@@ -49,6 +49,7 @@ from scripts.main_ui_production_chain import create_ui_package
 from scripts.main_ui_production_chain import create_main_ui_package
 from scripts.main_ui_production_chain import export_confirmed_components
 from scripts.main_ui_production_chain import mark_candidate_components
+from scripts.main_ui_production_chain import select_candidate_option
 from scripts.main_ui_production_chain import update_candidate_confirmation
 
 
@@ -225,6 +226,20 @@ def create_app(database_path: str | Path | None = None, upload_dir: str | Path |
         candidate_path = package_dir / "candidate_manifest.json"
         candidate_manifest = read_package_json(package_dir, "candidate_manifest.json") if candidate_path.exists() else {"candidates": []}
         candidates = candidate_manifest.get("candidates") if isinstance(candidate_manifest.get("candidates"), list) else []
+        delivery_path = package_dir / "delivery_report.json"
+        delivery_report = read_package_json(package_dir, "delivery_report.json") if delivery_path.exists() else {}
+        candidate_options = []
+        for item in delivery_report.get("candidate_options", []):
+            if not isinstance(item, dict) or not item.get("file"):
+                continue
+            file_path = package_dir / str(item["file"])
+            candidate_options.append(
+                {
+                    **item,
+                    "selected": item.get("candidate_id") == delivery_report.get("selected_candidate_id", "candidate_1"),
+                    "url": package_file_url(package_dir, str(item["file"])) if file_path.exists() else "",
+                }
+            )
         package_files = []
         for label, filename in [
             ("main_ui.jpg", "main_ui.jpg"),
@@ -290,6 +305,20 @@ def create_app(database_path: str | Path | None = None, upload_dir: str | Path |
             "candidates": candidates,
             "confirmed_components": confirmed_components,
             "package_files": package_files,
+            "candidate_options": candidate_options,
+            "selected_candidate_id": delivery_report.get("selected_candidate_id", "candidate_1"),
+            "style_reference_strength": delivery_report.get("style_reference_strength", ""),
+            "style_reference_note": delivery_report.get("style_reference_note", ""),
+            "project_context": {
+                "project_name": "996 UI Asset Studio",
+                "screen_type": delivery_report.get("screen_type", "main_ui"),
+                "style_package_name": delivery_report.get("style_reference_strength", "") or "未设置",
+                "style_notes": delivery_report.get("style_reference_note", ""),
+                "reference_status": "已上传/已读取" if delivery_report.get("source_note", {}).get("source_image") else "未设置",
+            },
+            "training_samples_url": package_file_url(package_dir, "training_samples/main_ui/candidate_samples.json")
+            if (package_dir / "training_samples" / "main_ui" / "candidate_samples.json").exists()
+            else "",
         }
 
     @app.post("/production-studio/analyze")
@@ -376,10 +405,21 @@ def create_app(database_path: str | Path | None = None, upload_dir: str | Path |
                 source_image=source,
                 requirement=str(payload.get("requirement") or ""),
                 style_reference_strength=str(payload.get("style_reference_strength") or "none"),
+                adjustment_note=str(payload.get("adjustment_note") or ""),
+                adjustment_image_path=str(payload.get("adjustment_image_path") or ""),
             )
         except (FileNotFoundError, RuntimeError, ValueError) as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         return main_ui_package_response(resolve_production_package_dir(str(result["package_dir"])))
+
+    @app.post("/production-studio/ui-production/select-candidate")
+    def select_ui_production_candidate(package_dir: str, candidate_id: str) -> dict:
+        package_path = resolve_production_package_dir(package_dir)
+        try:
+            select_candidate_option(package_path, candidate_id)
+        except (FileNotFoundError, RuntimeError, ValueError) as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        return main_ui_package_response(package_path)
 
     @app.post("/production-studio/ui-production/mark-candidates")
     def mark_ui_production_candidates(package_dir: str) -> dict:

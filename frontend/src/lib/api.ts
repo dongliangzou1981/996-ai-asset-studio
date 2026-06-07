@@ -264,6 +264,10 @@ export type MainUiProductionCandidate = {
   component_type: string;
   number: number;
   bounds: { x: number; y: number; width: number; height: number };
+  bbox?: { x: number; y: number; width: number; height: number };
+  outline_points?: Array<{ x: number; y: number }>;
+  layout_zone?: string;
+  shape_type?: "rect" | "circle" | "composite";
   level: "A" | "B" | "C";
   production_category: "Screen" | "Panel" | "Atomic" | "Effect" | "Ignore";
   recommended_action: string;
@@ -295,6 +299,22 @@ export type MainUiPackageFile = {
   url: string;
 };
 
+export type MainUiCandidateOption = {
+  candidate_id: string;
+  label: string;
+  file: string;
+  selected?: boolean;
+  url: string;
+};
+
+export type MainUiProjectContext = {
+  project_name: string;
+  screen_type: string;
+  style_package_name: string;
+  style_notes: string;
+  reference_status: string;
+};
+
 export type MainUiProductionResult = {
   package_dir: string;
   main_ui_url: string;
@@ -308,6 +328,12 @@ export type MainUiProductionResult = {
   candidates: MainUiProductionCandidate[];
   confirmed_components: MainUiConfirmedComponent[];
   package_files?: MainUiPackageFile[];
+  candidate_options?: MainUiCandidateOption[];
+  selected_candidate_id?: string;
+  style_reference_strength?: string;
+  style_reference_note?: string;
+  project_context?: MainUiProjectContext;
+  training_samples_url?: string;
   exported_count?: number;
 };
 
@@ -482,6 +508,8 @@ export const studioApi = {
     reference_image_path?: string | null;
     requirement: string;
     style_reference_strength: string;
+    adjustment_note?: string;
+    adjustment_image_path?: string | null;
   }) {
     return request<MainUiProductionResult | { status: "placeholder"; screen_type: string; message: string }>(
       "/production-studio/ui-production/generate",
@@ -489,6 +517,12 @@ export const studioApi = {
         method: "POST",
         body: JSON.stringify(payload),
       },
+    );
+  },
+  selectUiProductionCandidate(packageDir: string, candidateId: string) {
+    return request<MainUiProductionResult>(
+      `/production-studio/ui-production/select-candidate?package_dir=${encodeURIComponent(packageDir)}&candidate_id=${encodeURIComponent(candidateId)}`,
+      { method: "POST" },
     );
   },
   markUiProductionCandidates(packageDir: string) {

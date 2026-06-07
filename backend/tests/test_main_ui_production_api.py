@@ -40,6 +40,9 @@ def test_main_ui_run_endpoint_generates_package(tmp_path: Path, monkeypatch) -> 
     assert body["main_ui_url"].endswith("/main_ui.jpg")
     assert body["candidate_preview_url"].endswith("/candidate_preview.jpg")
     assert body["candidates"]
+    assert len(body["candidate_options"]) == 3
+    assert body["candidate_options"][0]["selected"] is True
+    assert body["project_context"]["project_name"] == "996 UI Asset Studio"
     package_files = {item["file"]: item for item in body["package_files"]}
     assert package_files["main_ui.jpg"]["exists"] is True
     assert package_files["candidate_preview.jpg"]["exists"] is True
@@ -119,8 +122,18 @@ def test_ui_production_generate_mark_and_export_main_ui(tmp_path: Path, monkeypa
     assert marked.status_code == 200
     assert marked.json()["candidate_preview_url"].endswith("/candidate_preview.jpg")
     assert marked.json()["candidates"]
+    by_candidate = {item["component_id"]: item for item in marked.json()["candidates"]}
+    assert by_candidate["skill_01"]["layout_zone"] == "right_skill"
+    assert by_candidate["skill_01"]["shape_type"] == "circle"
     marked_files = {item["file"]: item for item in marked.json()["package_files"]}
     assert marked_files["candidate_manifest.json"]["exists"] is True
+
+    selected = client.post(
+        "/production-studio/ui-production/select-candidate",
+        params={"package_dir": package_dir, "candidate_id": "candidate_2"},
+    )
+    assert selected.status_code == 200
+    assert selected.json()["selected_candidate_id"] == "candidate_2"
 
     updated = client.put(
         "/production-studio/ui-production/candidate",
@@ -138,6 +151,7 @@ def test_ui_production_generate_mark_and_export_main_ui(tmp_path: Path, monkeypa
     exported_files = {item["file"]: item for item in exported.json()["package_files"]}
     assert exported_files["confirmed_components/"]["exists"] is True
     assert exported_files["production_review.json"]["exists"] is True
+    assert exported.json()["training_samples_url"].endswith("/training_samples/main_ui/candidate_samples.json")
 
 
 def test_ui_production_other_screen_types_are_placeholders(tmp_path: Path) -> None:

@@ -7,6 +7,7 @@ const api = {
   generateProductionStudioPackage: jest.fn(),
   generateUiProductionPackage: jest.fn(),
   markUiProductionCandidates: jest.fn(),
+  selectUiProductionCandidate: jest.fn(),
   updateUiProductionCandidate: jest.fn(),
   exportUiProductionComponents: jest.fn(),
   runMainUiProduction: jest.fn(),
@@ -42,6 +43,15 @@ const mainUiProductionResult = {
       component_type: "skill_button",
       number: 1,
       bounds: { x: 10, y: 20, width: 48, height: 48 },
+      bbox: { x: 10, y: 20, width: 48, height: 48 },
+      outline_points: [
+        { x: 10, y: 20 },
+        { x: 58, y: 20 },
+        { x: 58, y: 68 },
+        { x: 10, y: 68 },
+      ],
+      layout_zone: "right_skill",
+      shape_type: "circle",
       level: "A",
       production_category: "Atomic",
       recommended_action: "确认切图",
@@ -87,6 +97,41 @@ const mainUiProductionResult = {
       url: "/production-studio/files/996-ready/SPRINT20B_MAIN_UI/main_ui/job-main-ui/confirmed_components/screen_main_ui.jpg",
     },
   ],
+  candidate_options: [
+    {
+      candidate_id: "candidate_1",
+      label: "候选 1：原始参考布局",
+      file: "candidate_options/candidate_1.jpg",
+      selected: true,
+      url: "/production-studio/files/996-ready/SPRINT20B_MAIN_UI/main_ui/job-main-ui/candidate_options/candidate_1.jpg",
+    },
+    {
+      candidate_id: "candidate_2",
+      label: "候选 2：增强对比度",
+      file: "candidate_options/candidate_2.jpg",
+      selected: false,
+      url: "/production-studio/files/996-ready/SPRINT20B_MAIN_UI/main_ui/job-main-ui/candidate_options/candidate_2.jpg",
+    },
+    {
+      candidate_id: "candidate_3",
+      label: "候选 3：增强边缘清晰度",
+      file: "candidate_options/candidate_3.jpg",
+      selected: false,
+      url: "/production-studio/files/996-ready/SPRINT20B_MAIN_UI/main_ui/job-main-ui/candidate_options/candidate_3.jpg",
+    },
+  ],
+  selected_candidate_id: "candidate_1",
+  style_reference_strength: "60",
+  style_reference_note: "60%参考：已写入提示词，效果取决模型",
+  project_context: {
+    project_name: "996 UI Asset Studio",
+    screen_type: "main_ui",
+    style_package_name: "60",
+    style_notes: "60%参考：已写入提示词，效果取决模型",
+    reference_status: "已上传/已读取",
+  },
+  training_samples_url:
+    "/production-studio/files/996-ready/SPRINT20B_MAIN_UI/main_ui/job-main-ui/training_samples/main_ui/candidate_samples.json",
   exported_count: 1,
 } as const;
 
@@ -148,6 +193,18 @@ beforeEach(() => {
   api.updateUiProductionCandidate.mockResolvedValue({
     ...mainUiProductionResult.candidates[0],
     confirmed: false,
+  });
+  api.selectUiProductionCandidate.mockResolvedValue({
+    ...mainUiProductionResult,
+    selected_candidate_id: "candidate_2",
+    candidate_preview_url: "",
+    candidate_manifest_url: "",
+    candidates: [],
+    confirmed_components: [],
+    candidate_options: mainUiProductionResult.candidate_options.map((item) => ({
+      ...item,
+      selected: item.candidate_id === "candidate_2",
+    })),
   });
   api.exportUiProductionComponents.mockResolvedValue(mainUiProductionResult);
   api.updateMainUiCandidate.mockResolvedValue({
@@ -213,6 +270,7 @@ test("UI素材生产流程可生成、标记、确认、切图并预览输出", 
   render(<ProductionStudio api={api} />);
 
   expect(await screen.findByText("UI素材生产")).toBeInTheDocument();
+  expect(screen.getByText("项目栏")).toBeInTheDocument();
   expect(screen.getByLabelText("1. 选择界面类型")).toHaveDisplayValue("主界面");
 
   const file = new File(["fake"], "reference-main-ui.png", { type: "image/png" });
@@ -237,11 +295,20 @@ test("UI素材生产流程可生成、标记、确认、切图并预览输出", 
       reference_image_path: "assets/uploads/reference-main-ui.png",
       requirement: "主界面布局清晰，技能区和地图区优先。",
       style_reference_strength: "60",
+      adjustment_note: "",
+      adjustment_image_path: null,
     }),
   );
   expect(await screen.findByAltText("完整界面预览")).toHaveAttribute(
     "src",
     "http://127.0.0.1:8000/production-studio/files/996-ready/SPRINT20B_MAIN_UI/main_ui/job-main-ui/main_ui.jpg",
+  );
+  expect(screen.getByText("候选方案")).toBeInTheDocument();
+  expect(screen.getByText("候选 2：增强对比度")).toBeInTheDocument();
+  await user.click(screen.getAllByRole("button", { name: "选择此方案" })[0]);
+  expect(api.selectUiProductionCandidate).toHaveBeenCalledWith(
+    "assets/uploads/996-ready/SPRINT20B_MAIN_UI/main_ui/job-main-ui",
+    "candidate_2",
   );
 
   await user.click(screen.getByRole("button", { name: "标记候选组件" }));
@@ -252,6 +319,8 @@ test("UI素材生产流程可生成、标记、确认、切图并预览输出", 
   expect(screen.getByText("skill_01")).toBeInTheDocument();
   expect(screen.getAllByText("确认切图").length).toBeGreaterThanOrEqual(1);
   expect(screen.getByText("Atomic")).toBeInTheDocument();
+  expect(screen.getByText("right_skill")).toBeInTheDocument();
+  expect(screen.getByText("circle")).toBeInTheDocument();
 
   await user.click(screen.getAllByLabelText("确认切图 skill_01")[0]);
   expect(api.updateUiProductionCandidate).toHaveBeenCalledWith(
@@ -271,6 +340,7 @@ test("UI素材生产流程可生成、标记、确认、切图并预览输出", 
   expect(screen.getByText("main_ui.jpg")).toBeInTheDocument();
   expect(screen.getByText("confirmed_components/")).toBeInTheDocument();
   expect(screen.getByText("查看输出包 manifest.json")).toBeInTheDocument();
+  expect(screen.getByText("查看 training_samples")).toBeInTheDocument();
 });
 
 test("显示布局模板、中文字段和可编辑自动生成提示词", async () => {

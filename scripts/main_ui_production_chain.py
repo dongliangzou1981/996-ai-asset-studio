@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageEnhance, ImageFont
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
@@ -48,6 +48,55 @@ def bounds(width: int, height: int, x: float, y: float, w: float, h: float) -> d
     box_width = max(1, min(width - left, round(width * w)))
     box_height = max(1, min(height - top, round(height * h)))
     return {"x": left, "y": top, "width": box_width, "height": box_height}
+
+
+def rect_outline(box: dict[str, int]) -> list[dict[str, int]]:
+    x = int(box["x"])
+    y = int(box["y"])
+    right = x + int(box["width"])
+    bottom = y + int(box["height"])
+    return [{"x": x, "y": y}, {"x": right, "y": y}, {"x": right, "y": bottom}, {"x": x, "y": bottom}]
+
+
+def candidate_record(
+    *,
+    width: int,
+    height: int,
+    index: int,
+    component_id: str,
+    name: str,
+    component_type: str,
+    layout_zone: str,
+    shape_type: str,
+    x: float,
+    y: float,
+    w: float,
+    h: float,
+    confirmed: bool,
+) -> dict[str, Any]:
+    box = bounds(width, height, x, y, w, h)
+    level = classify_level(component_type)
+    return {
+        "candidate_id": component_id,
+        "component_id": component_id,
+        "component_name": name,
+        "component_type": component_type,
+        "number": index,
+        "bounds": box,
+        "bbox": box,
+        "outline_points": rect_outline(box),
+        "shape_type": shape_type,
+        "layout_zone": layout_zone,
+        "level": level,
+        "production_category": production_category(component_type, level),
+        "recommended_action": recommended_action(level),
+        "confirmed": confirmed,
+        "output_format": output_format(component_type, level),
+        "output_name": output_name(component_id, component_type),
+        "transparent_required": level == "A",
+        "transparent_warning": "",
+        "image_path": "",
+    }
 
 
 def classify_level(component_type: str) -> str:
@@ -98,48 +147,56 @@ def recommended_action(level: str) -> str:
 
 def main_ui_candidates(width: int, height: int) -> list[dict[str, Any]]:
     specs = [
-        ("screen_main_ui", "\u5b8c\u6574\u4e3b\u754c\u9762", "screen", 0.0, 0.0, 1.0, 1.0, True),
-        ("top_player_info", "\u9876\u90e8\u89d2\u8272\u72b6\u6001\u533a", "hud_bar", 0.03, 0.01, 0.19, 0.20, True),
-        ("task_panel", "\u5de6\u4fa7\u4efb\u52a1\u533a", "panel", 0.0, 0.01, 0.21, 0.47, True),
-        ("status_panel", "\u5de6\u4fa7\u72b6\u6001\u533a", "panel", 0.0, 0.31, 0.21, 0.18, True),
-        ("left_joystick", "\u5de6\u4e0b\u6447\u6746", "joystick", 0.03, 0.66, 0.14, 0.26, True),
-        ("bottom_hud", "\u5e95\u90e8\u4e3b HUD", "hud_bar", 0.18, 0.74, 0.55, 0.22, True),
-        ("skill_01", "\u6280\u80fd\u6309\u94ae 1", "skill_button", 0.72, 0.62, 0.08, 0.14, True),
-        ("skill_02", "\u6280\u80fd\u6309\u94ae 2", "skill_button", 0.80, 0.56, 0.08, 0.14, True),
-        ("skill_03", "\u6280\u80fd\u6309\u94ae 3", "skill_button", 0.87, 0.65, 0.08, 0.14, True),
-        ("skill_04", "\u6280\u80fd\u6309\u94ae 4", "skill_button", 0.77, 0.76, 0.08, 0.14, True),
-        ("bag_entry", "\u80cc\u5305\u5165\u53e3", "system_entry_icon", 0.78, 0.08, 0.055, 0.095, True),
-        ("role_entry", "\u89d2\u8272\u5165\u53e3", "system_entry_icon", 0.84, 0.08, 0.055, 0.095, True),
-        ("shop_entry", "\u5546\u57ce\u5165\u53e3", "system_entry_icon", 0.90, 0.08, 0.055, 0.095, True),
-        ("activity_entry", "\u6d3b\u52a8\u5165\u53e3", "system_entry_icon", 0.77, 0.0, 0.08, 0.12, True),
-        ("mini_map", "\u53f3\u4e0a\u5c0f\u5730\u56fe", "map", 0.85, 0.01, 0.15, 0.23, True),
-        ("chat_panel", "\u804a\u5929\u533a", "chat", 0.39, 0.82, 0.22, 0.16, True),
-        ("currency", "\u8d27\u5e01\u56fe\u6807", "currency_icon", 0.28, 0.96, 0.035, 0.035, True),
-        ("dynamic_text", "\u52a8\u6001\u6570\u503c\u6587\u5b57", "dynamic_content", 0.39, 0.03, 0.16, 0.06, False),
+        ("screen_main_ui", "\u5b8c\u6574\u4e3b\u754c\u9762", "screen", "full_screen", "rect", 0.0, 0.0, 1.0, 1.0, True),
+        ("top_player_info", "\u9876\u90e8\u89d2\u8272\u72b6\u6001\u533a", "hud_bar", "top_info", "composite", 0.03, 0.01, 0.19, 0.20, True),
+        ("task_panel", "\u5de6\u4fa7\u4efb\u52a1\u680f", "panel", "left_task", "rect", 0.0, 0.01, 0.22, 0.47, True),
+        ("task_tab", "\u4efb\u52a1\u9875\u7b7e", "button", "left_task", "rect", 0.0, 0.02, 0.035, 0.10, True),
+        ("team_tab", "\u7ec4\u961f\u9875\u7b7e", "button", "left_task", "rect", 0.0, 0.26, 0.035, 0.12, True),
+        ("status_panel", "\u5de6\u4fa7\u72b6\u6001\u533a", "panel", "left_status", "rect", 0.0, 0.31, 0.21, 0.18, True),
+        ("health_bar", "\u536b\u58eb\u8840\u91cf\u6761", "hud_bar", "left_status", "rect", 0.05, 0.43, 0.12, 0.03, True),
+        ("left_joystick", "\u5de6\u4e0b\u6447\u6746", "joystick", "bottom_left_joystick", "circle", 0.06, 0.69, 0.10, 0.18, True),
+        ("run_button", "\u8dd1\u6b65\u6309\u94ae", "button", "bottom_left_joystick", "circle", 0.16, 0.63, 0.055, 0.09, True),
+        ("walk_button", "\u884c\u8d70\u6309\u94ae", "button", "bottom_left_joystick", "circle", 0.08, 0.80, 0.055, 0.09, True),
+        ("bottom_hud", "\u5e95\u90e8\u4e3b HUD", "hud_bar", "bottom_status", "composite", 0.23, 0.72, 0.56, 0.26, True),
+        ("hp_orb", "\u8840\u91cf\u7403", "icon", "bottom_status", "circle", 0.28, 0.76, 0.09, 0.16, True),
+        ("mp_orb", "\u9b54\u6cd5\u7403", "icon", "bottom_status", "circle", 0.35, 0.76, 0.09, 0.16, True),
+        ("dragon_frame", "\u9f99\u7eb9\u72b6\u6001\u6846", "decoration", "bottom_status", "composite", 0.26, 0.68, 0.20, 0.30, False),
+        ("item_slot_01", "\u7269\u54c1\u683c 1", "equipment_slot", "bottom_status", "rect", 0.52, 0.75, 0.045, 0.10, True),
+        ("item_slot_02", "\u7269\u54c1\u683c 2", "equipment_slot", "bottom_status", "rect", 0.565, 0.75, 0.045, 0.10, True),
+        ("item_slot_03", "\u7269\u54c1\u683c 3", "equipment_slot", "bottom_status", "rect", 0.61, 0.75, 0.045, 0.10, True),
+        ("item_slot_04", "\u7269\u54c1\u683c 4", "equipment_slot", "bottom_status", "rect", 0.655, 0.75, 0.045, 0.10, True),
+        ("chat_panel", "\u804a\u5929/\u7cfb\u7edf\u4fe1\u606f", "chat", "chat", "rect", 0.48, 0.80, 0.25, 0.16, True),
+        ("skill_01", "\u6280\u80fd\u6309\u94ae 1", "skill_button", "right_skill", "circle", 0.85, 0.73, 0.08, 0.14, True),
+        ("skill_02", "\u6280\u80fd\u6309\u94ae 2", "skill_button", "right_skill", "circle", 0.92, 0.78, 0.07, 0.12, True),
+        ("skill_03", "\u6280\u80fd\u6309\u94ae 3", "skill_button", "right_skill", "circle", 0.91, 0.63, 0.07, 0.12, True),
+        ("auto_button", "\u81ea\u52a8\u6309\u94ae", "button", "right_system_entry", "circle", 0.90, 0.45, 0.06, 0.10, True),
+        ("role_entry", "\u89d2\u8272\u5165\u53e3", "system_entry_icon", "right_system_entry", "circle", 0.86, 0.31, 0.055, 0.095, True),
+        ("bag_entry", "\u80cc\u5305\u5165\u53e3", "system_entry_icon", "right_system_entry", "circle", 0.93, 0.31, 0.055, 0.095, True),
+        ("shop_entry", "\u5546\u57ce\u5165\u53e3", "system_entry_icon", "right_system_entry", "circle", 0.77, 0.80, 0.065, 0.12, True),
+        ("activity_entry", "\u6d3b\u52a8\u5165\u53e3", "system_entry_icon", "right_system_entry", "circle", 0.96, 0.45, 0.035, 0.065, True),
+        ("mini_map", "\u53f3\u4e0a\u5c0f\u5730\u56fe", "map", "right_top_map", "rect", 0.86, 0.02, 0.14, 0.25, True),
+        ("map_zoom", "\u5730\u56fe\u7f29\u8fdb\u56fe\u6807", "system_entry_icon", "right_top_map", "rect", 0.83, 0.02, 0.035, 0.19, True),
+        ("currency", "\u8d27\u5e01\u56fe\u6807", "currency_icon", "bottom_status", "circle", 0.76, 0.89, 0.035, 0.055, True),
+        ("dynamic_text", "\u52a8\u6001\u6570\u503c\u6587\u5b57", "dynamic_content", "top_info", "rect", 0.39, 0.03, 0.16, 0.06, False),
     ]
-    candidates = []
-    for index, (component_id, name, component_type, x, y, w, h, confirmed) in enumerate(specs, 1):
-        level = classify_level(component_type)
-        candidates.append(
-            {
-                "candidate_id": component_id,
-                "component_id": component_id,
-                "component_name": name,
-                "component_type": component_type,
-                "number": index,
-                "bounds": bounds(width, height, x, y, w, h),
-                "level": level,
-                "production_category": production_category(component_type, level),
-                "recommended_action": recommended_action(level),
-                "confirmed": confirmed,
-                "output_format": output_format(component_type, level),
-                "output_name": output_name(component_id, component_type),
-                "transparent_required": level == "A",
-                "transparent_warning": "",
-                "image_path": "",
-            }
+    return [
+        candidate_record(
+            width=width,
+            height=height,
+            index=index,
+            component_id=component_id,
+            name=name,
+            component_type=component_type,
+            layout_zone=layout_zone,
+            shape_type=shape_type,
+            x=x,
+            y=y,
+            w=w,
+            h=h,
+            confirmed=confirmed,
         )
-    return candidates
+        for index, (component_id, name, component_type, layout_zone, shape_type, x, y, w, h, confirmed) in enumerate(specs, 1)
+    ]
 
 
 def load_badge_font(size: int) -> ImageFont.ImageFont:
@@ -161,7 +218,18 @@ def draw_candidate_preview(source: Path, target: Path, candidates: list[dict[str
         width = int(box["width"])
         height = int(box["height"])
         color = "#00e5ff" if candidate["level"] == "A" else "#ffd447" if candidate["level"] == "B" else "#9ca3af"
-        draw.rectangle([x, y, x + width, y + height], outline=color, width=max(2, preview.width // 512))
+        line_width = max(2, preview.width // 512)
+        shape_type = str(candidate.get("shape_type") or "rect")
+        if shape_type == "circle":
+            draw.ellipse([x, y, x + width, y + height], outline=color, width=line_width)
+        elif shape_type == "composite":
+            points = [(int(point["x"]), int(point["y"])) for point in candidate.get("outline_points", []) if isinstance(point, dict)]
+            if len(points) >= 3:
+                draw.line(points + [points[0]], fill=color, width=line_width)
+            else:
+                draw.rectangle([x, y, x + width, y + height], outline=color, width=line_width)
+        else:
+            draw.rectangle([x, y, x + width, y + height], outline=color, width=line_width)
         radius = max(14, preview.width // 80)
         cx = min(preview.width - radius - 2, x + radius + 4)
         cy = max(radius + 2, y - radius // 2)
@@ -209,6 +277,36 @@ def default_source_image(upload_root: Path) -> Path:
     return P5_MAIN_UI_SOURCE
 
 
+def style_reference_note(style_reference_strength: str) -> str:
+    labels = {
+        "none": "\u4e0d\u53c2\u8003\u98ce\u683c",
+        "30": "30%\u53c2\u8003",
+        "60": "60%\u53c2\u8003",
+        "90": "90%\u53c2\u8003",
+        "copy": "\u9ad8\u590d\u523b",
+    }
+    label = labels.get(style_reference_strength, style_reference_strength or "\u4e0d\u53c2\u8003\u98ce\u683c")
+    return f"{label}\uff1a\u5df2\u5199\u5165\u63d0\u793a\u8bcd\uff0c\u6548\u679c\u53d6\u51b3\u6a21\u578b"
+
+
+def create_candidate_options(package_dir: Path, source: Path) -> list[dict[str, str]]:
+    options_dir = package_dir / "candidate_options"
+    options_dir.mkdir(exist_ok=True)
+    with Image.open(source) as image:
+        base = image.convert("RGB")
+        variants = [
+            ("candidate_1", "\u5019\u9009 1\uff1a\u539f\u59cb\u53c2\u8003\u5e03\u5c40", base),
+            ("candidate_2", "\u5019\u9009 2\uff1a\u589e\u5f3a\u5bf9\u6bd4\u5ea6", ImageEnhance.Contrast(base).enhance(1.08)),
+            ("candidate_3", "\u5019\u9009 3\uff1a\u589e\u5f3a\u8fb9\u7f18\u6e05\u6670\u5ea6", ImageEnhance.Sharpness(base).enhance(1.18)),
+        ]
+        options = []
+        for candidate_id, label, variant in variants:
+            filename = f"candidate_options/{candidate_id}.jpg"
+            variant.save(package_dir / filename, "JPEG", quality=92)
+            options.append({"candidate_id": candidate_id, "label": label, "file": filename})
+    return options
+
+
 def write_base_package_files(
     package_dir: Path,
     *,
@@ -216,6 +314,9 @@ def write_base_package_files(
     requirement: str,
     style_reference_strength: str,
     source_note: dict[str, Any],
+    candidate_options: list[dict[str, str]],
+    adjustment_note: str = "",
+    adjustment_image_path: str = "",
 ) -> None:
     generated_at = utc_now()
     base = {
@@ -253,6 +354,19 @@ def write_base_package_files(
             "workflow": "sprint20c_ui_production_pipeline",
             "requirement": requirement,
             "style_reference_strength": style_reference_strength,
+            "style_reference_note": style_reference_note(style_reference_strength),
+            "final_prompt": f"{requirement}\n\u98ce\u683c\u53c2\u8003\uff1a{style_reference_note(style_reference_strength)}".strip(),
+            "candidate_options": candidate_options,
+            "selected_candidate_id": "candidate_1",
+            "adjustments": [
+                {
+                    "note": adjustment_note,
+                    "image_path": adjustment_image_path,
+                    "created_at": generated_at,
+                }
+            ]
+            if adjustment_note or adjustment_image_path
+            else [],
             "generated_at": generated_at,
             "source_note": source_note,
         },
@@ -268,6 +382,8 @@ def create_ui_package(
     job_id: str | None = None,
     requirement: str = "",
     style_reference_strength: str = "none",
+    adjustment_note: str = "",
+    adjustment_image_path: str = "",
 ) -> dict[str, Any]:
     if screen_type != "main_ui":
         raise ValueError(f"{screen_type} is a placeholder flow and is not implemented yet")
@@ -285,6 +401,7 @@ def create_ui_package(
         rgb = image.convert("RGB")
         rgb.save(main_ui_path, "JPEG", quality=92)
         rgb.save(package_dir / "ui_preview.png", "PNG")
+    candidate_options = create_candidate_options(package_dir, main_ui_path)
     if P5_MARKED_REFERENCE.exists():
         shutil.copyfile(P5_MARKED_REFERENCE, reference_dir / "p5_marked_reference.png")
     doc_path = Path(template_doc) if template_doc else Path.home() / "Desktop" / "\u4e3b\u754c\u9762\u6a21\u7248.doc"
@@ -293,13 +410,40 @@ def create_ui_package(
         screen_type=screen_type,
         requirement=requirement,
         style_reference_strength=style_reference_strength,
+        candidate_options=candidate_options,
+        adjustment_note=adjustment_note,
+        adjustment_image_path=adjustment_image_path,
         source_note={
             "source_image": str(source),
             "p5_marked_reference": str(P5_MARKED_REFERENCE) if P5_MARKED_REFERENCE.exists() else "",
             "template_summary": read_template_summary(doc_path),
         },
     )
-    return {"package_dir": str(package_dir), "main_ui": "main_ui.jpg"}
+    return {"package_dir": str(package_dir), "main_ui": "main_ui.jpg", "candidate_options": candidate_options}
+
+
+def select_candidate_option(package_dir: str | Path, candidate_id: str) -> dict[str, Any]:
+    package_path = Path(package_dir)
+    delivery_path = package_path / "delivery_report.json"
+    delivery = read_json(delivery_path)
+    options = [item for item in delivery.get("candidate_options", []) if isinstance(item, dict)]
+    selected = next((item for item in options if item.get("candidate_id") == candidate_id), None)
+    if not selected:
+        raise ValueError(f"Candidate option not found: {candidate_id}")
+    source = package_path / str(selected["file"])
+    if not source.exists():
+        raise FileNotFoundError(f"Candidate option image not found: {source}")
+    shutil.copyfile(source, package_path / "main_ui.jpg")
+    with Image.open(source) as image:
+        image.convert("RGB").save(package_path / "ui_preview.png", "PNG")
+    delivery["selected_candidate_id"] = candidate_id
+    delivery["selected_candidate_file"] = selected["file"]
+    delivery["updated_at"] = utc_now()
+    write_json(delivery_path, delivery)
+    candidate_manifest = package_path / "candidate_manifest.json"
+    if candidate_manifest.exists():
+        mark_candidate_components(package_path)
+    return {"package_dir": str(package_path), "selected_candidate_id": candidate_id}
 
 
 def mark_candidate_components(package_dir: str | Path) -> dict[str, Any]:
@@ -346,6 +490,43 @@ def load_candidate_manifest(package_dir: Path) -> dict[str, Any]:
 def save_candidate_manifest(package_dir: Path, manifest: dict[str, Any]) -> None:
     manifest["updated_at"] = utc_now()
     write_json(package_dir / "candidate_manifest.json", manifest)
+
+
+def write_training_samples(package_dir: Path, candidates: list[dict[str, Any]]) -> Path:
+    delivery = read_json(package_dir / "delivery_report.json")
+    training_dir = package_dir / "training_samples" / "main_ui"
+    training_dir.mkdir(parents=True, exist_ok=True)
+    created_at = utc_now()
+    samples = [
+        {
+            "source_image": str(package_dir / "main_ui.jpg"),
+            "candidate_id": candidate.get("candidate_id") or candidate.get("component_id"),
+            "component_id": candidate.get("component_id"),
+            "user_confirmed": bool(candidate.get("confirmed")),
+            "component_type": candidate.get("component_type"),
+            "level": candidate.get("level"),
+            "layout_zone": candidate.get("layout_zone"),
+            "shape_type": candidate.get("shape_type"),
+            "bbox": candidate.get("bbox") or candidate.get("bounds"),
+            "outline_points": candidate.get("outline_points", []),
+            "output_file": candidate.get("image_path") or "",
+            "transparent_warning": candidate.get("transparent_warning") or "",
+            "style_reference_strength": delivery.get("style_reference_strength", ""),
+            "selected_candidate_id": delivery.get("selected_candidate_id", ""),
+            "created_at": created_at,
+        }
+        for candidate in candidates
+    ]
+    payload = {
+        "schema_version": "1.0",
+        "screen_type": "main_ui",
+        "package_dir": str(package_dir),
+        "samples": samples,
+        "created_at": created_at,
+    }
+    target = training_dir / "candidate_samples.json"
+    write_json(target, payload)
+    return target
 
 
 def update_candidate_confirmation(package_dir: str | Path, candidate_id: str, confirmed: bool) -> dict[str, Any]:
@@ -412,6 +593,10 @@ def export_confirmed_components(package_dir: str | Path) -> dict[str, Any]:
             "component_name_zh": candidate.get("component_name", ""),
             "file": relative_file,
             "bounds": candidate["bounds"],
+            "bbox": candidate.get("bbox") or candidate["bounds"],
+            "layout_zone": candidate.get("layout_zone", ""),
+            "shape_type": candidate.get("shape_type", "rect"),
+            "outline_points": candidate.get("outline_points", []),
             "transparent_png_required": bool(candidate.get("transparent_required")),
             "transparent_warning": warning,
         }
@@ -446,6 +631,7 @@ def export_confirmed_components(package_dir: str | Path) -> dict[str, Any]:
     annotation["components"] = annotation_components
     write_json(package_path / "annotation.json", annotation)
     save_candidate_manifest(package_path, manifest)
+    training_samples_path = write_training_samples(package_path, candidates)
 
     try:
         analyze_package(package_path)
@@ -461,7 +647,12 @@ def export_confirmed_components(package_dir: str | Path) -> dict[str, Any]:
                 "generated_at": utc_now(),
             },
         )
-    return {"package_dir": str(package_path), "exported": exported, "screen_file": "confirmed_components/screen_main_ui.jpg"}
+    return {
+        "package_dir": str(package_path),
+        "exported": exported,
+        "screen_file": "confirmed_components/screen_main_ui.jpg",
+        "training_samples": str(training_samples_path),
+    }
 
 
 def create_main_ui_package(

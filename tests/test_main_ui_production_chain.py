@@ -28,6 +28,9 @@ def test_main_ui_package_generates_required_files(tmp_path: Path) -> None:
     assert (package / "main_ui.jpg").exists()
     assert (package / "ui_preview.png").exists()
     assert (package / "candidate_preview.jpg").exists()
+    assert (package / "candidate_options" / "candidate_1.jpg").exists()
+    assert (package / "candidate_options" / "candidate_2.jpg").exists()
+    assert (package / "candidate_options" / "candidate_3.jpg").exists()
     assert (package / "candidate_manifest.json").exists()
     assert (package / "manual_acceptance.json").exists()
     assert (package / "production_review.json").exists()
@@ -44,6 +47,10 @@ def test_main_ui_candidates_include_levels_and_categories(tmp_path: Path) -> Non
 
     assert by_id["skill_01"]["level"] == "A"
     assert by_id["skill_01"]["production_category"] == "Atomic"
+    assert by_id["skill_01"]["layout_zone"] == "right_skill"
+    assert by_id["skill_01"]["shape_type"] == "circle"
+    assert by_id["skill_01"]["bbox"]
+    assert by_id["skill_01"]["outline_points"]
     assert by_id["bottom_hud"]["level"] == "B"
     assert by_id["bottom_hud"]["production_category"] == "Panel"
     assert by_id["screen_main_ui"]["production_category"] == "Screen"
@@ -84,3 +91,7 @@ def test_manual_confirmation_controls_export(tmp_path: Path) -> None:
     assert by_id["skill_01"]["image_path"] == ""
     assert by_id["skill_02"]["confirmed"] is True
     assert by_id["skill_02"]["image_path"].endswith(".png")
+    samples = json.loads((package / "training_samples" / "main_ui" / "candidate_samples.json").read_text(encoding="utf-8"))
+    sample_by_id = {item["candidate_id"]: item for item in samples["samples"]}
+    assert sample_by_id["skill_01"]["user_confirmed"] is False
+    assert sample_by_id["skill_02"]["layout_zone"] == "right_skill"

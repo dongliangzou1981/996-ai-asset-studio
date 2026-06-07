@@ -77,6 +77,7 @@ type ProductionStudioApi = Pick<
   | "generateProductionStudioPackage"
   | "generateUiProductionPackage"
   | "markUiProductionCandidates"
+  | "selectUiProductionCandidate"
   | "updateUiProductionCandidate"
   | "exportUiProductionComponents"
   | "runMainUiProduction"
@@ -139,6 +140,9 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
   const [uiProductionReferencePath, setUiProductionReferencePath] = useState<string | null>(null);
   const [uiProductionReferencePreviewUrl, setUiProductionReferencePreviewUrl] = useState("");
   const [uiProductionReferenceFileName, setUiProductionReferenceFileName] = useState("");
+  const [uiAdjustmentNote, setUiAdjustmentNote] = useState("");
+  const [uiAdjustmentImagePath, setUiAdjustmentImagePath] = useState<string | null>(null);
+  const [uiAdjustmentImageName, setUiAdjustmentImageName] = useState("");
   const [uiProductionMessage, setUiProductionMessage] = useState("");
   const [generatedAt, setGeneratedAt] = useState("");
   const [acceptance, setAcceptance] = useState<Record<string, AcceptanceRecord>>({});
@@ -252,6 +256,29 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
     }
   }
 
+  async function uploadUiAdjustmentImage(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+    setError("");
+    try {
+      const asset = await api.uploadAsset({
+        file,
+        project_id: null,
+        asset_type: "reference_image",
+        device_type: deviceType,
+      });
+      setUiAdjustmentImagePath(asset.file_path);
+      setUiAdjustmentImageName(asset.original_filename || file.name);
+      setUiProductionMessage("调整截图已保存，下次生成会带入调整记录。");
+    } catch {
+      setError("调整截图上传失败，请使用 JPG 或 PNG。");
+    } finally {
+      event.target.value = "";
+    }
+  }
+
   function removeUiProductionReference() {
     if (uiProductionReferencePreviewUrl) {
       URL.revokeObjectURL(uiProductionReferencePreviewUrl);
@@ -272,6 +299,8 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
         reference_image_path: uiProductionReferencePath,
         requirement: uiProductionRequirement,
         style_reference_strength: uiProductionStyleReference,
+        adjustment_note: uiAdjustmentNote,
+        adjustment_image_path: uiAdjustmentImagePath,
       });
       if (!isUiProductionResult(response)) {
         setUiProductionMessage(response.message);
@@ -300,6 +329,24 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
       setUiProductionMessage("标记完成：已输出 candidate_preview.jpg，请确认需要切图的组件。");
     } catch {
       setError("标记候选组件失败。");
+    } finally {
+      setMainUiLoading(false);
+    }
+  }
+
+  async function selectUiCandidateOption(candidateId: string) {
+    if (!mainUiProduction) {
+      return;
+    }
+    setMainUiLoading(true);
+    setError("");
+    try {
+      const response = await api.selectUiProductionCandidate(mainUiProduction.package_dir, candidateId);
+      setMainUiProduction(response);
+      window.localStorage.setItem("uiProductionPackageDir", response.package_dir);
+      setUiProductionMessage("当前方案已切换，请重新标记候选组件。");
+    } catch {
+      setError("候选方案切换失败。");
     } finally {
       setMainUiLoading(false);
     }
@@ -443,8 +490,10 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
     (styleSource === "existing_style" && !selectedStyleCode) ||
     (generationMode === "reference_guided" && !referenceImagePath);
 
+  const projectContext = mainUiProduction?.project_context;
+
   return (
-    <section className="grid gap-6 lg:grid-cols-[0.82fr_1.18fr]">
+    <section className="grid gap-4 xl:grid-cols-[320px_180px_minmax(0,1fr)]">
       <form className="grid gap-4 rounded-md border border-studio-line bg-white p-5" onSubmit={generate}>
         <div>
           <h2 className="text-lg font-semibold">生产工作台</h2>
@@ -630,6 +679,32 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
         {error ? <p className="text-sm leading-6 text-red-600">{error}</p> : null}
       </form>
 
+      <aside className="grid h-fit gap-3 rounded-md border border-studio-line bg-white p-4 text-sm">
+        <h2 className="font-semibold">项目栏</h2>
+        <dl className="grid gap-3">
+          <div>
+            <dt className="text-xs text-studio-muted">当前项目名称</dt>
+            <dd className="font-semibold">{projectContext?.project_name ?? "996 UI Asset Studio"}</dd>
+          </div>
+          <div>
+            <dt className="text-xs text-studio-muted">当前界面类型</dt>
+            <dd>{projectContext?.screen_type === "main_ui" ? "主界面" : projectContext?.screen_type ?? "主界面"}</dd>
+          </div>
+          <div>
+            <dt className="text-xs text-studio-muted">当前风格包名称</dt>
+            <dd>{projectContext?.style_package_name ?? "未生成"}</dd>
+          </div>
+          <div>
+            <dt className="text-xs text-studio-muted">风格描述/备注</dt>
+            <dd className="leading-5 text-studio-muted">{projectContext?.style_notes ?? "参考布局为主，风格强度由生成参数记录。"}</dd>
+          </div>
+          <div>
+            <dt className="text-xs text-studio-muted">当前参考图状态</dt>
+            <dd>{uiProductionReferencePath ? "已上传参考图" : projectContext?.reference_status ?? "未上传，默认读取本地参考"}</dd>
+          </div>
+        </dl>
+      </aside>
+
       <div className="rounded-md border border-studio-line bg-white p-5">
         <h2 className="text-lg font-semibold">结果中心</h2>
         <section className="mt-4 grid gap-4 rounded-md border border-studio-line bg-white p-4">
@@ -704,6 +779,27 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
               value={uiProductionRequirement}
             />
           </label>
+          <div className="grid gap-3 rounded-md border border-studio-line p-3">
+            <label className="grid gap-1 text-sm font-medium">
+              调整说明
+              <textarea
+                className="min-h-20 rounded-md border border-studio-line px-3 py-2 font-normal leading-6"
+                onChange={(event) => setUiAdjustmentNote(event.target.value)}
+                placeholder="例如：任务栏向左缩进，右下技能按钮更贴近边缘。"
+                value={uiAdjustmentNote}
+              />
+            </label>
+            <label className="grid gap-1 text-sm font-medium">
+              上传调整截图
+              <input
+                accept="image/png,image/jpeg"
+                className="rounded-md border border-studio-line px-3 py-2 font-normal"
+                onChange={uploadUiAdjustmentImage}
+                type="file"
+              />
+            </label>
+            {uiAdjustmentImageName ? <p className="text-xs text-studio-muted">已保存调整截图：{uiAdjustmentImageName}</p> : null}
+          </div>
           <div className="flex flex-wrap gap-2">
             <button
               className="rounded-md bg-studio-action px-3 py-2 text-sm font-semibold text-white disabled:opacity-60"
@@ -741,9 +837,26 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
           {uiProductionMessage ? <p className="text-sm text-amber-700">{uiProductionMessage}</p> : null}
           {mainUiProduction ? (
             <div className="grid gap-4">
+              {mainUiProduction.style_reference_note ? (
+                <p className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800">{mainUiProduction.style_reference_note}</p>
+              ) : null}
               <div className="grid gap-3 lg:grid-cols-2">
                 <div className="grid gap-2">
-                  <div className="text-sm font-medium">完整界面预览</div>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="text-sm font-medium">完整界面预览</div>
+                    <button
+                      className="rounded-md border border-studio-line px-2 py-1 text-xs"
+                      onClick={() =>
+                        setExpandedPreview({
+                          src: api.getProductionStudioFileUrl(mainUiProduction.main_ui_url),
+                          label: "完整界面",
+                        })
+                      }
+                      type="button"
+                    >
+                      预览
+                    </button>
+                  </div>
                   <img
                     alt="完整界面预览"
                     className="aspect-video w-full rounded-md border border-studio-line bg-slate-950 object-contain"
@@ -752,7 +865,21 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
                 </div>
                 {mainUiProduction.candidate_preview_url ? (
                   <div className="grid gap-2">
-                    <div className="text-sm font-medium">编号图</div>
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="text-sm font-medium">编号图</div>
+                      <button
+                        className="rounded-md border border-studio-line px-2 py-1 text-xs"
+                        onClick={() =>
+                          setExpandedPreview({
+                            src: api.getProductionStudioFileUrl(mainUiProduction.candidate_preview_url),
+                            label: "候选组件编号图",
+                          })
+                        }
+                        type="button"
+                      >
+                        预览
+                      </button>
+                    </div>
                     <img
                       alt="候选组件编号图"
                       className="aspect-video w-full rounded-md border border-studio-line bg-slate-950 object-contain"
@@ -761,18 +888,70 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
                   </div>
                 ) : null}
               </div>
+              {mainUiProduction.candidate_options?.length ? (
+                <div className="grid gap-2 rounded-md border border-studio-line p-3">
+                  <div className="font-semibold">候选方案</div>
+                  <div className="grid gap-3 md:grid-cols-3">
+                    {mainUiProduction.candidate_options.map((option) => (
+                      <article className="grid gap-2 rounded-md bg-slate-50 p-2" key={option.candidate_id}>
+                        <img
+                          alt={`${option.label}预览`}
+                          className="aspect-video w-full rounded-md bg-slate-950 object-contain"
+                          src={api.getProductionStudioFileUrl(option.url)}
+                        />
+                        <div className="text-xs font-medium">{option.label}</div>
+                        <div className="flex gap-2">
+                          <button
+                            className="rounded-md border border-studio-line px-2 py-1 text-xs"
+                            onClick={() =>
+                              setExpandedPreview({
+                                src: api.getProductionStudioFileUrl(option.url),
+                                label: option.label,
+                              })
+                            }
+                            type="button"
+                          >
+                            预览
+                          </button>
+                          <button
+                            className="rounded-md border border-studio-line px-2 py-1 text-xs disabled:opacity-60"
+                            disabled={mainUiLoading || option.selected}
+                            onClick={() => selectUiCandidateOption(option.candidate_id)}
+                            type="button"
+                          >
+                            {option.selected ? "当前方案" : "选择此方案"}
+                          </button>
+                        </div>
+                      </article>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+              <div className="grid gap-2 rounded-md border border-studio-line p-3">
+                <div className="font-semibold">主界面布局骨架</div>
+                <div className="flex flex-wrap gap-2 text-xs">
+                  {["顶部信息区", "右上地图区", "右侧系统入口区", "右下技能区", "左下摇杆区", "聊天区", "底部状态区"].map((zone) => (
+                    <span className="rounded-md bg-slate-100 px-2 py-1" key={zone}>
+                      {zone}
+                    </span>
+                  ))}
+                </div>
+              </div>
               {mainUiProduction.candidates.length ? (
                 <div className="overflow-x-auto rounded-md border border-studio-line">
-                  <table className="w-full min-w-[820px] text-left text-sm">
+                  <table className="w-full min-w-[1040px] text-left text-sm">
                     <thead className="bg-slate-100 text-xs text-studio-muted">
                       <tr>
                         <th className="px-3 py-2">确认</th>
                         <th className="px-3 py-2">编号</th>
                         <th className="px-3 py-2">组件名称</th>
                         <th className="px-3 py-2">组件类型</th>
+                        <th className="px-3 py-2">布局区</th>
+                        <th className="px-3 py-2">形状</th>
                         <th className="px-3 py-2">A/B/C</th>
                         <th className="px-3 py-2">输出格式</th>
                         <th className="px-3 py-2">建议动作</th>
+                        <th className="px-3 py-2">预览</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -789,9 +968,27 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
                           <td className="px-3 py-2">{candidate.number}</td>
                           <td className="px-3 py-2">{candidate.component_name ?? candidate.component_id}</td>
                           <td className="px-3 py-2">{candidate.component_type}</td>
+                          <td className="px-3 py-2">{candidate.layout_zone ?? "-"}</td>
+                          <td className="px-3 py-2">{candidate.shape_type ?? "rect"}</td>
                           <td className="px-3 py-2">{candidate.level}</td>
                           <td className="px-3 py-2 uppercase">{candidate.output_format}</td>
                           <td className="px-3 py-2">{candidate.recommended_action}</td>
+                          <td className="px-3 py-2">
+                            {mainUiProduction.candidate_preview_url ? (
+                              <button
+                                className="rounded-md border border-studio-line px-2 py-1 text-xs"
+                                onClick={() =>
+                                  setExpandedPreview({
+                                    src: api.getProductionStudioFileUrl(mainUiProduction.candidate_preview_url),
+                                    label: `编号 ${candidate.number} ${candidate.component_id}`,
+                                  })
+                                }
+                                type="button"
+                              >
+                                预览
+                              </button>
+                            ) : null}
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -817,6 +1014,18 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
                             {item.has_transparent_pixels ? "是" : "否"}
                           </div>
                           {item.transparent_warning ? <div className="text-xs text-amber-700">透明警告：{item.transparent_warning}</div> : null}
+                          <button
+                            className="w-fit rounded-md border border-studio-line px-2 py-1 text-xs"
+                            onClick={() =>
+                              setExpandedPreview({
+                                src: api.getProductionStudioFileUrl(item.url),
+                                label: item.file,
+                              })
+                            }
+                            type="button"
+                          >
+                            预览
+                          </button>
                         </article>
                       ))}
                   </div>
@@ -876,6 +1085,16 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
                     target="_blank"
                   >
                     查看 candidate_manifest.json
+                  </a>
+                ) : null}
+                {mainUiProduction.training_samples_url ? (
+                  <a
+                    className="rounded-md border border-studio-line px-3 py-2 text-sm"
+                    href={api.getProductionStudioFileUrl(mainUiProduction.training_samples_url)}
+                    rel="noreferrer"
+                    target="_blank"
+                  >
+                    查看 training_samples
                   </a>
                 ) : null}
               </div>
