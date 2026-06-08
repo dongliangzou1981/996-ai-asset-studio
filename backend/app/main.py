@@ -65,6 +65,15 @@ def default_upload_dir() -> Path:
     return Path(__file__).resolve().parents[2] / "assets" / "uploads"
 
 
+def default_training_samples_dir(upload_dir: str | Path | None = None) -> Path:
+    configured = os.getenv("STUDIO_TRAINING_SAMPLES_DIR")
+    if configured:
+        return Path(configured)
+    if upload_dir:
+        return Path(upload_dir).parent / "training_samples"
+    return Path(__file__).resolve().parents[2] / "training_samples"
+
+
 def default_harness_examples_dir() -> Path:
     configured = os.getenv("STUDIO_HARNESS_EXAMPLES_DIR")
     if configured:
@@ -126,9 +135,11 @@ def create_app(database_path: str | Path | None = None, upload_dir: str | Path |
     database.initialize()
     upload_root = Path(upload_dir) if upload_dir else default_upload_dir()
     upload_root.mkdir(parents=True, exist_ok=True)
+    training_samples_root = default_training_samples_dir(upload_root if upload_dir else None)
     harness_examples_root = default_harness_examples_dir()
     app.state.database = database
     app.state.upload_dir = upload_root
+    app.state.training_samples_dir = training_samples_root
     app.state.harness_examples_dir = harness_examples_root
 
     @app.get("/health")
@@ -190,6 +201,150 @@ def create_app(database_path: str | Path | None = None, upload_dir: str | Path |
         except json.JSONDecodeError as exc:
             raise HTTPException(status_code=400, detail=f"{filename} is invalid JSON") from exc
         return data if isinstance(data, dict) else {}
+
+    def prompt_samples_file() -> Path:
+        return training_samples_root / "prompts" / "prompt_samples.json"
+
+    def read_prompt_samples() -> dict:
+        path = prompt_samples_file()
+        if not path.exists():
+            return {"schema_version": "1.0", "samples": []}
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            return {"schema_version": "1.0", "samples": []}
+        if not isinstance(data, dict) or not isinstance(data.get("samples"), list):
+            return {"schema_version": "1.0", "samples": []}
+        return data
+
+    def write_prompt_samples(payload: dict) -> None:
+        path = prompt_samples_file()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    def prompt_sample_by_type(component_type: str) -> str:
+        return marking_type(component_type)
+
+    def prompt_marking_summary(package_dir: Path, production: dict | None = None) -> dict:
+        candidate_path = package_dir / "candidate_manifest.json"
+        candidates: list[dict] = []
+        if candidate_path.exists():
+            manifest = read_package_json(package_dir, "candidate_manifest.json")
+            candidates = [item for item in manifest.get("candidates", []) if isinstance(item, dict)]
+        by_type = {"background": 0, "panel": 0, "button": 0, "icon": 0, "skill": 0}
+        for candidate in candidates:
+            by_type[prompt_sample_by_type(str(candidate.get("component_type") or ""))] += 1
+        confirmed_components = []
+        if production and isinstance(production.get("confirmed_components"), list):
+            confirmed_components = production["confirmed_components"]
+        slice_success = sum(
+            1
+            for item in confirmed_components
+            if isinstance(item, dict) and item.get("confirmed") and item.get("file") and (package_dir / str(item["file"])).exists()
+        )
+        return {
+            "status": "marked" if candidates else "pending",
+            "total_marks": len(candidates),
+            "by_type": by_type,
+            "slice_success": slice_success,
+        }
+
+    def upsert_prompt_sample(package_dir: Path, payload: dict, production: dict | None = None, marking_result: dict | None = None) -> None:
+        delivery_path = package_dir / "delivery_report.json"
+        delivery = read_package_json(package_dir, "delivery_report.json") if delivery_path.exists() else {}
+        source_note = delivery.get("source_note") if isinstance(delivery.get("source_note"), dict) else {}
+        samples_payload = read_prompt_samples()
+        samples = [item for item in samples_payload.get("samples", []) if isinstance(item, dict)]
+        package_dir_text = str(package_dir)
+        existing = next((item for item in samples if item.get("package_dir") == package_dir_text), None)
+        now = utc_now()
+        record = {
+            **(existing or {}),
+            "sample_id": (existing or {}).get("sample_id") or package_dir.name,
+            "package_dir": package_dir_text,
+            "created_at": (existing or {}).get("created_at") or now,
+            "updated_at": now,
+            "system_prompt": str(
+                payload.get("system_prompt")
+                or (existing or {}).get("system_prompt")
+                or payload.get("requirement")
+                or delivery.get("final_prompt")
+                or ""
+            ),
+            "final_prompt": str(payload.get("requirement") or (existing or {}).get("final_prompt") or delivery.get("final_prompt") or ""),
+            "project_id": str(payload.get("project_id") or (existing or {}).get("project_id") or ""),
+            "interface_type": str(payload.get("interface_type") or payload.get("screen_type") or delivery.get("screen_type") or "main_ui"),
+            "device_type": str(payload.get("device_type") or (existing or {}).get("device_type") or ""),
+            "layout_template": str(payload.get("layout_template") or (existing or {}).get("layout_template") or ""),
+            "reference_used": bool(payload.get("reference_image_path") or source_note.get("source_image")),
+            "generation_result": production
+            or (existing or {}).get("generation_result")
+            or {"status": "generated", "package_dir": package_dir_text},
+            "marking_result": marking_result or (existing or {}).get("marking_result") or {"status": "pending"},
+            "accepted": bool((existing or {}).get("accepted", False)),
+            "quality": str((existing or {}).get("quality") or "unreviewed"),
+            "rejected_reason": str((existing or {}).get("rejected_reason") or ""),
+            "manual_adjustment_note": str(payload.get("adjustment_note") or (existing or {}).get("manual_adjustment_note") or ""),
+        }
+        if existing:
+            samples = [record if item.get("package_dir") == package_dir_text else item for item in samples]
+        else:
+            samples.append(record)
+        samples_payload["schema_version"] = "1.0"
+        samples_payload["updated_at"] = now
+        samples_payload["samples"] = samples
+        write_prompt_samples(samples_payload)
+
+    def update_prompt_sample_acceptance(package_dir: Path, review_status: str, rejected_reason: str) -> None:
+        samples_payload = read_prompt_samples()
+        samples = [item for item in samples_payload.get("samples", []) if isinstance(item, dict)]
+        package_dir_text = str(package_dir)
+        changed = False
+        now = utc_now()
+        for sample in samples:
+            if sample.get("package_dir") != package_dir_text:
+                continue
+            sample["accepted"] = review_status == "accepted"
+            sample["quality"] = "high_quality" if review_status == "accepted" else "rejected" if review_status == "rejected" else "unreviewed"
+            sample["rejected_reason"] = rejected_reason if review_status == "rejected" else ""
+            sample["updated_at"] = now
+            changed = True
+        if changed:
+            samples_payload["updated_at"] = now
+            samples_payload["samples"] = samples
+            write_prompt_samples(samples_payload)
+
+    def best_prompt_sample(interface_type: str, device_type: str, layout_template: str) -> dict:
+        samples = [item for item in read_prompt_samples().get("samples", []) if isinstance(item, dict)]
+        matches = [
+            item
+            for item in samples
+            if item.get("quality") == "high_quality"
+            and item.get("interface_type") == interface_type
+            and (not device_type or item.get("device_type") == device_type)
+            and (not layout_template or item.get("layout_template") == layout_template)
+        ]
+        matches.sort(key=lambda item: str(item.get("updated_at") or item.get("created_at") or ""), reverse=True)
+        if not matches:
+            return {"found": False}
+        sample = matches[0]
+        return {
+            "found": True,
+            "sample_id": sample.get("sample_id", ""),
+            "system_prompt": sample.get("system_prompt", ""),
+            "final_prompt": sample.get("final_prompt", ""),
+            "quality": sample.get("quality", ""),
+            "updated_at": sample.get("updated_at", ""),
+        }
+
+    def generation_result_summary(production: dict) -> dict:
+        return {
+            "status": "generated",
+            "package_dir": production.get("package_dir", ""),
+            "main_ui_url": production.get("main_ui_url", ""),
+            "selected_candidate_id": production.get("selected_candidate_id", ""),
+            "candidate_options_count": len(production.get("candidate_options") or []),
+        }
 
     def pending_manual_acceptance() -> dict:
         return {
@@ -452,6 +607,10 @@ def create_app(database_path: str | Path | None = None, upload_dir: str | Path |
             return pending_manual_acceptance()
         return read_package_json(package_path, "manual_acceptance.json")
 
+    @app.get("/production-studio/prompt-samples/best")
+    def get_best_prompt_sample(interface_type: str = "main_ui", device_type: str = "", layout_template: str = "") -> dict:
+        return best_prompt_sample(interface_type, device_type, layout_template)
+
     @app.put("/production-studio/manual-acceptance")
     def update_manual_acceptance(package_dir: str, payload: dict) -> dict:
         package_path = resolve_production_package_dir(package_dir)
@@ -479,6 +638,7 @@ def create_app(database_path: str | Path | None = None, upload_dir: str | Path |
             updated["accepted_at"] = None
             updated["accepted_by"] = ""
         path.write_text(json.dumps(updated, ensure_ascii=False, indent=2), encoding="utf-8")
+        update_prompt_sample_acceptance(package_path, review_status, str(updated.get("remarks") or ""))
         return updated
 
     @app.post("/production-studio/main-ui-production/run")
@@ -515,7 +675,19 @@ def create_app(database_path: str | Path | None = None, upload_dir: str | Path |
             )
         except (FileNotFoundError, RuntimeError, ValueError) as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
-        return main_ui_package_response(resolve_production_package_dir(str(result["package_dir"])))
+        package_path = resolve_production_package_dir(str(result["package_dir"]))
+        response = main_ui_package_response(package_path)
+        upsert_prompt_sample(
+            package_path,
+            {
+                **payload,
+                "interface_type": screen_type,
+                "screen_type": screen_type,
+            },
+            generation_result_summary(response),
+            {"status": "generated"},
+        )
+        return response
 
     @app.post("/production-studio/ui-production/select-candidate")
     def select_ui_production_candidate(package_dir: str, candidate_id: str) -> dict:
@@ -533,7 +705,9 @@ def create_app(database_path: str | Path | None = None, upload_dir: str | Path |
             mark_candidate_components(package_path)
         except (FileNotFoundError, RuntimeError, ValueError) as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
-        return main_ui_package_response(package_path)
+        response = main_ui_package_response(package_path)
+        upsert_prompt_sample(package_path, {}, generation_result_summary(response), prompt_marking_summary(package_path, response))
+        return response
 
     @app.put("/production-studio/ui-production/candidate")
     def update_ui_production_candidate(package_dir: str, candidate_id: str, payload: dict) -> dict:
@@ -552,7 +726,11 @@ def create_app(database_path: str | Path | None = None, upload_dir: str | Path |
             export_confirmed_components(package_path)
         except (FileNotFoundError, RuntimeError, ValueError) as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
-        return main_ui_package_response(package_path)
+        response = main_ui_package_response(package_path)
+        marking_summary = prompt_marking_summary(package_path, response)
+        marking_summary["status"] = "exported"
+        upsert_prompt_sample(package_path, {}, generation_result_summary(response), marking_summary)
+        return response
 
     @app.post("/production-studio/marking-acceptance-test/run")
     def run_marking_acceptance_test(payload: dict | None = None) -> dict:
@@ -575,6 +753,17 @@ def create_app(database_path: str | Path | None = None, upload_dir: str | Path |
             export_confirmed_components(package_path)
             production = main_ui_package_response(package_path)
             report = write_marking_acceptance_outputs(package_path, production, project)
+            upsert_prompt_sample(
+                package_path,
+                {
+                    **payload,
+                    "project_id": payload.get("project_id") or project.id,
+                    "interface_type": "main_ui",
+                    "screen_type": "main_ui",
+                },
+                generation_result_summary(production),
+                report,
+            )
         except (FileNotFoundError, RuntimeError, ValueError, OSError) as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
 

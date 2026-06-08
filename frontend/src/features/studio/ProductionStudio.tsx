@@ -91,6 +91,7 @@ type ProductionStudioApi = Pick<
   | "listProjects"
   | "createProject"
   | "listProductionStyleCodes"
+  | "getPromptSampleSuggestion"
   | "updateProductionManualAcceptance"
   | "uploadAsset"
 >;
@@ -155,6 +156,7 @@ function buildMainUiProductionPrompt(input: {
   generationMode: ProductionGenerationMode;
   hasReferenceImage: boolean;
   adjustmentNote: string;
+  historicalPrompt?: string;
 }) {
   const referenceLine = input.hasReferenceImage
     ? "已上传参考图：风格跟随参考图或整体风格，不照抄参考图内容。"
@@ -165,6 +167,7 @@ function buildMainUiProductionPrompt(input: {
       : `生成 ${input.screenType} 界面。`;
 
   return [
+    input.historicalPrompt ? `历史高质量提示词参考：\n${input.historicalPrompt}` : "",
     `项目：${input.projectName || "未命名项目"} / ${input.projectCode || "未设置代号"}`,
     `生产参数：${PROMPT_DEVICE_LABELS[input.deviceType]}，${PROMPT_ASSET_MODE_LABELS[input.assetMode]}，${PROMPT_LAYOUT_LABELS[input.layoutTemplate]}，界面类型 ${input.screenType}，生成模式 ${PROMPT_GENERATION_MODE_LABELS[input.generationMode]}。`,
     screenLine,
@@ -172,7 +175,9 @@ function buildMainUiProductionPrompt(input: {
     "右下技能区：主技能按钮固定右下角偏内侧，小技能围绕主技能形成半圆布局，预留第二圈技能按钮空间，避免遮挡底部经验条和聊天区域，符合手机横屏右手拇指操作体验。",
     referenceLine,
     input.adjustmentNote ? `调整说明：${input.adjustmentNote}` : "调整说明：无。",
-  ].join("\n");
+  ]
+    .filter(Boolean)
+    .join("\n");
 }
 
 function defaultAcceptanceRecord(): AcceptanceRecord {
@@ -205,6 +210,7 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
   const [mainUiLoading, setMainUiLoading] = useState(false);
   const [uiProductionScreenType, setUiProductionScreenType] = useState<UiProductionScreenType>("main_ui");
   const [uiProductionRequirement, setUiProductionRequirement] = useState("");
+  const [uiProductionSystemPrompt, setUiProductionSystemPrompt] = useState("");
   const [uiProductionPromptEdited, setUiProductionPromptEdited] = useState(false);
   const [uiProductionStyleReference, setUiProductionStyleReference] = useState("none");
   const [uiProductionReferencePath, setUiProductionReferencePath] = useState<string | null>(null);
@@ -275,20 +281,44 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
     if (uiProductionPromptEdited) {
       return;
     }
-    setUiProductionRequirement(
-      buildMainUiProductionPrompt({
-        projectName: selectedProject?.name ?? MARKING_TEST_PROJECT_NAME,
-        projectCode: selectedProject?.description ?? MARKING_TEST_PROJECT_CODE,
-        deviceType,
-        assetMode,
-        layoutTemplate,
-        screenType: uiProductionScreenType,
-        generationMode,
-        hasReferenceImage: Boolean(uiProductionReferencePath),
-        adjustmentNote: uiAdjustmentNote,
-      }),
-    );
+    let cancelled = false;
+    const basePromptInput = {
+      projectName: selectedProject?.name ?? MARKING_TEST_PROJECT_NAME,
+      projectCode: selectedProject?.description ?? MARKING_TEST_PROJECT_CODE,
+      deviceType,
+      assetMode,
+      layoutTemplate,
+      screenType: uiProductionScreenType,
+      generationMode,
+      hasReferenceImage: Boolean(uiProductionReferencePath),
+      adjustmentNote: uiAdjustmentNote,
+    };
+    const basePrompt = buildMainUiProductionPrompt(basePromptInput);
+    setUiProductionSystemPrompt(basePrompt);
+    setUiProductionRequirement(basePrompt);
+    api
+      .getPromptSampleSuggestion({
+        interface_type: uiProductionScreenType,
+        device_type: deviceType,
+        layout_template: layoutTemplate,
+      })
+      .then((suggestion) => {
+        if (cancelled || uiProductionPromptEdited || !suggestion.found || !suggestion.final_prompt) {
+          return;
+        }
+        const learnedPrompt = buildMainUiProductionPrompt({
+          ...basePromptInput,
+          historicalPrompt: suggestion.final_prompt,
+        });
+        setUiProductionSystemPrompt(learnedPrompt);
+        setUiProductionRequirement(learnedPrompt);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
   }, [
+    api,
     assetMode,
     deviceType,
     generationMode,
@@ -379,19 +409,19 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
       setUiProductionStyleReference("none");
       setUiAdjustmentImagePath(null);
       setUiAdjustmentImageName("");
-      setUiProductionRequirement(
-        buildMainUiProductionPrompt({
-          projectName: project.name,
-          projectCode: project.description,
-          deviceType: "mobile_landscape",
-          assetMode: "resource_production",
-          layoutTemplate: "classic_legend_mobile",
-          screenType: "main_ui",
-          generationMode: "auto_generate",
-          hasReferenceImage: Boolean(uiProductionReferencePath),
-          adjustmentNote: MARKING_TEST_ADJUSTMENT,
-        }),
-      );
+      const testPrompt = buildMainUiProductionPrompt({
+        projectName: project.name,
+        projectCode: project.description,
+        deviceType: "mobile_landscape",
+        assetMode: "resource_production",
+        layoutTemplate: "classic_legend_mobile",
+        screenType: "main_ui",
+        generationMode: "auto_generate",
+        hasReferenceImage: Boolean(uiProductionReferencePath),
+        adjustmentNote: MARKING_TEST_ADJUSTMENT,
+      });
+      setUiProductionSystemPrompt(testPrompt);
+      setUiProductionRequirement(testPrompt);
       setMarkingTestMode(true);
       setUiProductionMessage("已进入标记验收测试：参数已自动填充，请点击一键生成并标记测试。");
     } catch {
@@ -409,8 +439,12 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
     try {
       const response = await api.runMarkingAcceptanceTest({
         reference_image_path: uiProductionReferencePath,
+        system_prompt: uiProductionSystemPrompt,
         requirement: uiProductionRequirement,
         style_reference_strength: uiProductionStyleReference,
+        project_id: selectedProjectId,
+        device_type: deviceType,
+        layout_template: layoutTemplate,
         adjustment_note: uiAdjustmentNote,
         adjustment_image_path: uiAdjustmentImagePath,
       });
@@ -515,8 +549,12 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
       const response = await api.generateUiProductionPackage({
         screen_type: uiProductionScreenType,
         reference_image_path: uiProductionReferencePath,
+        system_prompt: uiProductionSystemPrompt,
         requirement: uiProductionRequirement,
         style_reference_strength: uiProductionStyleReference,
+        project_id: selectedProjectId,
+        device_type: deviceType,
+        layout_template: layoutTemplate,
         adjustment_note: uiAdjustmentNote,
         adjustment_image_path: uiAdjustmentImagePath,
       });

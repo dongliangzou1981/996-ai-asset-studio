@@ -7,8 +7,10 @@ const api = {
   generateProductionStudioPackage: jest.fn(),
   generateUiProductionPackage: jest.fn(),
   markUiProductionCandidates: jest.fn(),
+  selectUiProductionCandidate: jest.fn(),
   updateUiProductionCandidate: jest.fn(),
   exportUiProductionComponents: jest.fn(),
+  runMarkingAcceptanceTest: jest.fn(),
   runMainUiProduction: jest.fn(),
   getMainUiProduction: jest.fn(),
   updateMainUiCandidate: jest.fn(),
@@ -17,6 +19,7 @@ const api = {
   listProjects: jest.fn(),
   createProject: jest.fn(),
   listProductionStyleCodes: jest.fn(),
+  getPromptSampleSuggestion: jest.fn(),
   updateProductionManualAcceptance: jest.fn(),
   uploadAsset: jest.fn(),
 };
@@ -35,14 +38,14 @@ beforeEach(() => {
       },
     ],
   });
-  api.createProject.mockResolvedValue({
-    id: "project-new",
-    name: "新项目",
-    description: "NEW001",
+  api.createProject.mockImplementation(async (payload) => ({
+    id: payload.description === "MARKING_TEST" ? "project-marking" : "project-new",
+    name: payload.name,
+    description: payload.description,
     status: "draft",
     created_at: "2026-06-08T00:00:00Z",
     updated_at: "2026-06-08T00:00:00Z",
-  });
+  }));
   api.listProductionStyleCodes.mockResolvedValue({
     items: [
       {
@@ -62,6 +65,7 @@ beforeEach(() => {
     accepted_by: "",
     components: [],
   });
+  api.getPromptSampleSuggestion.mockResolvedValue({ found: false });
   api.runMainUiProduction.mockResolvedValue({
     package_dir: "assets/uploads/996-ready/SPRINT20B_MAIN_UI/main_ui/job-main-ui",
     main_ui_url: "/production-studio/files/996-ready/SPRINT20B_MAIN_UI/main_ui/job-main-ui/main_ui.jpg",

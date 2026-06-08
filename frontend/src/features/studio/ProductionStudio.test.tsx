@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { ProductionStudio } from "./ProductionStudio";
@@ -19,6 +19,7 @@ const api = {
   listProjects: jest.fn(),
   createProject: jest.fn(),
   listProductionStyleCodes: jest.fn(),
+  getPromptSampleSuggestion: jest.fn(),
   updateProductionManualAcceptance: jest.fn(),
   uploadAsset: jest.fn(),
 };
@@ -193,14 +194,14 @@ beforeEach(() => {
       },
     ],
   });
-  api.createProject.mockResolvedValue({
-    id: "project-new",
-    name: "新项目",
-    description: "NEW001",
+  api.createProject.mockImplementation(async (payload) => ({
+    id: payload.description === "MARKING_TEST" ? "project-marking" : "project-new",
+    name: payload.name,
+    description: payload.description,
     status: "draft",
     created_at: "2026-06-08T00:00:00Z",
     updated_at: "2026-06-08T00:00:00Z",
-  });
+  }));
   api.listProductionStyleCodes.mockResolvedValue({
     items: [
       {
@@ -236,6 +237,7 @@ beforeEach(() => {
     accepted_by: "",
     components: [],
   });
+  api.getPromptSampleSuggestion.mockResolvedValue({ found: false });
   api.runMainUiProduction.mockResolvedValue(mainUiProductionResult);
   api.getMainUiProduction.mockRejectedValue(new Error("no saved package"));
   api.generateUiProductionPackage.mockResolvedValue({
@@ -355,8 +357,12 @@ test("UI素材生产流程可生成、标记、确认、切图并预览输出", 
     expect.objectContaining({
       screen_type: "main_ui",
       reference_image_path: "assets/uploads/reference-main-ui.png",
+      system_prompt: expect.stringContaining("手机横屏传奇手游主界面"),
       requirement: "主界面布局清晰，技能区和地图区优先。",
       style_reference_strength: "none",
+      project_id: "project-996",
+      device_type: "mobile_landscape",
+      layout_template: "classic_legend_mobile",
       adjustment_note: "",
       adjustment_image_path: null,
     }),
@@ -489,7 +495,11 @@ test("标记验收测试模式可自动填充并展示验收结果", async () =>
   expect(api.runMarkingAcceptanceTest).toHaveBeenCalledWith(
     expect.objectContaining({
       reference_image_path: "assets/uploads/reference-main-ui.png",
+      system_prompt: expect.stringContaining("手机横屏传奇手游主界面"),
       requirement: "编辑后的验收提示词：技能区需要半圆布局。",
+      project_id: "project-marking",
+      device_type: "mobile_landscape",
+      layout_template: "classic_legend_mobile",
       adjustment_note: "用于测试自动标记和自动切图准确性",
     }),
   );
@@ -511,4 +521,21 @@ test("标记验收测试模式可自动填充并展示验收结果", async () =>
   expect(screen.getByText("harness/examples/main_ui/marking_test/manual_acceptance.json")).toBeInTheDocument();
   expect(screen.getByText("harness/examples/main_ui/marking_test/marking_acceptance_report.json")).toBeInTheDocument();
   expect(screen.getByText(/training_samples\/main_ui\/candidate_samples\.json/)).toBeInTheDocument();
+});
+
+test("系统生成提示词优先读取同类 high_quality prompt", async () => {
+  api.getPromptSampleSuggestion.mockResolvedValue({
+    found: true,
+    sample_id: "sample-high-quality",
+    final_prompt: "历史高质量主界面提示词：技能半圆布局清晰，按钮和面板独立。",
+    quality: "high_quality",
+  });
+  render(<ProductionStudio api={api} />);
+
+  expect(await screen.findByText("系统生成提示词")).toBeInTheDocument();
+  await waitFor(() => {
+    const promptField = screen.getByLabelText("系统生成提示词") as HTMLTextAreaElement;
+    expect(promptField.value).toContain("历史高质量提示词参考");
+    expect(promptField.value).toContain("历史高质量主界面提示词");
+  });
 });

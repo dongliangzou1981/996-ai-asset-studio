@@ -92,22 +92,20 @@ def test_main_ui_endpoint_rejects_outside_package_path(tmp_path: Path) -> None:
     assert response.status_code == 400
 
 
-def test_ui_production_generate_mark_and_export_main_ui(tmp_path: Path, monkeypatch) -> None:
-    source = tmp_path / "source.jpg"
-    write_source(source)
-
-    def fake_default_source(upload_root):  # type: ignore[no-untyped-def]
-        return source
-
-    monkeypatch.setattr("scripts.main_ui_production_chain.default_source_image", fake_default_source)
+def test_ui_production_generate_mark_export_and_prompt_samples(tmp_path: Path) -> None:
     client = make_client(tmp_path)
 
     generated = client.post(
         "/production-studio/ui-production/generate",
         json={
             "screen_type": "main_ui",
+            "system_prompt": "system generated prompt",
             "requirement": "main ui layout",
             "style_reference_strength": "60",
+            "project_id": "project-1",
+            "device_type": "mobile_landscape",
+            "layout_template": "classic_legend_mobile",
+            "adjustment_note": "manual note",
         },
     )
     assert generated.status_code == 200
@@ -117,6 +115,17 @@ def test_ui_production_generate_mark_and_export_main_ui(tmp_path: Path, monkeypa
     generated_files = {item["file"]: item for item in generated.json()["package_files"]}
     assert generated_files["main_ui.jpg"]["exists"] is True
     assert generated_files["candidate_preview.jpg"]["exists"] is False
+    prompt_samples_path = tmp_path / "training_samples" / "prompts" / "prompt_samples.json"
+    prompt_samples = json.loads(prompt_samples_path.read_text(encoding="utf-8"))
+    sample = prompt_samples["samples"][0]
+    assert sample["system_prompt"] == "system generated prompt"
+    assert sample["final_prompt"] == "main ui layout"
+    assert sample["project_id"] == "project-1"
+    assert sample["interface_type"] == "main_ui"
+    assert sample["device_type"] == "mobile_landscape"
+    assert sample["layout_template"] == "classic_legend_mobile"
+    assert sample["accepted"] is False
+    assert sample["manual_adjustment_note"] == "manual note"
 
     marked = client.post("/production-studio/ui-production/mark-candidates", params={"package_dir": package_dir})
     assert marked.status_code == 200
@@ -153,6 +162,33 @@ def test_ui_production_generate_mark_and_export_main_ui(tmp_path: Path, monkeypa
     assert exported_files["production_review.json"]["exists"] is True
     assert exported_files["training_samples/main_ui/candidate_samples.json"]["exists"] is True
     assert exported.json()["training_samples_url"].endswith("/training_samples/main_ui/candidate_samples.json")
+    prompt_samples = json.loads(prompt_samples_path.read_text(encoding="utf-8"))
+    sample = prompt_samples["samples"][0]
+    assert sample["marking_result"]["status"] == "exported"
+    assert sample["marking_result"]["total_marks"] > 0
+
+    accepted = client.put(
+        "/production-studio/manual-acceptance",
+        params={"package_dir": package_dir},
+        json={"review_status": "accepted", "reviewer": "qa", "remarks": "approved"},
+    )
+    assert accepted.status_code == 200
+    prompt_samples = json.loads(prompt_samples_path.read_text(encoding="utf-8"))
+    sample = prompt_samples["samples"][0]
+    assert sample["accepted"] is True
+    assert sample["quality"] == "high_quality"
+
+    best = client.get(
+        "/production-studio/prompt-samples/best",
+        params={
+            "interface_type": "main_ui",
+            "device_type": "mobile_landscape",
+            "layout_template": "classic_legend_mobile",
+        },
+    )
+    assert best.status_code == 200
+    assert best.json()["found"] is True
+    assert best.json()["final_prompt"] == "main ui layout"
 
 
 def test_ui_production_other_screen_types_are_placeholders(tmp_path: Path) -> None:
@@ -176,7 +212,14 @@ def test_marking_acceptance_test_generates_harness_outputs(tmp_path: Path, monke
 
     response = client.post(
         "/production-studio/marking-acceptance-test/run",
-        json={"requirement": "edited prompt for fallback", "adjustment_note": "fallback adjustment"},
+        json={
+            "system_prompt": "fallback system prompt",
+            "requirement": "edited prompt for fallback",
+            "project_id": "project-marking",
+            "device_type": "mobile_landscape",
+            "layout_template": "classic_legend_mobile",
+            "adjustment_note": "fallback adjustment",
+        },
     )
 
     assert response.status_code == 200
@@ -209,6 +252,11 @@ def test_marking_acceptance_test_generates_harness_outputs(tmp_path: Path, monke
     assert report["by_type"]["button"] >= 1
     assert report["by_type"]["skill"] >= 1
     assert report["marking_json_path"].endswith("marking.json")
+    prompt_samples = json.loads((tmp_path / "training_samples" / "prompts" / "prompt_samples.json").read_text(encoding="utf-8"))
+    sample = prompt_samples["samples"][0]
+    assert sample["system_prompt"] == "fallback system prompt"
+    assert sample["final_prompt"] == "edited prompt for fallback"
+    assert sample["marking_result"]["project_code"] == "MARKING_TEST"
 
 
 def test_marking_acceptance_test_prefers_uploaded_reference(tmp_path: Path, monkeypatch) -> None:

@@ -364,6 +364,15 @@ export type MarkingAcceptanceResult = {
   production: MainUiProductionResult;
 };
 
+export type PromptSampleSuggestion = {
+  found: boolean;
+  sample_id?: string;
+  system_prompt?: string;
+  final_prompt?: string;
+  quality?: string;
+  updated_at?: string;
+};
+
 export type ListResponse<T> = {
   items: T[];
 };
@@ -544,8 +553,12 @@ export const studioApi = {
   generateUiProductionPackage(payload: {
     screen_type: string;
     reference_image_path?: string | null;
+    system_prompt?: string;
     requirement: string;
     style_reference_strength: string;
+    project_id?: string;
+    device_type?: string;
+    layout_template?: string;
     adjustment_note?: string;
     adjustment_image_path?: string | null;
   }) {
@@ -586,8 +599,12 @@ export const studioApi = {
   },
   runMarkingAcceptanceTest(payload: {
     reference_image_path?: string | null;
+    system_prompt?: string;
     requirement: string;
     style_reference_strength: string;
+    project_id?: string;
+    device_type?: string;
+    layout_template?: string;
     adjustment_note?: string;
     adjustment_image_path?: string | null;
   }) {
@@ -595,6 +612,10 @@ export const studioApi = {
       method: "POST",
       body: JSON.stringify(payload),
     });
+  },
+  getPromptSampleSuggestion(params: { interface_type: string; device_type: string; layout_template: string }) {
+    const query = new URLSearchParams(params).toString();
+    return request<PromptSampleSuggestion>(`/production-studio/prompt-samples/best?${query}`);
   },
   getMainUiProduction(packageDir: string) {
     return request<MainUiProductionResult>(
