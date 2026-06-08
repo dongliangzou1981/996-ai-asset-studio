@@ -118,8 +118,61 @@ const MARKING_TEST_PROJECT_CODE = "MARKING_TEST";
 const MARKING_TEST_REQUIREMENT = "生成一张用于996传奇引擎的主界面UI";
 const MARKING_TEST_ADJUSTMENT = "用于测试自动标记和自动切图准确性";
 
+const PROMPT_DEVICE_LABELS: Record<ProductionDeviceType, string> = {
+  mobile_landscape: "手机横屏",
+  pc_landscape: "PC横屏",
+};
+
+const PROMPT_ASSET_MODE_LABELS: Record<ProductionAssetMode, string> = {
+  resource_production: "资源生产",
+  ui_package: "UI整包",
+};
+
+const PROMPT_LAYOUT_LABELS: Record<ProductionLayoutTemplate, string> = {
+  classic_legend_mobile: "经典传奇手游布局",
+  legend_176: "1.76经典布局",
+  legend_185_combo: "1.85合击布局",
+  silent_version: "沉默版本布局",
+  hot_blood: "热血版本布局",
+};
+
+const PROMPT_GENERATION_MODE_LABELS: Record<ProductionGenerationMode, string> = {
+  auto_generate: "自动生成",
+  reference_guided: "参考图引导",
+};
+
 function isUiProductionResult(value: unknown): value is MainUiProductionResult {
   return Boolean(value && typeof value === "object" && "package_dir" in value);
+}
+
+function buildMainUiProductionPrompt(input: {
+  projectName: string;
+  projectCode: string;
+  deviceType: ProductionDeviceType;
+  assetMode: ProductionAssetMode;
+  layoutTemplate: ProductionLayoutTemplate;
+  screenType: UiProductionScreenType;
+  generationMode: ProductionGenerationMode;
+  hasReferenceImage: boolean;
+  adjustmentNote: string;
+}) {
+  const referenceLine = input.hasReferenceImage
+    ? "已上传参考图：风格跟随参考图或整体风格，不照抄参考图内容。"
+    : "未上传参考图：使用系统内置 fallback 测试图或整体风格生成，不依赖 P5 资源。";
+  const screenLine =
+    input.screenType === "main_ui"
+      ? "生成手机横屏传奇手游主界面，包含顶部信息区、右上地图、右侧入口按钮、右下技能操作区、左下摇杆、底部经验条、聊天区清晰。"
+      : `生成 ${input.screenType} 界面。`;
+
+  return [
+    `项目：${input.projectName || "未命名项目"} / ${input.projectCode || "未设置代号"}`,
+    `生产参数：${PROMPT_DEVICE_LABELS[input.deviceType]}，${PROMPT_ASSET_MODE_LABELS[input.assetMode]}，${PROMPT_LAYOUT_LABELS[input.layoutTemplate]}，界面类型 ${input.screenType}，生成模式 ${PROMPT_GENERATION_MODE_LABELS[input.generationMode]}。`,
+    screenLine,
+    "布局要求：经典传奇手游布局，UI 元素边界清楚，方便自动标记和切图；按钮、图标、面板需要独立清晰。",
+    "右下技能区：主技能按钮固定右下角偏内侧，小技能围绕主技能形成半圆布局，预留第二圈技能按钮空间，避免遮挡底部经验条和聊天区域，符合手机横屏右手拇指操作体验。",
+    referenceLine,
+    input.adjustmentNote ? `调整说明：${input.adjustmentNote}` : "调整说明：无。",
+  ].join("\n");
 }
 
 function defaultAcceptanceRecord(): AcceptanceRecord {
@@ -151,7 +204,8 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
   const [mainUiProduction, setMainUiProduction] = useState<MainUiProductionResult | null>(null);
   const [mainUiLoading, setMainUiLoading] = useState(false);
   const [uiProductionScreenType, setUiProductionScreenType] = useState<UiProductionScreenType>("main_ui");
-  const [uiProductionRequirement, setUiProductionRequirement] = useState("手机横屏传奇主界面，顶部信息、右上地图、右侧入口、右下技能、左下摇杆、聊天区清晰。");
+  const [uiProductionRequirement, setUiProductionRequirement] = useState("");
+  const [uiProductionPromptEdited, setUiProductionPromptEdited] = useState(false);
   const [uiProductionStyleReference, setUiProductionStyleReference] = useState("none");
   const [uiProductionReferencePath, setUiProductionReferencePath] = useState<string | null>(null);
   const [uiProductionReferencePreviewUrl, setUiProductionReferencePreviewUrl] = useState("");
@@ -168,6 +222,7 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
   const [expandedPreview, setExpandedPreview] = useState<{ src: string; label: string } | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const selectedProject = projects.find((project) => project.id === selectedProjectId);
 
   useEffect(() => {
     api
@@ -215,6 +270,36 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
       .then((response) => setMainUiProduction(response))
       .catch(() => window.localStorage.removeItem("uiProductionPackageDir"));
   }, [api]);
+
+  useEffect(() => {
+    if (uiProductionPromptEdited) {
+      return;
+    }
+    setUiProductionRequirement(
+      buildMainUiProductionPrompt({
+        projectName: selectedProject?.name ?? MARKING_TEST_PROJECT_NAME,
+        projectCode: selectedProject?.description ?? MARKING_TEST_PROJECT_CODE,
+        deviceType,
+        assetMode,
+        layoutTemplate,
+        screenType: uiProductionScreenType,
+        generationMode,
+        hasReferenceImage: Boolean(uiProductionReferencePath),
+        adjustmentNote: uiAdjustmentNote,
+      }),
+    );
+  }, [
+    assetMode,
+    deviceType,
+    generationMode,
+    layoutTemplate,
+    selectedProject?.description,
+    selectedProject?.name,
+    uiAdjustmentNote,
+    uiProductionPromptEdited,
+    uiProductionReferencePath,
+    uiProductionScreenType,
+  ]);
 
   function toggleScreen(screenType: ProductionScreenType) {
     setScreenTypes((items) => {
@@ -289,14 +374,24 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
       setLayoutTemplate("classic_legend_mobile");
       setUiProductionScreenType("main_ui");
       chooseGenerationMode("auto_generate");
-      setUiProductionRequirement(MARKING_TEST_REQUIREMENT);
+      setUiProductionPromptEdited(false);
       setUiAdjustmentNote(MARKING_TEST_ADJUSTMENT);
       setUiProductionStyleReference("none");
-      setUiProductionReferencePath(null);
-      setUiProductionReferencePreviewUrl("");
-      setUiProductionReferenceFileName("");
       setUiAdjustmentImagePath(null);
       setUiAdjustmentImageName("");
+      setUiProductionRequirement(
+        buildMainUiProductionPrompt({
+          projectName: project.name,
+          projectCode: project.description,
+          deviceType: "mobile_landscape",
+          assetMode: "resource_production",
+          layoutTemplate: "classic_legend_mobile",
+          screenType: "main_ui",
+          generationMode: "auto_generate",
+          hasReferenceImage: Boolean(uiProductionReferencePath),
+          adjustmentNote: MARKING_TEST_ADJUSTMENT,
+        }),
+      );
       setMarkingTestMode(true);
       setUiProductionMessage("已进入标记验收测试：参数已自动填充，请点击一键生成并标记测试。");
     } catch {
@@ -312,7 +407,13 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
     setError("");
     setUiProductionMessage("正在自动生成三张候选图、选择第一张、标记组件并执行切图...");
     try {
-      const response = await api.runMarkingAcceptanceTest();
+      const response = await api.runMarkingAcceptanceTest({
+        reference_image_path: uiProductionReferencePath,
+        requirement: uiProductionRequirement,
+        style_reference_strength: uiProductionStyleReference,
+        adjustment_note: uiAdjustmentNote,
+        adjustment_image_path: uiAdjustmentImagePath,
+      });
       setMarkingAcceptanceResult(response);
       setMainUiProduction(response.production);
       setSelectedProjectId(response.project.id);
@@ -321,8 +422,8 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
       );
       window.localStorage.setItem("uiProductionPackageDir", response.production.package_dir);
       setUiProductionMessage("标记验收测试完成：已输出 candidate_preview、marking JSON、切图和验收报告。");
-    } catch {
-      setError("一键生成并标记测试失败，请检查后端服务和生产链输出。");
+    } catch (exc) {
+      setError(`一键生成并标记测试失败：${exc instanceof Error ? exc.message : "未知错误"}`);
     } finally {
       setMarkingTestLoading(false);
       setMainUiLoading(false);
@@ -426,8 +527,8 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
       setMainUiProduction(response);
       window.localStorage.setItem("uiProductionPackageDir", response.package_dir);
       setUiProductionMessage("生成完成：已输出 main_ui.jpg，请继续标记候选组件。");
-    } catch {
-      setError("生成界面失败，请确认参考图或本地 P5 主界面素材可访问。");
+    } catch (exc) {
+      setError(`生成界面失败：${exc instanceof Error ? exc.message : "未知错误"}`);
     } finally {
       setMainUiLoading(false);
     }
@@ -609,7 +710,6 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
 
   const projectContext = mainUiProduction?.project_context;
   const canPreviewPackageFile = (file: string) => /\.(png|jpe?g|webp)$/i.test(file);
-  const selectedProject = projects.find((project) => project.id === selectedProjectId);
 
   return (
     <section className="grid min-w-0 gap-4 xl:grid-cols-[260px_320px_minmax(0,1fr)]">
@@ -820,11 +920,19 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
               </div>
             ) : null}
           </div>
-          <label className="grid gap-1 text-sm font-medium">
+          <label className="grid gap-2 text-sm font-medium">
+            <span>系统生成提示词</span>
+            <span className="text-xs font-normal text-studio-muted">
+              系统会根据项目、设备、布局、界面类型、参考图和调整说明生成；可直接编辑，实际生成会使用这里的最终文本。
+            </span>
             3. 生成提示词 / 需求描述
             <textarea
-              className="min-h-24 rounded-md border border-studio-line px-3 py-2 font-normal leading-6"
-              onChange={(event) => setUiProductionRequirement(event.target.value)}
+              aria-label="系统生成提示词"
+              className="min-h-44 rounded-md border border-studio-line px-3 py-2 font-normal leading-6"
+              onChange={(event) => {
+                setUiProductionPromptEdited(true);
+                setUiProductionRequirement(event.target.value);
+              }}
               value={uiProductionRequirement}
             />
           </label>
@@ -938,6 +1046,10 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
                   <dd className="mt-1 text-xl font-semibold">{markingAcceptanceResult.by_type.icon}</dd>
                 </div>
                 <div className="rounded-md bg-white p-3">
+                  <dt className="text-studio-muted">技能数量</dt>
+                  <dd className="mt-1 text-xl font-semibold">{markingAcceptanceResult.by_type.skill}</dd>
+                </div>
+                <div className="rounded-md bg-white p-3">
                   <dt className="text-studio-muted">切图成功数量</dt>
                   <dd className="mt-1 text-xl font-semibold">{markingAcceptanceResult.slice_success}</dd>
                 </div>
@@ -952,12 +1064,20 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
                   {markingAcceptanceResult.manifest_path}
                 </div>
                 <div className="break-all">
+                  <span className="font-semibold">marking.json 路径：</span>
+                  {markingAcceptanceResult.marking_json_path}
+                </div>
+                <div className="break-all">
                   <span className="font-semibold">manual_acceptance.json 路径：</span>
                   {markingAcceptanceResult.manual_acceptance_path}
                 </div>
                 <div className="break-all">
                   <span className="font-semibold">training_samples 路径：</span>
                   {markingAcceptanceResult.training_samples_path}
+                </div>
+                <div className="break-all">
+                  <span className="font-semibold">marking_acceptance_report.json 路径：</span>
+                  {markingAcceptanceResult.report_path}
                 </div>
               </div>
             </section>

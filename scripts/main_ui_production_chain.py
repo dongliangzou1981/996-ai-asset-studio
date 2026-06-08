@@ -318,10 +318,61 @@ def image_has_transparent_pixels(path: Path) -> bool:
 
 
 def default_source_image(upload_root: Path) -> Path:
-    local_copy = upload_root / "sprint20b-source" / "p5_main_ui.jpg"
-    if local_copy.exists():
-        return local_copy
+    fallback = upload_root / "sprint20i-fallback" / "mock_main_ui.jpg"
+    if not fallback.exists():
+        create_fallback_main_ui_source(fallback)
+    if fallback.exists():
+        return fallback
     return P5_MAIN_UI_SOURCE
+
+
+def create_fallback_main_ui_source(target: Path) -> Path:
+    target.parent.mkdir(parents=True, exist_ok=True)
+    width, height = 1280, 720
+    image = Image.new("RGB", (width, height), (28, 31, 36))
+    draw = ImageDraw.Draw(image)
+
+    draw.rectangle((0, 0, width, height), fill=(34, 37, 43))
+    draw.rectangle((0, 0, width, 92), fill=(56, 48, 39), outline=(190, 146, 70), width=3)
+    draw.rectangle((18, 16, 290, 132), fill=(45, 51, 64), outline=(224, 178, 82), width=4)
+    draw.rectangle((0, 20, 285, 352), fill=(38, 43, 52), outline=(166, 129, 67), width=4)
+    draw.rectangle((20, 250, 270, 380), fill=(44, 54, 57), outline=(158, 129, 74), width=3)
+    draw.rectangle((650, 572, 965, 690), fill=(30, 38, 46), outline=(126, 109, 78), width=3)
+    draw.rectangle((300, 585, 1015, 705), fill=(50, 43, 38), outline=(202, 156, 76), width=5)
+    draw.rectangle((326, 674, 974, 692), fill=(81, 31, 28), outline=(231, 180, 87), width=2)
+    draw.rectangle((1075, 18, 1265, 190), fill=(35, 52, 49), outline=(212, 169, 83), width=5)
+
+    for index, center in enumerate([(90, 610), (180, 575), (115, 655)], 1):
+        radius = 52 if index == 1 else 34
+        draw.ellipse(
+            (center[0] - radius, center[1] - radius, center[0] + radius, center[1] + radius),
+            fill=(55, 61, 67),
+            outline=(215, 170, 86),
+            width=4,
+        )
+
+    skill_centers = [(1110, 610), (1190, 655), (1200, 535), (1045, 665), (1048, 548)]
+    for index, center in enumerate(skill_centers):
+        radius = 58 if index == 0 else 40
+        draw.ellipse(
+            (center[0] - radius, center[1] - radius, center[0] + radius, center[1] + radius),
+            fill=(68, 48, 44),
+            outline=(236, 182, 83),
+            width=5,
+        )
+
+    for x in [675, 735, 795, 855]:
+        draw.rectangle((x, 560, x + 46, 626), fill=(42, 43, 51), outline=(196, 154, 78), width=3)
+
+    for x, y in [(1095, 250), (1180, 250), (990, 610), (1220, 340)]:
+        draw.ellipse((x, y, x + 58, y + 58), fill=(44, 55, 69), outline=(210, 168, 84), width=3)
+
+    font = load_badge_font(28)
+    draw.text((44, 42), "Fallback Main UI", fill=(242, 220, 164), font=font)
+    draw.text((672, 646), "EXP", fill=(242, 220, 164), font=font)
+    draw.text((676, 598), "CHAT", fill=(242, 220, 164), font=font)
+    image.save(target, "JPEG", quality=92)
+    return target
 
 
 def style_reference_note(style_reference_strength: str) -> str:

@@ -147,6 +147,7 @@ const markingAcceptanceResult = {
     panel: 3,
     button: 3,
     icon: 1,
+    skill: 2,
   },
   slice_success: 6,
   slice_failed: 0,
@@ -164,6 +165,7 @@ const markingAcceptanceResult = {
     "/production-studio/files/996-ready/SPRINT20B_MAIN_UI/main_ui/job-main-ui/candidate_preview.jpg",
   candidate_preview_path: "harness/examples/main_ui/marking_test/candidate_preview.png",
   manifest_path: "harness/examples/main_ui/marking_test/manifest.json",
+  marking_json_path: "harness/examples/main_ui/marking_test/marking.json",
   manual_acceptance_path: "harness/examples/main_ui/marking_test/manual_acceptance.json",
   training_samples_path:
     "assets/uploads/996-ready/SPRINT20B_MAIN_UI/main_ui/job-main-ui/training_samples/main_ui/candidate_samples.json",
@@ -343,8 +345,10 @@ test("UI素材生产流程可生成、标记、确认、切图并预览输出", 
   expect(await screen.findByAltText("UI素材生产参考图预览")).toHaveAttribute("src", "blob:reference-preview");
 
   await user.selectOptions(screen.getByLabelText("生成模式"), "reference_guided");
-  await user.clear(screen.getByLabelText("3. 生成提示词 / 需求描述"));
-  await user.type(screen.getByLabelText("3. 生成提示词 / 需求描述"), "主界面布局清晰，技能区和地图区优先。");
+  const generatedPrompt = screen.getByLabelText("系统生成提示词") as HTMLTextAreaElement;
+  expect(generatedPrompt.value).toContain("手机横屏传奇手游主界面");
+  await user.clear(generatedPrompt);
+  await user.type(generatedPrompt, "主界面布局清晰，技能区和地图区优先。");
   await user.click(screen.getByRole("button", { name: "生成界面" }));
 
   expect(api.generateUiProductionPackage).toHaveBeenCalledWith(
@@ -462,6 +466,8 @@ test("标记验收测试模式可自动填充并展示验收结果", async () =>
   render(<ProductionStudio api={api} />);
 
   expect(await screen.findByText("验收测试模式")).toBeInTheDocument();
+  const referenceFile = new File(["fake"], "reference-main-ui.png", { type: "image/png" });
+  await user.upload(screen.getByLabelText("2. 上传参考图"), referenceFile);
   await user.click(screen.getByRole("button", { name: "进入标记验收测试" }));
 
   expect(api.createProject).toHaveBeenCalledWith({
@@ -470,12 +476,23 @@ test("标记验收测试模式可自动填充并展示验收结果", async () =>
     status: "draft",
   });
   expect(await screen.findByText("当前模式：标记验收测试 / MARKING_TEST")).toBeInTheDocument();
-  expect(screen.getByDisplayValue("生成一张用于996传奇引擎的主界面UI")).toBeInTheDocument();
+  const promptField = screen.getByLabelText("系统生成提示词") as HTMLTextAreaElement;
+  expect(promptField.value).toContain("手机横屏传奇手游主界面");
+  expect(promptField.value).toContain("右下技能操作区");
+  expect(promptField.value).toContain("主技能按钮固定右下角偏内侧");
   expect(screen.getByDisplayValue("用于测试自动标记和自动切图准确性")).toBeInTheDocument();
+  await user.clear(promptField);
+  await user.type(promptField, "编辑后的验收提示词：技能区需要半圆布局。");
 
   await user.click(screen.getByRole("button", { name: "一键生成并标记测试" }));
 
-  expect(api.runMarkingAcceptanceTest).toHaveBeenCalledTimes(1);
+  expect(api.runMarkingAcceptanceTest).toHaveBeenCalledWith(
+    expect.objectContaining({
+      reference_image_path: "assets/uploads/reference-main-ui.png",
+      requirement: "编辑后的验收提示词：技能区需要半圆布局。",
+      adjustment_note: "用于测试自动标记和自动切图准确性",
+    }),
+  );
   expect(await screen.findByText("标记验收结果")).toBeInTheDocument();
   expect(screen.getByAltText("标记验收 candidate_preview")).toHaveAttribute(
     "src",
@@ -486,9 +503,12 @@ test("标记验收测试模式可自动填充并展示验收结果", async () =>
   expect(screen.getByText("面板数量")).toBeInTheDocument();
   expect(screen.getByText("按钮数量")).toBeInTheDocument();
   expect(screen.getByText("图标数量")).toBeInTheDocument();
+  expect(screen.getByText("技能数量")).toBeInTheDocument();
   expect(screen.getByText("切图成功数量")).toBeInTheDocument();
   expect(screen.getByText("切图失败数量")).toBeInTheDocument();
   expect(screen.getByText("harness/examples/main_ui/marking_test/manifest.json")).toBeInTheDocument();
+  expect(screen.getByText("harness/examples/main_ui/marking_test/marking.json")).toBeInTheDocument();
   expect(screen.getByText("harness/examples/main_ui/marking_test/manual_acceptance.json")).toBeInTheDocument();
+  expect(screen.getByText("harness/examples/main_ui/marking_test/marking_acceptance_report.json")).toBeInTheDocument();
   expect(screen.getByText(/training_samples\/main_ui\/candidate_samples\.json/)).toBeInTheDocument();
 });

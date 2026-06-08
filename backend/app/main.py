@@ -240,6 +240,8 @@ def create_app(database_path: str | Path | None = None, upload_dir: str | Path |
 
     def marking_type(component_type: str) -> str:
         value = component_type.lower()
+        if "skill" in value:
+            return "skill"
         if "background" in value or value == "screen":
             return "background"
         if "button" in value or "joystick" in value or "slot" in value:
@@ -260,7 +262,7 @@ def create_app(database_path: str | Path | None = None, upload_dir: str | Path |
         confirmed_components = production.get("confirmed_components", [])
         selected_candidate_id = str(production.get("selected_candidate_id") or "candidate_1")
 
-        by_type = {"background": 0, "panel": 0, "button": 0, "icon": 0}
+        by_type = {"background": 0, "panel": 0, "button": 0, "icon": 0, "skill": 0}
         for candidate in candidates:
             by_type[marking_type(str(candidate.get("component_type") or ""))] += 1
 
@@ -312,6 +314,7 @@ def create_app(database_path: str | Path | None = None, upload_dir: str | Path |
             "warnings": warnings,
             "project_id": project.id,
             "manifest_path": str(harness_dir / "manifest.json"),
+            "marking_json_path": str(harness_dir / "marking.json"),
             "manual_acceptance_path": str(harness_dir / "manual_acceptance.json"),
             "training_samples_path": str(package_dir / "training_samples" / "main_ui" / "candidate_samples.json"),
             "harness_dir": str(harness_dir),
@@ -552,15 +555,19 @@ def create_app(database_path: str | Path | None = None, upload_dir: str | Path |
         return main_ui_package_response(package_path)
 
     @app.post("/production-studio/marking-acceptance-test/run")
-    def run_marking_acceptance_test() -> dict:
+    def run_marking_acceptance_test(payload: dict | None = None) -> dict:
+        payload = payload or {}
         project = ensure_marking_test_project()
         try:
+            source = resolve_uploaded_source_file(payload.get("reference_image_path"))
             result = create_ui_package(
                 upload_root=upload_root,
                 screen_type="main_ui",
-                requirement="生成一张用于996传奇引擎的主界面UI",
-                style_reference_strength="none",
-                adjustment_note="用于测试自动标记和自动切图准确性",
+                source_image=source,
+                requirement=str(payload.get("requirement") or "生成一张用于996传奇引擎的主界面UI"),
+                style_reference_strength=str(payload.get("style_reference_strength") or "none"),
+                adjustment_note=str(payload.get("adjustment_note") or "用于测试自动标记和自动切图准确性"),
+                adjustment_image_path=str(payload.get("adjustment_image_path") or ""),
             )
             package_path = resolve_production_package_dir(str(result["package_dir"]))
             select_candidate_option(package_path, "candidate_1")

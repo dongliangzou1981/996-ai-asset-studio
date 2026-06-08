@@ -169,18 +169,15 @@ def test_ui_production_other_screen_types_are_placeholders(tmp_path: Path) -> No
 
 
 def test_marking_acceptance_test_generates_harness_outputs(tmp_path: Path, monkeypatch) -> None:
-    source = tmp_path / "source.jpg"
-    write_source(source)
     harness_root = tmp_path / "harness_examples"
 
-    def fake_default_source(upload_root):  # type: ignore[no-untyped-def]
-        return source
-
     monkeypatch.setenv("STUDIO_HARNESS_EXAMPLES_DIR", str(harness_root))
-    monkeypatch.setattr("scripts.main_ui_production_chain.default_source_image", fake_default_source)
     client = make_client(tmp_path)
 
-    response = client.post("/production-studio/marking-acceptance-test/run")
+    response = client.post(
+        "/production-studio/marking-acceptance-test/run",
+        json={"requirement": "edited prompt for fallback", "adjustment_note": "fallback adjustment"},
+    )
 
     assert response.status_code == 200
     body = response.json()
@@ -190,8 +187,12 @@ def test_marking_acceptance_test_generates_harness_outputs(tmp_path: Path, monke
     assert body["candidate_id"] == "candidate_1"
     assert body["total_marks"] > 0
     assert body["slice_success"] > 0
+    assert body["by_type"]["skill"] > 0
     assert body["production"]["selected_candidate_id"] == "candidate_1"
     assert body["production"]["candidate_options"][0]["selected"] is True
+    delivery = json.loads((Path(body["production"]["package_dir"]) / "delivery_report.json").read_text(encoding="utf-8"))
+    assert delivery["requirement"] == "edited prompt for fallback"
+    assert "sprint20i-fallback" in delivery["source_note"]["source_image"]
 
     output_dir = harness_root / "main_ui" / "marking_test"
     assert (output_dir / "original.jpg").exists()
@@ -206,3 +207,31 @@ def test_marking_acceptance_test_generates_harness_outputs(tmp_path: Path, monke
     assert report["project_code"] == "MARKING_TEST"
     assert report["by_type"]["background"] >= 1
     assert report["by_type"]["button"] >= 1
+    assert report["by_type"]["skill"] >= 1
+    assert report["marking_json_path"].endswith("marking.json")
+
+
+def test_marking_acceptance_test_prefers_uploaded_reference(tmp_path: Path, monkeypatch) -> None:
+    harness_root = tmp_path / "harness_examples"
+    upload_root = tmp_path / "uploads"
+    reference = upload_root / "references" / "uploaded-main-ui.jpg"
+    reference.parent.mkdir(parents=True)
+    write_source(reference)
+
+    monkeypatch.setenv("STUDIO_HARNESS_EXAMPLES_DIR", str(harness_root))
+    client = TestClient(create_app(database_path=tmp_path / "studio.db", upload_dir=upload_root))
+
+    response = client.post(
+        "/production-studio/marking-acceptance-test/run",
+        json={
+            "reference_image_path": str(reference),
+            "requirement": "uploaded reference prompt",
+            "adjustment_note": "uploaded reference adjustment",
+        },
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    delivery = json.loads((Path(body["production"]["package_dir"]) / "delivery_report.json").read_text(encoding="utf-8"))
+    assert delivery["requirement"] == "uploaded reference prompt"
+    assert delivery["source_note"]["source_image"] == str(reference)

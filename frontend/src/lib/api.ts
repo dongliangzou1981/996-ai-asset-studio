@@ -346,6 +346,7 @@ export type MarkingAcceptanceResult = {
     panel: number;
     button: number;
     icon: number;
+    skill: number;
   };
   slice_success: number;
   slice_failed: number;
@@ -355,6 +356,7 @@ export type MarkingAcceptanceResult = {
   candidate_preview_url: string;
   candidate_preview_path: string;
   manifest_path: string;
+  marking_json_path: string;
   manual_acceptance_path: string;
   training_samples_path: string;
   harness_dir: string;
@@ -378,7 +380,18 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   });
 
   if (!response.ok) {
-    throw new Error(`API request failed: ${response.status}`);
+    let message = `API request failed: ${response.status}`;
+    try {
+      const body = await response.json();
+      if (typeof body?.detail === "string") {
+        message = body.detail;
+      } else if (Array.isArray(body?.detail)) {
+        message = body.detail.map((item: { msg?: string }) => item.msg).filter(Boolean).join("; ") || message;
+      }
+    } catch {
+      // Keep the status-only fallback when the response body is not JSON.
+    }
+    throw new Error(message);
   }
 
   if (response.status === 204) {
@@ -571,8 +584,17 @@ export const studioApi = {
       { method: "POST" },
     );
   },
-  runMarkingAcceptanceTest() {
-    return request<MarkingAcceptanceResult>("/production-studio/marking-acceptance-test/run", { method: "POST" });
+  runMarkingAcceptanceTest(payload: {
+    reference_image_path?: string | null;
+    requirement: string;
+    style_reference_strength: string;
+    adjustment_note?: string;
+    adjustment_image_path?: string | null;
+  }) {
+    return request<MarkingAcceptanceResult>("/production-studio/marking-acceptance-test/run", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
   },
   getMainUiProduction(packageDir: string) {
     return request<MainUiProductionResult>(
