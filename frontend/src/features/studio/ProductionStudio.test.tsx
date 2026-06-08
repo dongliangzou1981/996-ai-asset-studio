@@ -334,6 +334,12 @@ test("UI素材生产流程可生成、标记、确认、切图并预览输出", 
   expect(await screen.findByText("UI素材生产")).toBeInTheDocument();
   expect(screen.getByText("项目列表")).toBeInTheDocument();
   expect(screen.getByLabelText("1. 选择界面类型")).toHaveDisplayValue("主界面");
+  expect(screen.getByLabelText("生成模式")).toHaveDisplayValue("普通生成");
+  expect(screen.queryByLabelText("2. 上传参考图")).not.toBeInTheDocument();
+
+  await user.selectOptions(screen.getByLabelText("生成模式"), "reference_ratio");
+  expect(screen.getByLabelText("生成模式")).toHaveDisplayValue("参考图生成（按比例）");
+  expect(screen.getByLabelText("参考图影响比例")).toHaveValue("40");
 
   const file = new File(["fake"], "reference-main-ui.png", { type: "image/png" });
   await user.upload(screen.getByLabelText("2. 上传参考图"), file);
@@ -346,12 +352,12 @@ test("UI素材生产流程可生成、标记、确认、切图并预览输出", 
   });
   expect(await screen.findByAltText("UI素材生产参考图预览")).toHaveAttribute("src", "blob:reference-preview");
 
-  await user.selectOptions(screen.getByLabelText("生成模式"), "reference_guided");
   const generatedPrompt = screen.getByLabelText("系统生成提示词") as HTMLTextAreaElement;
-  expect(generatedPrompt.value).toContain("手机横屏传奇手游主界面");
-  expect(generatedPrompt.value).toContain("参考图影响比例为 40%");
-  expect(generatedPrompt.value).toContain("固定布局骨架必须保持");
-  expect(screen.getByLabelText("参考图影响比例")).toHaveValue("40");
+  await waitFor(() => {
+    expect(generatedPrompt.value).toContain("手机横屏传奇手游主界面");
+    expect(generatedPrompt.value).toContain("参考图影响比例为 40%");
+    expect(generatedPrompt.value).toContain("固定布局骨架必须保持");
+  });
   await user.clear(generatedPrompt);
   await user.type(generatedPrompt, "主界面布局清晰，技能区和地图区优先。");
   await user.click(screen.getByRole("button", { name: "生成界面" }));
@@ -448,6 +454,50 @@ test("项目栏和生产工作台只显示 Sprint20G 要求的基础信息", asy
   expect(screen.getAllByText("NEW001").length).toBeGreaterThanOrEqual(1);
 });
 
+test("风格编号加载失败只显示 warning，不阻断新建项目", async () => {
+  api.listProductionStyleCodes.mockRejectedValueOnce(new Error("style unavailable"));
+  const user = userEvent.setup();
+  render(<ProductionStudio api={api} />);
+
+  expect(await screen.findByText("风格编号暂时不可用，不影响项目创建、普通生成、参考图生成和标记验收测试。")).toBeInTheDocument();
+  expect(screen.queryByText(/启动工作台\.ps1/)).not.toBeInTheDocument();
+
+  await user.click(screen.getByRole("button", { name: "新建项目" }));
+  await user.type(screen.getByLabelText("项目名称"), "无风格项目");
+  await user.type(screen.getByLabelText("项目代号"), "NO_STYLE");
+  await user.click(screen.getByRole("button", { name: "保存项目" }));
+
+  expect(api.createProject).toHaveBeenCalledWith({
+    name: "无风格项目",
+    description: "NO_STYLE",
+    status: "draft",
+  });
+  expect((await screen.findAllByText("无风格项目")).length).toBeGreaterThanOrEqual(1);
+  expect(screen.getAllByText("NO_STYLE").length).toBeGreaterThanOrEqual(1);
+});
+
+test("普通生成不显示参考图控件，生成请求不依赖参考图", async () => {
+  const user = userEvent.setup();
+  render(<ProductionStudio api={api} />);
+
+  await screen.findByText("UI素材生产");
+  expect(screen.getByLabelText("生成模式")).toHaveDisplayValue("普通生成");
+  expect(screen.queryByLabelText("2. 上传参考图")).not.toBeInTheDocument();
+
+  await user.click(screen.getByRole("button", { name: "生成界面" }));
+
+  expect(api.generateUiProductionPackage).toHaveBeenCalledWith(
+    expect.objectContaining({
+      screen_type: "main_ui",
+      reference_image_path: null,
+      style_reference_strength: "none",
+      project_id: "project-996",
+      device_type: "mobile_landscape",
+      layout_template: "classic_legend_mobile",
+    }),
+  );
+});
+
 test("生产工作台基础选项可调整，素材生产区保留参考图和调整说明", async () => {
   const user = userEvent.setup();
   render(<ProductionStudio api={api} />);
@@ -455,6 +505,9 @@ test("生产工作台基础选项可调整，素材生产区保留参考图和�
   await screen.findByText("生产工作台");
   await user.selectOptions(screen.getByLabelText("布局模板"), "legend_185_combo");
   expect(screen.getByLabelText("布局模板")).toHaveDisplayValue("1.85合击版");
+  await user.selectOptions(screen.getByLabelText("生成模式"), "reference");
+  expect(screen.getByLabelText("2. 上传参考图")).toBeInTheDocument();
+  expect(screen.queryByLabelText("参考图影响比例")).not.toBeInTheDocument();
 
   const file = new File(["fake"], "reference-main-ui.png", { type: "image/png" });
   await user.upload(screen.getByLabelText("2. 上传参考图"), file);
@@ -480,8 +533,14 @@ test("参考图影响比例会写入提示词，且调整截图上传错误显�
   await screen.findByText("UI素材生产");
   await waitFor(() => {
     const promptField = screen.getByLabelText("系统生成提示词") as HTMLTextAreaElement;
-    expect(promptField.value).toContain("参考图影响比例为 40%");
+    expect(promptField.value).toContain("普通生成");
+    expect(promptField.value).toContain("本次普通生成不使用参考图");
   });
+  expect(screen.queryByLabelText("2. 上传参考图")).not.toBeInTheDocument();
+  await user.selectOptions(screen.getByLabelText("生成模式"), "reference");
+  expect(screen.getByLabelText("2. 上传参考图")).toBeInTheDocument();
+  expect(screen.queryByLabelText("参考图影响比例")).not.toBeInTheDocument();
+  await user.selectOptions(screen.getByLabelText("生成模式"), "reference_ratio");
 
   await user.clear(screen.getByLabelText("参考图影响比例数值"));
   await user.type(screen.getByLabelText("参考图影响比例数值"), "65");
@@ -503,6 +562,26 @@ test("参考图影响比例会写入提示词，且调整截图上传错误显�
   expect(screen.queryByText("调整截图上传失败，请使用 PNG、JPG 或 JPEG。")).not.toBeInTheDocument();
 
   api.uploadAsset.mockClear();
+  const jpgFile = new File(["fake"], "adjustment.jpg", { type: "image/jpeg" });
+  await user.upload(screen.getByLabelText("上传调整截图"), jpgFile);
+  expect(api.uploadAsset).toHaveBeenCalledWith({
+    file: jpgFile,
+    project_id: null,
+    asset_type: "reference_image",
+    device_type: "mobile_landscape",
+  });
+
+  api.uploadAsset.mockClear();
+  const jpegFile = new File(["fake"], "adjustment.jpeg", { type: "" });
+  await user.upload(screen.getByLabelText("上传调整截图"), jpegFile);
+  expect(api.uploadAsset).toHaveBeenCalledWith({
+    file: jpegFile,
+    project_id: null,
+    asset_type: "reference_image",
+    device_type: "mobile_landscape",
+  });
+
+  api.uploadAsset.mockClear();
   const invalidFile = new File(["fake"], "adjustment.txt", { type: "text/plain" });
   await user.upload(screen.getByLabelText("上传调整截图"), invalidFile);
   expect(api.uploadAsset).not.toHaveBeenCalled();
@@ -517,8 +596,6 @@ test("标记验收测试模式可自动填充并展示验收结果", async () =>
   render(<ProductionStudio api={api} />);
 
   expect(await screen.findByText("验收测试模式")).toBeInTheDocument();
-  const referenceFile = new File(["fake"], "reference-main-ui.png", { type: "image/png" });
-  await user.upload(screen.getByLabelText("2. 上传参考图"), referenceFile);
   await user.click(screen.getByRole("button", { name: "进入标记验收测试" }));
 
   expect(api.createProject).toHaveBeenCalledWith({
@@ -531,7 +608,8 @@ test("标记验收测试模式可自动填充并展示验收结果", async () =>
   expect(promptField.value).toContain("手机横屏传奇手游主界面");
   expect(promptField.value).toContain("右下技能操作区");
   expect(promptField.value).toContain("主技能按钮固定右下角偏内侧");
-  expect(promptField.value).toContain("参考图影响比例为 40%");
+  expect(promptField.value).toContain("普通生成");
+  expect(promptField.value).toContain("不使用参考图");
   expect(screen.getByDisplayValue("用于测试自动标记和自动切图准确性")).toBeInTheDocument();
   await user.clear(promptField);
   await user.type(promptField, "编辑后的验收提示词：技能区需要半圆布局。");
@@ -540,13 +618,13 @@ test("标记验收测试模式可自动填充并展示验收结果", async () =>
 
   expect(api.runMarkingAcceptanceTest).toHaveBeenCalledWith(
     expect.objectContaining({
-      reference_image_path: "assets/uploads/reference-main-ui.png",
+      reference_image_path: null,
       system_prompt: expect.stringContaining("手机横屏传奇手游主界面"),
       requirement: "编辑后的验收提示词：技能区需要半圆布局。",
       project_id: "project-marking",
       device_type: "mobile_landscape",
       layout_template: "classic_legend_mobile",
-      style_reference_strength: "40",
+      style_reference_strength: "none",
       adjustment_note: "用于测试自动标记和自动切图准确性",
     }),
   );

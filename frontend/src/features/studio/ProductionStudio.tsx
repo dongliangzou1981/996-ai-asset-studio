@@ -97,6 +97,7 @@ type ProductionStudioApi = Pick<
 >;
 
 type UiProductionScreenType = "main_ui" | "bag_ui" | "role_ui" | "shop_ui" | "activity_ui";
+type UiProductionGenerationMode = "plain" | "reference" | "reference_ratio";
 
 const UI_PRODUCTION_SCREEN_OPTIONS: { value: UiProductionScreenType; label: string; enabled: boolean }[] = [
   { value: "main_ui", label: "主界面", enabled: true },
@@ -105,6 +106,18 @@ const UI_PRODUCTION_SCREEN_OPTIONS: { value: UiProductionScreenType; label: stri
   { value: "shop_ui", label: "商城（即将支持）", enabled: false },
   { value: "activity_ui", label: "活动（即将支持）", enabled: false },
 ];
+
+const UI_PRODUCTION_GENERATION_OPTIONS: { value: UiProductionGenerationMode; label: string }[] = [
+  { value: "plain", label: "普通生成" },
+  { value: "reference", label: "参考图生成（不按比例）" },
+  { value: "reference_ratio", label: "参考图生成（按比例）" },
+];
+
+const UI_PRODUCTION_GENERATION_LABELS: Record<UiProductionGenerationMode, string> = {
+  plain: "普通生成",
+  reference: "参考图生成（不按比例）",
+  reference_ratio: "参考图生成（按比例）",
+};
 
 const STYLE_REFERENCE_OPTIONS = [
   { value: "none", label: "不参考风格" },
@@ -137,11 +150,6 @@ const PROMPT_LAYOUT_LABELS: Record<ProductionLayoutTemplate, string> = {
   hot_blood: "热血版本布局",
 };
 
-const PROMPT_GENERATION_MODE_LABELS: Record<ProductionGenerationMode, string> = {
-  auto_generate: "自动生成",
-  reference_guided: "参考图引导",
-};
-
 function isUiProductionResult(value: unknown): value is MainUiProductionResult {
   return Boolean(value && typeof value === "object" && "package_dir" in value);
 }
@@ -154,15 +162,27 @@ function buildMainUiProductionPrompt(input: {
   layoutTemplate: ProductionLayoutTemplate;
   screenType: UiProductionScreenType;
   generationMode: ProductionGenerationMode;
+  uiGenerationMode: UiProductionGenerationMode;
   hasReferenceImage: boolean;
   referenceInfluence: number;
   adjustmentNote: string;
   historicalPrompt?: string;
 }) {
   const referenceInfluence = Math.min(100, Math.max(0, Math.round(input.referenceInfluence)));
-  const referenceLine = input.hasReferenceImage
-    ? "已上传参考图：风格跟随参考图或整体风格，不照抄参考图内容。"
-    : "未上传参考图：使用系统内置 fallback 测试图或整体风格生成，不依赖 P5 资源。";
+  const referenceLine =
+    input.uiGenerationMode === "plain"
+      ? "普通生成：不使用参考图，不依赖 P5 资源或项目参考图。"
+      : input.hasReferenceImage
+        ? "已上传参考图：风格跟随参考图或整体风格，不照抄参考图内容。"
+        : "未上传参考图：使用系统内置 fallback 测试图或整体风格生成，不依赖 P5 资源。";
+  const referenceInfluenceLine =
+    input.uiGenerationMode === "reference_ratio"
+      ? "参考图影响比例为 " +
+        referenceInfluence +
+        "%，仅影响风格、纹饰、色彩、材质、按钮视觉皮肤、面板装饰和图标表现，不改变固定布局骨架。"
+      : input.uiGenerationMode === "reference"
+        ? "参考图生成（不按比例）：参考图仅作为本次风格、纹饰、色彩、材质和视觉皮肤参考，不改变固定布局骨架。"
+        : "参考图影响比例：未启用，本次普通生成不使用参考图。";
   const screenLine =
     input.screenType === "main_ui"
       ? "生成手机横屏传奇手游主界面，包含顶部信息区、右上地图、右侧入口按钮、右下技能操作区、左下摇杆、底部经验条、聊天区清晰。"
@@ -171,12 +191,10 @@ function buildMainUiProductionPrompt(input: {
   return [
     input.historicalPrompt ? `历史高质量提示词参考：\n${input.historicalPrompt}` : "",
     `项目：${input.projectName || "未命名项目"} / ${input.projectCode || "未设置代号"}`,
-    `生产参数：${PROMPT_DEVICE_LABELS[input.deviceType]}，${PROMPT_ASSET_MODE_LABELS[input.assetMode]}，${PROMPT_LAYOUT_LABELS[input.layoutTemplate]}，界面类型 ${input.screenType}，生成模式 ${PROMPT_GENERATION_MODE_LABELS[input.generationMode]}。`,
+    `生产参数：${PROMPT_DEVICE_LABELS[input.deviceType]}，${PROMPT_ASSET_MODE_LABELS[input.assetMode]}，${PROMPT_LAYOUT_LABELS[input.layoutTemplate]}，界面类型 ${input.screenType}，生成模式 ${UI_PRODUCTION_GENERATION_LABELS[input.uiGenerationMode]}。`,
     screenLine,
     "布局要求：经典传奇手游布局，UI 元素边界清楚，方便自动标记和切图；按钮、图标、面板需要独立清晰。",
-    "参考图影响比例为 " +
-      referenceInfluence +
-      "%，仅影响风格、纹饰、色彩、材质、按钮视觉皮肤、面板装饰和图标表现，不改变固定布局骨架。",
+    referenceInfluenceLine,
     "固定布局骨架必须保持：顶部信息区、右上地图、右侧入口按钮、右下技能区、左下摇杆、底部经验条、聊天区。",
     "移动端操作体验规则：手机横屏操作体验优先，右下技能按钮适配右手拇指操作，技能区可支持第二圈技能按钮，不遮挡经验条、聊天区和主视觉，按钮间距避免误触。布局可参考成熟手游操作设计，但不得破坏经典传奇手游布局骨架。",
     "右下技能区：主技能按钮固定右下角偏内侧，小技能围绕主技能形成半圆布局，预留第二圈技能按钮空间，避免遮挡底部经验条和聊天区域，符合手机横屏右手拇指操作体验。",
@@ -211,6 +229,22 @@ function normalizeReferenceInfluence(value: string) {
   return String(Math.min(100, Math.max(0, Math.round(number))));
 }
 
+function backendGenerationMode(mode: UiProductionGenerationMode): ProductionGenerationMode {
+  return mode === "plain" ? "auto_generate" : "reference_guided";
+}
+
+function shouldUseUiReference(mode: UiProductionGenerationMode) {
+  return mode !== "plain";
+}
+
+function shouldUseUiReferenceRatio(mode: UiProductionGenerationMode) {
+  return mode === "reference_ratio";
+}
+
+function uiStyleReferenceStrength(mode: UiProductionGenerationMode, influence: string) {
+  return shouldUseUiReferenceRatio(mode) ? normalizeReferenceInfluence(influence) : "none";
+}
+
 export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioApi }) {
   const [projects, setProjects] = useState<Project[]>([]);
   const [selectedProjectId, setSelectedProjectId] = useState("");
@@ -236,6 +270,7 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
   const [mainUiProduction, setMainUiProduction] = useState<MainUiProductionResult | null>(null);
   const [mainUiLoading, setMainUiLoading] = useState(false);
   const [uiProductionScreenType, setUiProductionScreenType] = useState<UiProductionScreenType>("main_ui");
+  const [uiProductionGenerationMode, setUiProductionGenerationMode] = useState<UiProductionGenerationMode>("plain");
   const [uiProductionRequirement, setUiProductionRequirement] = useState("");
   const [uiProductionSystemPrompt, setUiProductionSystemPrompt] = useState("");
   const [uiProductionPromptEdited, setUiProductionPromptEdited] = useState(false);
@@ -256,6 +291,7 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [projectError, setProjectError] = useState("");
+  const [styleCodeWarning, setStyleCodeWarning] = useState("");
   const [uiReferenceUploadError, setUiReferenceUploadError] = useState("");
   const [uiAdjustmentUploadError, setUiAdjustmentUploadError] = useState("");
   const selectedProject = projects.find((project) => project.id === selectedProjectId);
@@ -276,8 +312,9 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
       .then((response) => {
         setStyleCodes(response.items);
         setSelectedStyleCode(response.items[0]?.style_code ?? "");
+        setStyleCodeWarning("");
       })
-      .catch(() => setError("风格编号加载失败。请重新打开工作台，或运行 启动工作台.ps1。"));
+      .catch(() => setStyleCodeWarning("风格编号暂时不可用，不影响项目创建、普通生成、参考图生成和标记验收测试。"));
   }, [api]);
 
   useEffect(() => {
@@ -319,8 +356,9 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
       assetMode,
       layoutTemplate,
       screenType: uiProductionScreenType,
-      generationMode,
-      hasReferenceImage: Boolean(uiProductionReferencePath),
+      generationMode: backendGenerationMode(uiProductionGenerationMode),
+      uiGenerationMode: uiProductionGenerationMode,
+      hasReferenceImage: shouldUseUiReference(uiProductionGenerationMode) && Boolean(uiProductionReferencePath),
       referenceInfluence: Number(uiProductionStyleReference) || 0,
       adjustmentNote: uiAdjustmentNote,
     };
@@ -352,11 +390,11 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
     api,
     assetMode,
     deviceType,
-    generationMode,
     layoutTemplate,
     selectedProject?.description,
     selectedProject?.name,
     uiAdjustmentNote,
+    uiProductionGenerationMode,
     uiProductionPromptEdited,
     uiProductionReferencePath,
     uiProductionScreenType,
@@ -438,10 +476,17 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
       setAssetMode("resource_production");
       setLayoutTemplate("classic_legend_mobile");
       setUiProductionScreenType("main_ui");
+      setUiProductionGenerationMode("plain");
       chooseGenerationMode("auto_generate");
       setUiProductionPromptEdited(false);
       setUiAdjustmentNote(MARKING_TEST_ADJUSTMENT);
       setUiProductionStyleReference("40");
+      if (uiProductionReferencePreviewUrl) {
+        URL.revokeObjectURL(uiProductionReferencePreviewUrl);
+      }
+      setUiProductionReferencePath(null);
+      setUiProductionReferencePreviewUrl("");
+      setUiProductionReferenceFileName("");
       setUiAdjustmentImagePath(null);
       setUiAdjustmentImageName("");
       const testPrompt = buildMainUiProductionPrompt({
@@ -452,7 +497,8 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
         layoutTemplate: "classic_legend_mobile",
         screenType: "main_ui",
         generationMode: "auto_generate",
-        hasReferenceImage: Boolean(uiProductionReferencePath),
+        uiGenerationMode: "plain",
+        hasReferenceImage: false,
         referenceInfluence: 40,
         adjustmentNote: MARKING_TEST_ADJUSTMENT,
       });
@@ -474,10 +520,10 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
     setUiProductionMessage("正在自动生成三张候选图、选择第一张、标记组件并执行切图...");
     try {
       const response = await api.runMarkingAcceptanceTest({
-        reference_image_path: uiProductionReferencePath,
+        reference_image_path: null,
         system_prompt: uiProductionSystemPrompt,
         requirement: uiProductionRequirement,
-        style_reference_strength: uiProductionStyleReference,
+        style_reference_strength: "none",
         project_id: selectedProjectId,
         device_type: deviceType,
         layout_template: layoutTemplate,
@@ -590,16 +636,22 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
   }
 
   async function generateUiProductionInterface() {
+    const useReference = shouldUseUiReference(uiProductionGenerationMode);
+    if (useReference && !uiProductionReferencePath) {
+      setUiReferenceUploadError("请先上传参考图。");
+      return;
+    }
     setMainUiLoading(true);
     setError("");
+    setUiReferenceUploadError("");
     setUiProductionMessage("");
     try {
       const response = await api.generateUiProductionPackage({
         screen_type: uiProductionScreenType,
-        reference_image_path: uiProductionReferencePath,
+        reference_image_path: useReference ? uiProductionReferencePath : null,
         system_prompt: uiProductionSystemPrompt,
         requirement: uiProductionRequirement,
-        style_reference_strength: uiProductionStyleReference,
+        style_reference_strength: uiStyleReferenceStrength(uiProductionGenerationMode, uiProductionStyleReference),
         project_id: selectedProjectId,
         device_type: deviceType,
         layout_template: layoutTemplate,
@@ -913,6 +965,7 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
 
       <div className="min-w-0 rounded-md border border-studio-line bg-white p-5">
         <h2 className="text-lg font-semibold">结果中心 / 素材生产</h2>
+        {styleCodeWarning ? <p className="mt-3 rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800">{styleCodeWarning}</p> : null}
         <section className="mt-4 grid gap-3 rounded-md border border-amber-300 bg-amber-50 p-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="min-w-0">
@@ -973,74 +1026,86 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
               生成模式
               <select
                 className="rounded-md border border-studio-line px-3 py-2 font-normal"
-                onChange={(event) => chooseGenerationMode(event.target.value as ProductionGenerationMode)}
-                value={generationMode}
+                onChange={(event) => {
+                  const nextMode = event.target.value as UiProductionGenerationMode;
+                  setUiProductionGenerationMode(nextMode);
+                  chooseGenerationMode(backendGenerationMode(nextMode));
+                  setUiReferenceUploadError("");
+                }}
+                value={uiProductionGenerationMode}
               >
-                <option value="auto_generate">自动生成</option>
-                <option value="reference_guided">参考生成</option>
+                {UI_PRODUCTION_GENERATION_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
               </select>
             </label>
           </div>
-          <div className="grid gap-3 rounded-md border border-studio-line p-3">
-            <label className="grid gap-1 text-sm font-medium">
-              2. 上传参考图
-              <input
-                accept="image/png,image/jpeg,.png,.jpg,.jpeg"
-                className="rounded-md border border-studio-line px-3 py-2 font-normal"
-                onChange={uploadUiProductionReference}
-                type="file"
-              />
-            </label>
-            {uiReferenceUploadError ? <p className="text-xs leading-5 text-red-600">{uiReferenceUploadError}</p> : null}
-            <div className="grid gap-2 rounded-md bg-slate-50 p-3">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <label className="text-sm font-medium" htmlFor="ui-reference-influence">
-                  参考图影响比例
-                </label>
-                <div className="flex items-center gap-2">
+          {shouldUseUiReference(uiProductionGenerationMode) ? (
+            <div className="grid gap-3 rounded-md border border-studio-line p-3">
+              <label className="grid gap-1 text-sm font-medium">
+                2. 上传参考图
+                <input
+                  accept="image/png,image/jpeg,.png,.jpg,.jpeg"
+                  className="rounded-md border border-studio-line px-3 py-2 font-normal"
+                  onChange={uploadUiProductionReference}
+                  type="file"
+                />
+              </label>
+              {uiReferenceUploadError ? <p className="text-xs leading-5 text-red-600">{uiReferenceUploadError}</p> : null}
+              {shouldUseUiReferenceRatio(uiProductionGenerationMode) ? (
+                <div className="grid gap-2 rounded-md bg-slate-50 p-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <label className="text-sm font-medium" htmlFor="ui-reference-influence">
+                      参考图影响比例
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        aria-label="参考图影响比例数值"
+                        className="w-20 rounded-md border border-studio-line px-2 py-1 text-sm"
+                        max={100}
+                        min={0}
+                        onChange={(event) => setUiProductionStyleReference(normalizeReferenceInfluence(event.target.value))}
+                        type="number"
+                        value={uiProductionStyleReference}
+                      />
+                      <span className="text-sm text-studio-muted">%</span>
+                    </div>
+                  </div>
                   <input
-                    aria-label="参考图影响比例数值"
-                    className="w-20 rounded-md border border-studio-line px-2 py-1 text-sm"
+                    aria-label="参考图影响比例"
+                    className="w-full"
+                    id="ui-reference-influence"
                     max={100}
                     min={0}
                     onChange={(event) => setUiProductionStyleReference(normalizeReferenceInfluence(event.target.value))}
-                    type="number"
-                    value={uiProductionStyleReference}
+                    step={1}
+                    type="range"
+                    value={Number(uiProductionStyleReference) || 0}
                   />
-                  <span className="text-sm text-studio-muted">%</span>
+                  <p className="text-xs leading-5 text-studio-muted">
+                    仅影响风格、纹饰、色彩、材质、按钮皮肤、面板装饰和图标表现，不改变固定布局骨架。
+                  </p>
                 </div>
-              </div>
-              <input
-                aria-label="参考图影响比例"
-                className="w-full"
-                id="ui-reference-influence"
-                max={100}
-                min={0}
-                onChange={(event) => setUiProductionStyleReference(normalizeReferenceInfluence(event.target.value))}
-                step={1}
-                type="range"
-                value={Number(uiProductionStyleReference) || 0}
-              />
-              <p className="text-xs leading-5 text-studio-muted">
-                仅影响风格、纹饰、色彩、材质、按钮皮肤、面板装饰和图标表现，不改变固定布局骨架。
-              </p>
+              ) : null}
+              {uiProductionReferencePreviewUrl ? (
+                <div className="grid gap-2">
+                  <img
+                    alt="UI素材生产参考图预览"
+                    className="aspect-video w-full rounded-md border border-studio-line object-contain"
+                    src={uiProductionReferencePreviewUrl}
+                  />
+                  <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+                    <span className="text-studio-muted">{uiProductionReferenceFileName}</span>
+                    <button className="rounded-md border border-studio-line px-3 py-2" onClick={removeUiProductionReference} type="button">
+                      移除参考图
+                    </button>
+                  </div>
+                </div>
+              ) : null}
             </div>
-            {uiProductionReferencePreviewUrl ? (
-              <div className="grid gap-2">
-                <img
-                  alt="UI素材生产参考图预览"
-                  className="aspect-video w-full rounded-md border border-studio-line object-contain"
-                  src={uiProductionReferencePreviewUrl}
-                />
-                <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
-                  <span className="text-studio-muted">{uiProductionReferenceFileName}</span>
-                  <button className="rounded-md border border-studio-line px-3 py-2" onClick={removeUiProductionReference} type="button">
-                    移除参考图
-                  </button>
-                </div>
-              </div>
-            ) : null}
-          </div>
+          ) : null}
           <label className="grid gap-2 text-sm font-medium">
             <span>系统生成提示词</span>
             <span className="text-xs font-normal text-studio-muted">
