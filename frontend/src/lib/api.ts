@@ -379,28 +379,42 @@ export type ListResponse<T> = {
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:8000";
 
+function apiUrl(path: string) {
+  return `${API_BASE_URL}${path}`;
+}
+
+async function responseErrorMessage(url: string, response: Response) {
+  let detail = `API request failed`;
+  try {
+    const body = await response.json();
+    if (typeof body?.detail === "string") {
+      detail = body.detail;
+    } else if (Array.isArray(body?.detail)) {
+      detail = body.detail.map((item: { msg?: string }) => item.msg).filter(Boolean).join("; ") || detail;
+    }
+  } catch {
+    // Keep the generic message when the response body is not JSON.
+  }
+  return `请求失败：${url}，status=${response.status}，error=${detail}`;
+}
+
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...options?.headers,
-    },
-  });
+  const url = apiUrl(path);
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      ...options,
+      headers: {
+        "Content-Type": "application/json",
+        ...options?.headers,
+      },
+    });
+  } catch (exc) {
+    throw new Error(`请求失败：${url}，status=network_error，error=${exc instanceof Error ? exc.message : "unknown"}`);
+  }
 
   if (!response.ok) {
-    let message = `API request failed: ${response.status}`;
-    try {
-      const body = await response.json();
-      if (typeof body?.detail === "string") {
-        message = body.detail;
-      } else if (Array.isArray(body?.detail)) {
-        message = body.detail.map((item: { msg?: string }) => item.msg).filter(Boolean).join("; ") || message;
-      }
-    } catch {
-      // Keep the status-only fallback when the response body is not JSON.
-    }
-    throw new Error(message);
+    throw new Error(await responseErrorMessage(url, response));
   }
 
   if (response.status === 204) {
@@ -411,13 +425,19 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 }
 
 async function uploadRequest<T>(path: string, formData: FormData): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    method: "POST",
-    body: formData,
-  });
+  const url = apiUrl(path);
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      method: "POST",
+      body: formData,
+    });
+  } catch (exc) {
+    throw new Error(`请求失败：${url}，status=network_error，error=${exc instanceof Error ? exc.message : "unknown"}`);
+  }
 
   if (!response.ok) {
-    throw new Error(`API request failed: ${response.status}`);
+    throw new Error(await responseErrorMessage(url, response));
   }
 
   return response.json() as Promise<T>;

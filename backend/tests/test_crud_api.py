@@ -17,8 +17,10 @@ def test_cors_allows_local_frontend_origins(tmp_path: Path) -> None:
     allowed_origins = [
         "http://localhost:3000",
         "http://localhost:3001",
+        "http://localhost:3107",
         "http://127.0.0.1:3000",
         "http://127.0.0.1:3001",
+        "http://127.0.0.1:3107",
     ]
 
     for origin in allowed_origins:
@@ -69,6 +71,21 @@ def test_project_crud_round_trip(tmp_path: Path) -> None:
     deleted = client.delete(f"/projects/{project['id']}")
     assert deleted.status_code == 204
     assert client.get(f"/projects/{project['id']}").status_code == 404
+
+
+def test_project_create_accepts_name_and_code_only(tmp_path: Path) -> None:
+    client = make_client(tmp_path)
+
+    created = client.post(
+        "/projects",
+        json={"project_name": "标记验收项目", "project_code": "MARKING_API"},
+    )
+
+    assert created.status_code == 201
+    project = created.json()
+    assert project["name"] == "标记验收项目"
+    assert project["description"] == "MARKING_API"
+    assert project["status"] == "draft"
 
 
 def test_style_profile_crud_round_trip(tmp_path: Path) -> None:

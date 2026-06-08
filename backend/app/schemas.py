@@ -16,6 +16,19 @@ class ProjectCreate(BaseModel):
     description: str = ""
     status: str = Field(default="draft", min_length=1, max_length=32)
 
+    @model_validator(mode="before")
+    @classmethod
+    def accept_project_name_and_code(cls, data: Any) -> Any:
+        if isinstance(data, dict):
+            normalized = dict(data)
+            if not normalized.get("name") and normalized.get("project_name"):
+                normalized["name"] = normalized["project_name"]
+            if not normalized.get("description") and normalized.get("project_code"):
+                normalized["description"] = normalized["project_code"]
+            normalized.setdefault("status", "draft")
+            return normalized
+        return data
+
 
 class Project(ProjectCreate):
     id: str

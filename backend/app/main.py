@@ -116,8 +116,10 @@ def create_app(database_path: str | Path | None = None, upload_dir: str | Path |
         allow_origins=[
             "http://localhost:3000",
             "http://localhost:3001",
+            "http://localhost:3107",
             "http://127.0.0.1:3000",
             "http://127.0.0.1:3001",
+            "http://127.0.0.1:3107",
         ],
         allow_credentials=True,
         allow_methods=["*"],
