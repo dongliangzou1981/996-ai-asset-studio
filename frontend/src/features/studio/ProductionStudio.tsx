@@ -1,8 +1,9 @@
 "use client";
 
-import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
+import { ChangeEvent, FormEvent, useEffect, useState } from "react";
 
 import {
+  Project,
   ProductionAssetMode,
   ProductionDeviceType,
   ProductionGenerationMode,
@@ -85,6 +86,8 @@ type ProductionStudioApi = Pick<
   | "updateMainUiCandidate"
   | "exportMainUiProduction"
   | "getProductionStudioFileUrl"
+  | "listProjects"
+  | "createProject"
   | "listProductionStyleCodes"
   | "updateProductionManualAcceptance"
   | "uploadAsset"
@@ -117,6 +120,12 @@ function defaultAcceptanceRecord(): AcceptanceRecord {
 }
 
 export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioApi }) {
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [selectedProjectId, setSelectedProjectId] = useState("");
+  const [newProjectName, setNewProjectName] = useState("");
+  const [newProjectCode, setNewProjectCode] = useState("");
+  const [showNewProjectForm, setShowNewProjectForm] = useState(false);
+  const [projectLoading, setProjectLoading] = useState(false);
   const [deviceType, setDeviceType] = useState<ProductionDeviceType>("mobile_landscape");
   const [assetMode, setAssetMode] = useState<ProductionAssetMode>("resource_production");
   const [styleSource, setStyleSource] = useState<ProductionStyleSource>("new_style");
@@ -149,6 +158,16 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
   const [expandedPreview, setExpandedPreview] = useState<{ src: string; label: string } | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    api
+      .listProjects()
+      .then((response) => {
+        setProjects(response.items);
+        setSelectedProjectId((current) => current || response.items[0]?.id || "");
+      })
+      .catch(() => setError("项目列表加载失败，请确认后端服务已启动。"));
+  }, [api]);
 
   useEffect(() => {
     api
@@ -187,11 +206,6 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
       .catch(() => window.localStorage.removeItem("uiProductionPackageDir"));
   }, [api]);
 
-  const selectedStyle = useMemo(
-    () => styleCodes.find((style) => style.style_code === selectedStyleCode),
-    [selectedStyleCode, styleCodes],
-  );
-
   function toggleScreen(screenType: ProductionScreenType) {
     setScreenTypes((items) => {
       if (items.includes(screenType)) {
@@ -210,6 +224,34 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
         ...patch,
       },
     }));
+  }
+
+  async function createProject(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const name = newProjectName.trim();
+    const code = newProjectCode.trim();
+    if (!name || !code) {
+      setError("请填写项目名称和代号。");
+      return;
+    }
+    setProjectLoading(true);
+    setError("");
+    try {
+      const created = await api.createProject({
+        name,
+        description: code,
+        status: "draft",
+      });
+      setProjects((items) => [created, ...items]);
+      setSelectedProjectId(created.id);
+      setNewProjectName("");
+      setNewProjectCode("");
+      setShowNewProjectForm(false);
+    } catch {
+      setError("新建项目失败，请确认项目服务可用。");
+    } finally {
+      setProjectLoading(false);
+    }
   }
 
   async function persistAcceptance(packageDir: string, jobId: string, patch: Partial<AcceptanceRecord>) {
@@ -492,19 +534,86 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
 
   const projectContext = mainUiProduction?.project_context;
   const canPreviewPackageFile = (file: string) => /\.(png|jpe?g|webp)$/i.test(file);
+  const selectedProject = projects.find((project) => project.id === selectedProjectId);
 
   return (
-    <section className="grid gap-4 xl:grid-cols-[280px_160px_minmax(0,1fr)]">
-      <form className="grid gap-4 rounded-md border border-studio-line bg-white p-4" onSubmit={generate}>
-        <div>
-          <h2 className="text-lg font-semibold">生产工作台</h2>
-          <p className="mt-2 text-sm leading-6 text-studio-muted">生成 996 传奇手游界面资源，结果会进入右侧结果中心。</p>
+    <section className="grid min-w-0 gap-4 xl:grid-cols-[260px_320px_minmax(0,1fr)]">
+      <aside className="grid h-fit min-w-0 gap-4 rounded-md border border-studio-line bg-white p-4 text-sm">
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="text-lg font-semibold">项目列表</h2>
+          <button
+            className="shrink-0 rounded-md border border-studio-line px-3 py-2 text-xs font-medium"
+            onClick={() => setShowNewProjectForm((value) => !value)}
+            type="button"
+          >
+            新建项目
+          </button>
         </div>
 
+        {showNewProjectForm ? (
+          <form className="grid gap-3 rounded-md bg-slate-50 p-3" onSubmit={createProject}>
+            <label className="grid gap-1 font-medium">
+              项目名称
+              <input
+                className="min-w-0 rounded-md border border-studio-line px-3 py-2 font-normal"
+                onChange={(event) => setNewProjectName(event.target.value)}
+                value={newProjectName}
+              />
+            </label>
+            <label className="grid gap-1 font-medium">
+              项目代号
+              <input
+                className="min-w-0 rounded-md border border-studio-line px-3 py-2 font-normal"
+                onChange={(event) => setNewProjectCode(event.target.value)}
+                value={newProjectCode}
+              />
+            </label>
+            <button
+              className="rounded-md bg-studio-action px-3 py-2 text-sm font-semibold text-white disabled:opacity-60"
+              disabled={projectLoading}
+              type="submit"
+            >
+              {projectLoading ? "创建中..." : "保存项目"}
+            </button>
+          </form>
+        ) : null}
+
+        <div className="grid gap-2">
+          {projects.length ? (
+            projects.map((project) => (
+              <button
+                className={`grid min-w-0 gap-1 rounded-md border px-3 py-2 text-left ${
+                  project.id === selectedProjectId ? "border-studio-action bg-slate-50" : "border-studio-line bg-white"
+                }`}
+                key={project.id}
+                onClick={() => setSelectedProjectId(project.id)}
+                type="button"
+              >
+                <span className="truncate font-semibold">{project.name}</span>
+                <span className="truncate text-xs text-studio-muted">{project.description || "未设置代号"}</span>
+              </button>
+            ))
+          ) : (
+            <p className="rounded-md bg-slate-50 p-3 text-studio-muted">暂无项目，点击新建项目开始。</p>
+          )}
+        </div>
+      </aside>
+
+      <section className="grid h-fit min-w-0 gap-4 rounded-md border border-studio-line bg-white p-4">
+        <div>
+          <h2 className="text-lg font-semibold">生产工作台</h2>
+          <p className="mt-2 text-sm leading-6 text-studio-muted">选择当前项目的生产方向，后续素材任务将在结果中心执行</p>
+        </div>
+        {selectedProject ? (
+          <div className="rounded-md bg-slate-50 p-3 text-sm">
+            <div className="font-semibold">{selectedProject.name}</div>
+            <div className="mt-1 text-xs text-studio-muted">{selectedProject.description || "未设置代号"}</div>
+          </div>
+        ) : null}
         <label className="grid gap-1 text-sm font-medium">
           设备类型
           <select
-            className="rounded-md border border-studio-line px-3 py-2 font-normal"
+            className="min-w-0 rounded-md border border-studio-line px-3 py-2 font-normal"
             onChange={(event) => setDeviceType(event.target.value as ProductionDeviceType)}
             value={deviceType}
           >
@@ -512,11 +621,10 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
             <option value="pc_landscape">电脑端</option>
           </select>
         </label>
-
         <label className="grid gap-1 text-sm font-medium">
           输出模式
           <select
-            className="rounded-md border border-studio-line px-3 py-2 font-normal"
+            className="min-w-0 rounded-md border border-studio-line px-3 py-2 font-normal"
             onChange={(event) => setAssetMode(event.target.value as ProductionAssetMode)}
             value={assetMode}
           >
@@ -524,11 +632,10 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
             <option value="ui_package">整图预览</option>
           </select>
         </label>
-
         <label className="grid gap-1 text-sm font-medium">
           布局模板
           <select
-            className="rounded-md border border-studio-line px-3 py-2 font-normal"
+            className="min-w-0 rounded-md border border-studio-line px-3 py-2 font-normal"
             onChange={(event) => setLayoutTemplate(event.target.value as ProductionLayoutTemplate)}
             value={layoutTemplate}
           >
@@ -539,175 +646,11 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
             ))}
           </select>
         </label>
-
-        <fieldset className="grid gap-2 rounded-md border border-studio-line p-3">
-          <legend className="px-1 text-sm font-medium">生成模式</legend>
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              checked={generationMode === "auto_generate"}
-              name="generation_mode"
-              onChange={() => chooseGenerationMode("auto_generate")}
-              type="radio"
-            />
-            自动生成
-          </label>
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              checked={generationMode === "reference_guided"}
-              name="generation_mode"
-              onChange={() => chooseGenerationMode("reference_guided")}
-              type="radio"
-            />
-            参考生成
-          </label>
-        </fieldset>
-
-        <fieldset className="grid gap-2 rounded-md border border-studio-line p-3">
-          <legend className="px-1 text-sm font-medium">风格来源</legend>
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              checked={styleSource === "new_style"}
-              name="style_source"
-              onChange={() => setStyleSource("new_style")}
-              type="radio"
-            />
-            新建风格
-          </label>
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              checked={styleSource === "existing_style"}
-              name="style_source"
-              onChange={() => setStyleSource("existing_style")}
-              type="radio"
-            />
-            使用已有风格
-          </label>
-        </fieldset>
-
-        {styleSource === "existing_style" ? (
-          <label className="grid gap-1 text-sm font-medium">
-            风格编号
-            <select
-              className="rounded-md border border-studio-line px-3 py-2 font-normal"
-              onChange={(event) => setSelectedStyleCode(event.target.value)}
-              value={selectedStyleCode}
-            >
-              {styleCodes.map((style) => (
-                <option key={style.style_code} value={style.style_code}>
-                  {style.style_code}
-                </option>
-              ))}
-            </select>
-            <span className="text-xs font-normal text-studio-muted">
-              {selectedStyle
-                ? `${selectedStyle.style_name} / ${
-                    selectedStyle.device_type
-                      ? DEVICE_LABELS[selectedStyle.device_type as ProductionDeviceType] ?? selectedStyle.device_type
-                      : "未知设备"
-                  }`
-                : "暂无风格"}
-            </span>
-          </label>
-        ) : null}
-
-        <fieldset className="grid gap-2 rounded-md border border-studio-line p-3">
-          <legend className="px-1 text-sm font-medium">界面类型</legend>
-          {SCREEN_OPTIONS.map((option) => (
-            <label className="flex items-center gap-2 text-sm" key={option.value}>
-              <input
-                checked={screenTypes.includes(option.value)}
-                onChange={() => toggleScreen(option.value)}
-                type="checkbox"
-              />
-              {option.label}
-            </label>
-          ))}
-        </fieldset>
-
-        <label className="grid gap-1 text-sm font-medium">
-          风格名称
-          <input
-            className="rounded-md border border-studio-line px-3 py-2 font-normal"
-            onChange={(event) => setStyleName(event.target.value)}
-            value={styleName}
-          />
-        </label>
-
-        <div className="grid gap-2 rounded-md border border-studio-line p-3">
-          <label className="grid gap-1 text-sm font-medium">
-            参考图
-            <input
-              accept="image/png,image/jpeg,image/webp"
-              className="rounded-md border border-studio-line px-3 py-2 font-normal"
-              onChange={uploadReferenceImage}
-              type="file"
-            />
-          </label>
-          {referencePreviewUrl ? (
-            <div className="grid gap-2">
-              <img
-                alt="参考图缩略图"
-                className="aspect-video w-full rounded-md border border-studio-line object-contain"
-                src={referencePreviewUrl}
-              />
-              <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
-                <span className="text-studio-muted">{referenceFileName}</span>
-                <button className="rounded-md border border-studio-line px-3 py-2" onClick={removeReferenceImage} type="button">
-                  删除参考图
-                </button>
-              </div>
-            </div>
-          ) : null}
-          {uploadingReference ? <p className="text-sm text-studio-muted">参考图上传中...</p> : null}
-        </div>
-
-        <label className="grid gap-1 text-sm font-medium">
-          生成提示词
-          <textarea
-            className="min-h-36 rounded-md border border-studio-line px-3 py-2 text-sm font-normal leading-6"
-            onChange={(event) => setPrompt(event.target.value)}
-            value={prompt}
-          />
-        </label>
-
-        <button
-          className="rounded-md bg-studio-action px-4 py-3 text-sm font-semibold text-white disabled:opacity-60"
-          disabled={generationDisabled}
-          type="submit"
-        >
-          {loading ? "生成中..." : "开始生成"}
-        </button>
         {error ? <p className="text-sm leading-6 text-red-600">{error}</p> : null}
-      </form>
+      </section>
 
-      <aside className="grid h-fit gap-3 rounded-md border border-studio-line bg-white p-4 text-sm">
-        <h2 className="font-semibold">项目栏</h2>
-        <dl className="grid gap-3">
-          <div>
-            <dt className="text-xs text-studio-muted">当前项目名称</dt>
-            <dd className="font-semibold">{projectContext?.project_name ?? "996 UI Asset Studio"}</dd>
-          </div>
-          <div>
-            <dt className="text-xs text-studio-muted">当前界面类型</dt>
-            <dd>{projectContext?.screen_type === "main_ui" ? "主界面" : projectContext?.screen_type ?? "主界面"}</dd>
-          </div>
-          <div>
-            <dt className="text-xs text-studio-muted">当前风格包名称</dt>
-            <dd>{projectContext?.style_package_name ?? "未生成"}</dd>
-          </div>
-          <div>
-            <dt className="text-xs text-studio-muted">风格描述/备注</dt>
-            <dd className="leading-5 text-studio-muted">{projectContext?.style_notes ?? "参考布局为主，风格强度由生成参数记录。"}</dd>
-          </div>
-          <div>
-            <dt className="text-xs text-studio-muted">当前参考图状态</dt>
-            <dd>{uiProductionReferencePath ? "已上传参考图" : projectContext?.reference_status ?? "未上传，默认读取本地参考"}</dd>
-          </div>
-        </dl>
-      </aside>
-
-      <div className="rounded-md border border-studio-line bg-white p-5">
-        <h2 className="text-lg font-semibold">结果中心</h2>
+      <div className="min-w-0 rounded-md border border-studio-line bg-white p-5">
+        <h2 className="text-lg font-semibold">结果中心 / 素材生产</h2>
         <section className="mt-4 grid gap-4 rounded-md border border-studio-line bg-white p-4">
           <div>
             <h3 className="font-semibold">UI素材生产</h3>
@@ -732,17 +675,14 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
               ) : null}
             </label>
             <label className="grid gap-1 text-sm font-medium">
-              风格参考
+              生成模式
               <select
                 className="rounded-md border border-studio-line px-3 py-2 font-normal"
-                onChange={(event) => setUiProductionStyleReference(event.target.value)}
-                value={uiProductionStyleReference}
+                onChange={(event) => chooseGenerationMode(event.target.value as ProductionGenerationMode)}
+                value={generationMode}
               >
-                {STYLE_REFERENCE_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>
-                    {option.label}
-                  </option>
-                ))}
+                <option value="auto_generate">自动生成</option>
+                <option value="reference_guided">参考生成</option>
               </select>
             </label>
           </div>
@@ -773,7 +713,7 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
             ) : null}
           </div>
           <label className="grid gap-1 text-sm font-medium">
-            3. 输入生成需求
+            3. 生成提示词 / 需求描述
             <textarea
               className="min-h-24 rounded-md border border-studio-line px-3 py-2 font-normal leading-6"
               onChange={(event) => setUiProductionRequirement(event.target.value)}

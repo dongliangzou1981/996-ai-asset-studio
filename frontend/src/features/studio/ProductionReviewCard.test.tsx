@@ -14,6 +14,8 @@ const api = {
   updateMainUiCandidate: jest.fn(),
   exportMainUiProduction: jest.fn(),
   getProductionStudioFileUrl: jest.fn((path: string) => `http://127.0.0.1:8000${path}`),
+  listProjects: jest.fn(),
+  createProject: jest.fn(),
   listProductionStyleCodes: jest.fn(),
   updateProductionManualAcceptance: jest.fn(),
   uploadAsset: jest.fn(),
@@ -21,6 +23,26 @@ const api = {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  api.listProjects.mockResolvedValue({
+    items: [
+      {
+        id: "project-996",
+        name: "996 主界面",
+        description: "P996",
+        status: "draft",
+        created_at: "2026-06-08T00:00:00Z",
+        updated_at: "2026-06-08T00:00:00Z",
+      },
+    ],
+  });
+  api.createProject.mockResolvedValue({
+    id: "project-new",
+    name: "新项目",
+    description: "NEW001",
+    status: "draft",
+    created_at: "2026-06-08T00:00:00Z",
+    updated_at: "2026-06-08T00:00:00Z",
+  });
   api.listProductionStyleCodes.mockResolvedValue({
     items: [
       {
@@ -143,37 +165,19 @@ beforeEach(() => {
   });
 });
 
-test("shows production review card and writes manual acceptance", async () => {
+test("shows material production result links after generating the interface", async () => {
   const user = userEvent.setup();
   render(<ProductionStudio api={api} />);
 
-  const generateButton = await screen.findByRole("button", { name: "开始生成" });
+  const generateButton = await screen.findByRole("button", { name: "生成界面" });
   await user.click(generateButton);
 
-  const card = await screen.findByText("Production Review Card");
-  const section = card.closest("section") as HTMLElement;
+  const resultCenter = await screen.findByText("结果中心 / 素材生产");
+  const section = resultCenter.closest("div") as HTMLElement;
 
-  expect(within(section).getByText("Production Score")).toBeInTheDocument();
-  expect(within(section).getByText("72")).toBeInTheDocument();
-  expect(within(section).getByText("Ready Status")).toBeInTheDocument();
-  expect(within(section).getAllByText("blocked").length).toBeGreaterThanOrEqual(1);
-  expect(within(section).getByText("A/B/C")).toBeInTheDocument();
-  expect(within(section).getByText("2 / 3 / 1")).toBeInTheDocument();
-  expect(within(section).getByText("Screen/Panel/Atomic/Effect/Ignore")).toBeInTheDocument();
-  expect(within(section).getByText("1 / 3 / 2 / 0 / 1")).toBeInTheDocument();
-  expect(within(section).getByText("blockers")).toBeInTheDocument();
-  expect(within(section).getByText("warnings")).toBeInTheDocument();
-  expect(within(section).getByText("transparent_issues")).toBeInTheDocument();
-  expect(within(section).getByText("manual_acceptance_status")).toBeInTheDocument();
-  expect(within(section).getByText("View production_review.json")).toBeInTheDocument();
-  expect(within(section).getByText("View component_review_analysis.json")).toBeInTheDocument();
-  expect(within(section).getByText("View manual_acceptance.json")).toBeInTheDocument();
-  expect(within(section).getByText("View production_review.html")).toBeInTheDocument();
-
-  await user.selectOptions(screen.getByLabelText("人工验收状态"), "accepted");
-
-  expect(api.updateProductionManualAcceptance).toHaveBeenCalledWith(
-    "assets/uploads/996-ready/STYLE_0003/bag_ui/job-bag",
-    expect.objectContaining({ review_status: "accepted" }),
-  );
+  expect(within(section).getByAltText("完整界面预览")).toBeInTheDocument();
+  expect(within(section).getByText("查看输出包 manifest.json")).toBeInTheDocument();
+  expect(within(section).getByText("查看 manual_acceptance.json")).toBeInTheDocument();
+  expect(within(section).queryByText("Production Review Card")).not.toBeInTheDocument();
+  expect(api.updateProductionManualAcceptance).not.toHaveBeenCalled();
 });

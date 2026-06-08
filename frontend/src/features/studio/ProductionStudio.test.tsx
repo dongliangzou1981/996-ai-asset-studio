@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { ProductionStudio } from "./ProductionStudio";
@@ -15,6 +15,8 @@ const api = {
   updateMainUiCandidate: jest.fn(),
   exportMainUiProduction: jest.fn(),
   getProductionStudioFileUrl: jest.fn((path: string) => `http://127.0.0.1:8000${path}`),
+  listProjects: jest.fn(),
+  createProject: jest.fn(),
   listProductionStyleCodes: jest.fn(),
   updateProductionManualAcceptance: jest.fn(),
   uploadAsset: jest.fn(),
@@ -142,6 +144,26 @@ beforeAll(() => {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  api.listProjects.mockResolvedValue({
+    items: [
+      {
+        id: "project-996",
+        name: "996 主界面",
+        description: "P996",
+        status: "draft",
+        created_at: "2026-06-08T00:00:00Z",
+        updated_at: "2026-06-08T00:00:00Z",
+      },
+    ],
+  });
+  api.createProject.mockResolvedValue({
+    id: "project-new",
+    name: "新项目",
+    description: "NEW001",
+    status: "draft",
+    created_at: "2026-06-08T00:00:00Z",
+    updated_at: "2026-06-08T00:00:00Z",
+  });
   api.listProductionStyleCodes.mockResolvedValue({
     items: [
       {
@@ -270,7 +292,7 @@ test("UI素材生产流程可生成、标记、确认、切图并预览输出", 
   render(<ProductionStudio api={api} />);
 
   expect(await screen.findByText("UI素材生产")).toBeInTheDocument();
-  expect(screen.getByText("项目栏")).toBeInTheDocument();
+  expect(screen.getByText("项目列表")).toBeInTheDocument();
   expect(screen.getByLabelText("1. 选择界面类型")).toHaveDisplayValue("主界面");
 
   const file = new File(["fake"], "reference-main-ui.png", { type: "image/png" });
@@ -284,9 +306,9 @@ test("UI素材生产流程可生成、标记、确认、切图并预览输出", 
   });
   expect(await screen.findByAltText("UI素材生产参考图预览")).toHaveAttribute("src", "blob:reference-preview");
 
-  await user.selectOptions(screen.getByLabelText("风格参考"), "60");
-  await user.clear(screen.getByLabelText("3. 输入生成需求"));
-  await user.type(screen.getByLabelText("3. 输入生成需求"), "主界面布局清晰，技能区和地图区优先。");
+  await user.selectOptions(screen.getByLabelText("生成模式"), "reference_guided");
+  await user.clear(screen.getByLabelText("3. 生成提示词 / 需求描述"));
+  await user.type(screen.getByLabelText("3. 生成提示词 / 需求描述"), "主界面布局清晰，技能区和地图区优先。");
   await user.click(screen.getByRole("button", { name: "生成界面" }));
 
   expect(api.generateUiProductionPackage).toHaveBeenCalledWith(
@@ -294,7 +316,7 @@ test("UI素材生产流程可生成、标记、确认、切图并预览输出", 
       screen_type: "main_ui",
       reference_image_path: "assets/uploads/reference-main-ui.png",
       requirement: "主界面布局清晰，技能区和地图区优先。",
-      style_reference_strength: "60",
+      style_reference_strength: "none",
       adjustment_note: "",
       adjustment_image_path: null,
     }),
@@ -343,39 +365,48 @@ test("UI素材生产流程可生成、标记、确认、切图并预览输出", 
   expect(screen.getByText("查看 training_samples")).toBeInTheDocument();
 });
 
-test("显示布局模板、中文字段和可编辑自动生成提示词", async () => {
+test("项目栏和生产工作台只显示 Sprint20G 要求的基础信息", async () => {
   const user = userEvent.setup();
   render(<ProductionStudio api={api} />);
 
-  expect(await screen.findByText("生产工作台")).toBeInTheDocument();
-  expect(screen.getByLabelText("设备类型")).toHaveDisplayValue("手机横屏");
-  expect(screen.getByLabelText("输出模式")).toHaveDisplayValue("资源生产");
-  expect(screen.getByLabelText("布局模板")).toHaveDisplayValue("经典传奇手游布局");
-  expect((screen.getByLabelText("生成提示词") as HTMLTextAreaElement).value).toContain("左下摇杆区");
-  expect((screen.getByLabelText("生成提示词") as HTMLTextAreaElement).value).toContain("右下环绕式技能操作区");
+  expect(await screen.findByText("项目列表")).toBeInTheDocument();
+  expect((await screen.findAllByText("996 主界面")).length).toBeGreaterThanOrEqual(1);
+  expect((await screen.findAllByText("P996")).length).toBeGreaterThanOrEqual(1);
+  expect(screen.getByRole("button", { name: "新建项目" })).toBeInTheDocument();
 
-  await user.selectOptions(screen.getByLabelText("布局模板"), "legend_185_combo");
-  await user.clear(screen.getByLabelText("生成提示词"));
-  await user.type(screen.getByLabelText("生成提示词"), "保持固定布局，只替换暗金材质。");
-  await user.click(screen.getByRole("button", { name: "开始生成" }));
+  const workbench = screen.getByText("生产工作台").closest("section") as HTMLElement;
+  expect(within(workbench).getByText("选择当前项目的生产方向，后续素材任务将在结果中心执行")).toBeInTheDocument();
+  expect(within(workbench).getByLabelText("设备类型")).toHaveDisplayValue("手机横屏");
+  expect(within(workbench).getByLabelText("输出模式")).toHaveDisplayValue("资源生产");
+  expect(within(workbench).getByLabelText("布局模板")).toHaveDisplayValue("经典传奇手游布局");
+  expect(within(workbench).queryByText("生成模式")).not.toBeInTheDocument();
+  expect(within(workbench).queryByText("风格来源")).not.toBeInTheDocument();
+  expect(within(workbench).queryByText("界面类型")).not.toBeInTheDocument();
+  expect(within(workbench).queryByText("参考图")).not.toBeInTheDocument();
+  expect(within(workbench).queryByText("生成提示词")).not.toBeInTheDocument();
 
-  expect(api.generateProductionStudioPackage).toHaveBeenCalledWith(
-    expect.objectContaining({
-      layout_template: "legend_185_combo",
-      generation_mode: "auto_generate",
-      reference_image_path: null,
-      prompt: "保持固定布局，只替换暗金材质。",
-    }),
-  );
+  await user.click(screen.getByRole("button", { name: "新建项目" }));
+  await user.type(screen.getByLabelText("项目名称"), "新项目");
+  await user.type(screen.getByLabelText("项目代号"), "NEW001");
+  await user.click(screen.getByRole("button", { name: "保存项目" }));
+
+  expect(api.createProject).toHaveBeenCalledWith({
+    name: "新项目",
+    description: "NEW001",
+    status: "draft",
+  });
 });
 
-test("支持参考图上传、缩略图、删除和参考生成提示词", async () => {
+test("生产工作台基础选项可调整，素材生产区保留参考图和调整说明", async () => {
   const user = userEvent.setup();
   render(<ProductionStudio api={api} />);
 
   await screen.findByText("生产工作台");
+  await user.selectOptions(screen.getByLabelText("布局模板"), "legend_185_combo");
+  expect(screen.getByLabelText("布局模板")).toHaveDisplayValue("1.85合击版");
+
   const file = new File(["fake"], "reference-main-ui.png", { type: "image/png" });
-  await user.upload(screen.getByLabelText("参考图"), file);
+  await user.upload(screen.getByLabelText("2. 上传参考图"), file);
 
   expect(api.uploadAsset).toHaveBeenCalledWith({
     file,
@@ -383,50 +414,10 @@ test("支持参考图上传、缩略图、删除和参考生成提示词", async
     asset_type: "reference_image",
     device_type: "mobile_landscape",
   });
-  expect(await screen.findByAltText("参考图缩略图")).toHaveAttribute("src", "blob:reference-preview");
-  expect((screen.getByLabelText("生成提示词") as HTMLTextAreaElement).value).toContain("参考上传的传奇手游界面截图");
+  expect(await screen.findByAltText("UI素材生产参考图预览")).toHaveAttribute("src", "blob:reference-preview");
+  await user.type(screen.getByLabelText("调整说明"), "技能按钮更贴边。");
+  expect(screen.getByDisplayValue("技能按钮更贴边。")).toBeInTheDocument();
 
-  await user.click(screen.getByRole("button", { name: "开始生成" }));
-  expect(api.generateProductionStudioPackage).toHaveBeenCalledWith(
-    expect.objectContaining({
-      generation_mode: "reference_guided",
-      reference_image_path: "assets/uploads/reference-main-ui.png",
-      prompt: expect.stringContaining("不要照抄原图素材"),
-    }),
-  );
-
-  await user.click(screen.getByRole("button", { name: "删除参考图" }));
-  expect(screen.queryByAltText("参考图缩略图")).not.toBeInTheDocument();
-});
-
-test("结果中心优先显示完整图预览、资源入口和验收记录", async () => {
-  const user = userEvent.setup();
-  render(<ProductionStudio api={api} />);
-
-  await screen.findByText("生产工作台");
-  await user.click(screen.getByLabelText("使用已有风格"));
-  await user.click(screen.getByLabelText("背包界面"));
-  await user.click(screen.getByLabelText("主界面"));
-  await user.click(screen.getByRole("button", { name: "开始生成" }));
-
-  expect(await screen.findByText("结果中心")).toBeInTheDocument();
-  expect(screen.getByAltText("背包界面完整图预览")).toHaveAttribute(
-    "src",
-    "http://127.0.0.1:8000/production-studio/files/996-ready/STYLE_0003/bag_ui/job-bag/ui_preview.png",
-  );
-  expect(screen.getByText("验证通过")).toBeInTheDocument();
-  expect(screen.getByText("组件数量")).toBeInTheDocument();
-  expect(screen.getByText("候选资源")).toBeInTheDocument();
-  expect(screen.getByText("查看资源")).toBeInTheDocument();
-  expect(screen.getByText("查看报告")).toBeInTheDocument();
-
-  await user.click(screen.getByRole("button", { name: "放大查看背包界面完整图预览" }));
-  expect(screen.getByRole("dialog")).toBeInTheDocument();
-  expect(screen.getByAltText("背包界面放大预览")).toBeInTheDocument();
-
-  await user.selectOptions(screen.getByLabelText("人工验收状态"), "rejected");
-  await user.type(screen.getByLabelText("验收记录"), "右下技能区需要更环绕。");
-
-  expect(screen.getAllByText("验收拒绝").length).toBeGreaterThanOrEqual(1);
-  expect(screen.getByDisplayValue("右下技能区需要更环绕。")).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "移除参考图" }));
+  expect(screen.queryByAltText("UI素材生产参考图预览")).not.toBeInTheDocument();
 });
