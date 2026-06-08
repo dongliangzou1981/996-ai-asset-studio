@@ -483,6 +483,15 @@ test("普通生成不显示参考图控件，生成请求不依赖参考图", as
   await screen.findByText("UI素材生产");
   expect(screen.getByLabelText("生成模式")).toHaveDisplayValue("普通生成");
   expect(screen.queryByLabelText("2. 上传参考图")).not.toBeInTheDocument();
+  const promptField = screen.getByLabelText("系统生成提示词") as HTMLTextAreaElement;
+  expect(promptField.value).toContain("固定布局骨架必须保持");
+  expect(promptField.value).toContain("顶部信息区");
+  expect(promptField.value).toContain("右上地图");
+  expect(promptField.value).toContain("右下技能区");
+  expect(promptField.value).toContain("左下摇杆");
+  expect(promptField.value).toContain("底部经验条");
+  expect(promptField.value).toContain("聊天区");
+  expect(promptField.value).toContain("可变元素仅限：风格、纹饰、色彩、材质和装饰表现");
 
   await user.click(screen.getByRole("button", { name: "生成界面" }));
 
@@ -490,6 +499,7 @@ test("普通生成不显示参考图控件，生成请求不依赖参考图", as
     expect.objectContaining({
       screen_type: "main_ui",
       reference_image_path: null,
+      system_prompt: expect.stringContaining("固定布局骨架必须保持"),
       style_reference_strength: "none",
       project_id: "project-996",
       device_type: "mobile_landscape",
