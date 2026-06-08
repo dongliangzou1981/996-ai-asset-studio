@@ -155,9 +155,11 @@ function buildMainUiProductionPrompt(input: {
   screenType: UiProductionScreenType;
   generationMode: ProductionGenerationMode;
   hasReferenceImage: boolean;
+  referenceInfluence: number;
   adjustmentNote: string;
   historicalPrompt?: string;
 }) {
+  const referenceInfluence = Math.min(100, Math.max(0, Math.round(input.referenceInfluence)));
   const referenceLine = input.hasReferenceImage
     ? "已上传参考图：风格跟随参考图或整体风格，不照抄参考图内容。"
     : "未上传参考图：使用系统内置 fallback 测试图或整体风格生成，不依赖 P5 资源。";
@@ -172,6 +174,11 @@ function buildMainUiProductionPrompt(input: {
     `生产参数：${PROMPT_DEVICE_LABELS[input.deviceType]}，${PROMPT_ASSET_MODE_LABELS[input.assetMode]}，${PROMPT_LAYOUT_LABELS[input.layoutTemplate]}，界面类型 ${input.screenType}，生成模式 ${PROMPT_GENERATION_MODE_LABELS[input.generationMode]}。`,
     screenLine,
     "布局要求：经典传奇手游布局，UI 元素边界清楚，方便自动标记和切图；按钮、图标、面板需要独立清晰。",
+    "参考图影响比例为 " +
+      referenceInfluence +
+      "%，仅影响风格、纹饰、色彩、材质、按钮视觉皮肤、面板装饰和图标表现，不改变固定布局骨架。",
+    "固定布局骨架必须保持：顶部信息区、右上地图、右侧入口按钮、右下技能区、左下摇杆、底部经验条、聊天区。",
+    "移动端操作体验规则：手机横屏操作体验优先，右下技能按钮适配右手拇指操作，技能区可支持第二圈技能按钮，不遮挡经验条、聊天区和主视觉，按钮间距避免误触。布局可参考成熟手游操作设计，但不得破坏经典传奇手游布局骨架。",
     "右下技能区：主技能按钮固定右下角偏内侧，小技能围绕主技能形成半圆布局，预留第二圈技能按钮空间，避免遮挡底部经验条和聊天区域，符合手机横屏右手拇指操作体验。",
     referenceLine,
     input.adjustmentNote ? `调整说明：${input.adjustmentNote}` : "调整说明：无。",
@@ -182,6 +189,26 @@ function buildMainUiProductionPrompt(input: {
 
 function defaultAcceptanceRecord(): AcceptanceRecord {
   return { status: "pending", notes: "" };
+}
+
+function isSupportedUploadImage(file: File) {
+  const type = file.type.toLowerCase();
+  const name = file.name.toLowerCase();
+  return (
+    type === "image/png" ||
+    type === "image/jpeg" ||
+    name.endsWith(".png") ||
+    name.endsWith(".jpg") ||
+    name.endsWith(".jpeg")
+  );
+}
+
+function normalizeReferenceInfluence(value: string) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) {
+    return "0";
+  }
+  return String(Math.min(100, Math.max(0, Math.round(number))));
 }
 
 export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioApi }) {
@@ -212,7 +239,7 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
   const [uiProductionRequirement, setUiProductionRequirement] = useState("");
   const [uiProductionSystemPrompt, setUiProductionSystemPrompt] = useState("");
   const [uiProductionPromptEdited, setUiProductionPromptEdited] = useState(false);
-  const [uiProductionStyleReference, setUiProductionStyleReference] = useState("none");
+  const [uiProductionStyleReference, setUiProductionStyleReference] = useState("40");
   const [uiProductionReferencePath, setUiProductionReferencePath] = useState<string | null>(null);
   const [uiProductionReferencePreviewUrl, setUiProductionReferencePreviewUrl] = useState("");
   const [uiProductionReferenceFileName, setUiProductionReferenceFileName] = useState("");
@@ -228,6 +255,9 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
   const [expandedPreview, setExpandedPreview] = useState<{ src: string; label: string } | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [projectError, setProjectError] = useState("");
+  const [uiReferenceUploadError, setUiReferenceUploadError] = useState("");
+  const [uiAdjustmentUploadError, setUiAdjustmentUploadError] = useState("");
   const selectedProject = projects.find((project) => project.id === selectedProjectId);
 
   useEffect(() => {
@@ -291,6 +321,7 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
       screenType: uiProductionScreenType,
       generationMode,
       hasReferenceImage: Boolean(uiProductionReferencePath),
+      referenceInfluence: Number(uiProductionStyleReference) || 0,
       adjustmentNote: uiAdjustmentNote,
     };
     const basePrompt = buildMainUiProductionPrompt(basePromptInput);
@@ -329,6 +360,7 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
     uiProductionPromptEdited,
     uiProductionReferencePath,
     uiProductionScreenType,
+    uiProductionStyleReference,
   ]);
 
   function toggleScreen(screenType: ProductionScreenType) {
@@ -356,11 +388,11 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
     const name = newProjectName.trim();
     const code = newProjectCode.trim();
     if (!name || !code) {
-      setError("请填写项目名称和代号。");
+      setProjectError("请填写项目名称和代号。");
       return;
     }
     setProjectLoading(true);
-    setError("");
+    setProjectError("");
     try {
       const created = await api.createProject({
         name,
@@ -373,7 +405,7 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
       setNewProjectCode("");
       setShowNewProjectForm(false);
     } catch {
-      setError("新建项目失败，请确认项目服务可用。");
+      setProjectError("新建项目失败，请确认项目服务可用。");
     } finally {
       setProjectLoading(false);
     }
@@ -382,6 +414,9 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
   async function enterMarkingAcceptanceMode() {
     setProjectLoading(true);
     setError("");
+    setProjectError("");
+    setUiReferenceUploadError("");
+    setUiAdjustmentUploadError("");
     setUiProductionMessage("");
     setMarkingAcceptanceResult(null);
     try {
@@ -406,7 +441,7 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
       chooseGenerationMode("auto_generate");
       setUiProductionPromptEdited(false);
       setUiAdjustmentNote(MARKING_TEST_ADJUSTMENT);
-      setUiProductionStyleReference("none");
+      setUiProductionStyleReference("40");
       setUiAdjustmentImagePath(null);
       setUiAdjustmentImageName("");
       const testPrompt = buildMainUiProductionPrompt({
@@ -418,6 +453,7 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
         screenType: "main_ui",
         generationMode: "auto_generate",
         hasReferenceImage: Boolean(uiProductionReferencePath),
+        referenceInfluence: 40,
         adjustmentNote: MARKING_TEST_ADJUSTMENT,
       });
       setUiProductionSystemPrompt(testPrompt);
@@ -481,8 +517,13 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
     if (!file) {
       return;
     }
-    setError("");
+    setUiReferenceUploadError("");
     setUiProductionMessage("");
+    if (!isSupportedUploadImage(file)) {
+      setUiReferenceUploadError("参考图上传失败，请使用 PNG、JPG 或 JPEG。");
+      event.target.value = "";
+      return;
+    }
     const previewUrl = URL.createObjectURL(file);
     setUiProductionReferencePreviewUrl((current) => {
       if (current) {
@@ -502,7 +543,7 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
       setUiProductionReferenceFileName(asset.original_filename || file.name);
     } catch {
       setUiProductionReferencePath(null);
-      setError("参考图上传失败，请使用 JPG 或 PNG。");
+      setUiReferenceUploadError("参考图上传失败，请使用 PNG、JPG 或 JPEG。");
     } finally {
       event.target.value = "";
     }
@@ -513,7 +554,13 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
     if (!file) {
       return;
     }
-    setError("");
+    setUiAdjustmentUploadError("");
+    setUiProductionMessage("");
+    if (!isSupportedUploadImage(file)) {
+      setUiAdjustmentUploadError("调整截图上传失败，请使用 PNG、JPG 或 JPEG。");
+      event.target.value = "";
+      return;
+    }
     try {
       const asset = await api.uploadAsset({
         file,
@@ -525,7 +572,7 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
       setUiAdjustmentImageName(asset.original_filename || file.name);
       setUiProductionMessage("调整截图已保存，下次生成会带入调整记录。");
     } catch {
-      setError("调整截图上传失败，请使用 JPG 或 PNG。");
+      setUiAdjustmentUploadError("调整截图上传失败，请使用 PNG、JPG 或 JPEG。");
     } finally {
       event.target.value = "";
     }
@@ -538,6 +585,7 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
     setUiProductionReferencePreviewUrl("");
     setUiProductionReferencePath(null);
     setUiProductionReferenceFileName("");
+    setUiReferenceUploadError("");
     setUiProductionMessage("已移除参考图。");
   }
 
@@ -788,6 +836,7 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
             >
               {projectLoading ? "创建中..." : "保存项目"}
             </button>
+            {projectError ? <p className="text-xs leading-5 text-red-600">{projectError}</p> : null}
           </form>
         ) : null}
 
@@ -936,12 +985,46 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
             <label className="grid gap-1 text-sm font-medium">
               2. 上传参考图
               <input
-                accept="image/png,image/jpeg"
+                accept="image/png,image/jpeg,.png,.jpg,.jpeg"
                 className="rounded-md border border-studio-line px-3 py-2 font-normal"
                 onChange={uploadUiProductionReference}
                 type="file"
               />
             </label>
+            {uiReferenceUploadError ? <p className="text-xs leading-5 text-red-600">{uiReferenceUploadError}</p> : null}
+            <div className="grid gap-2 rounded-md bg-slate-50 p-3">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <label className="text-sm font-medium" htmlFor="ui-reference-influence">
+                  参考图影响比例
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    aria-label="参考图影响比例数值"
+                    className="w-20 rounded-md border border-studio-line px-2 py-1 text-sm"
+                    max={100}
+                    min={0}
+                    onChange={(event) => setUiProductionStyleReference(normalizeReferenceInfluence(event.target.value))}
+                    type="number"
+                    value={uiProductionStyleReference}
+                  />
+                  <span className="text-sm text-studio-muted">%</span>
+                </div>
+              </div>
+              <input
+                aria-label="参考图影响比例"
+                className="w-full"
+                id="ui-reference-influence"
+                max={100}
+                min={0}
+                onChange={(event) => setUiProductionStyleReference(normalizeReferenceInfluence(event.target.value))}
+                step={1}
+                type="range"
+                value={Number(uiProductionStyleReference) || 0}
+              />
+              <p className="text-xs leading-5 text-studio-muted">
+                仅影响风格、纹饰、色彩、材质、按钮皮肤、面板装饰和图标表现，不改变固定布局骨架。
+              </p>
+            </div>
             {uiProductionReferencePreviewUrl ? (
               <div className="grid gap-2">
                 <img
@@ -987,12 +1070,13 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
             <label className="grid gap-1 text-sm font-medium">
               上传调整截图
               <input
-                accept="image/png,image/jpeg"
+                accept="image/png,image/jpeg,.png,.jpg,.jpeg"
                 className="rounded-md border border-studio-line px-3 py-2 font-normal"
                 onChange={uploadUiAdjustmentImage}
                 type="file"
               />
             </label>
+            {uiAdjustmentUploadError ? <p className="text-xs leading-5 text-red-600">{uiAdjustmentUploadError}</p> : null}
             {uiAdjustmentImageName ? <p className="text-xs text-studio-muted">已保存调整截图：{uiAdjustmentImageName}</p> : null}
           </div>
           <div className="flex flex-wrap gap-2">

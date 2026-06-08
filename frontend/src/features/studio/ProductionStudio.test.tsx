@@ -349,6 +349,9 @@ test("UI素材生产流程可生成、标记、确认、切图并预览输出", 
   await user.selectOptions(screen.getByLabelText("生成模式"), "reference_guided");
   const generatedPrompt = screen.getByLabelText("系统生成提示词") as HTMLTextAreaElement;
   expect(generatedPrompt.value).toContain("手机横屏传奇手游主界面");
+  expect(generatedPrompt.value).toContain("参考图影响比例为 40%");
+  expect(generatedPrompt.value).toContain("固定布局骨架必须保持");
+  expect(screen.getByLabelText("参考图影响比例")).toHaveValue("40");
   await user.clear(generatedPrompt);
   await user.type(generatedPrompt, "主界面布局清晰，技能区和地图区优先。");
   await user.click(screen.getByRole("button", { name: "生成界面" }));
@@ -359,7 +362,7 @@ test("UI素材生产流程可生成、标记、确认、切图并预览输出", 
       reference_image_path: "assets/uploads/reference-main-ui.png",
       system_prompt: expect.stringContaining("手机横屏传奇手游主界面"),
       requirement: "主界面布局清晰，技能区和地图区优先。",
-      style_reference_strength: "none",
+      style_reference_strength: "40",
       project_id: "project-996",
       device_type: "mobile_landscape",
       layout_template: "classic_legend_mobile",
@@ -441,6 +444,8 @@ test("项目栏和生产工作台只显示 Sprint20G 要求的基础信息", asy
     description: "NEW001",
     status: "draft",
   });
+  expect((await screen.findAllByText("新项目")).length).toBeGreaterThanOrEqual(1);
+  expect(screen.getAllByText("NEW001").length).toBeGreaterThanOrEqual(1);
 });
 
 test("生产工作台基础选项可调整，素材生产区保留参考图和调整说明", async () => {
@@ -467,6 +472,46 @@ test("生产工作台基础选项可调整，素材生产区保留参考图和�
   await user.click(screen.getByRole("button", { name: "移除参考图" }));
   expect(screen.queryByAltText("UI素材生产参考图预览")).not.toBeInTheDocument();
 });
+
+test("参考图影响比例会写入提示词，且调整截图上传错误显示在正确位置", async () => {
+  const user = userEvent.setup({ applyAccept: false });
+  render(<ProductionStudio api={api} />);
+
+  await screen.findByText("UI素材生产");
+  await waitFor(() => {
+    const promptField = screen.getByLabelText("系统生成提示词") as HTMLTextAreaElement;
+    expect(promptField.value).toContain("参考图影响比例为 40%");
+  });
+
+  await user.clear(screen.getByLabelText("参考图影响比例数值"));
+  await user.type(screen.getByLabelText("参考图影响比例数值"), "65");
+  await waitFor(() => {
+    const promptField = screen.getByLabelText("系统生成提示词") as HTMLTextAreaElement;
+    expect(promptField.value).toContain("参考图影响比例为 65%");
+  });
+  expect((screen.getByLabelText("系统生成提示词") as HTMLTextAreaElement).value).toContain("不改变固定布局骨架");
+
+  const adjustmentInput = screen.getByLabelText("上传调整截图");
+  const pngFile = new File(["fake"], "adjustment.png", { type: "" });
+  await user.upload(adjustmentInput, pngFile);
+  expect(api.uploadAsset).toHaveBeenCalledWith({
+    file: pngFile,
+    project_id: null,
+    asset_type: "reference_image",
+    device_type: "mobile_landscape",
+  });
+  expect(screen.queryByText("调整截图上传失败，请使用 PNG、JPG 或 JPEG。")).not.toBeInTheDocument();
+
+  api.uploadAsset.mockClear();
+  const invalidFile = new File(["fake"], "adjustment.txt", { type: "text/plain" });
+  await user.upload(screen.getByLabelText("上传调整截图"), invalidFile);
+  expect(api.uploadAsset).not.toHaveBeenCalled();
+  const adjustmentBlock = screen.getByText("上传调整截图").closest("div") as HTMLElement;
+  const workbench = screen.getByText("生产工作台").closest("section") as HTMLElement;
+  expect(within(adjustmentBlock).getByText("调整截图上传失败，请使用 PNG、JPG 或 JPEG。")).toBeInTheDocument();
+  expect(within(workbench).queryByText("调整截图上传失败，请使用 PNG、JPG 或 JPEG。")).not.toBeInTheDocument();
+});
+
 test("标记验收测试模式可自动填充并展示验收结果", async () => {
   const user = userEvent.setup();
   render(<ProductionStudio api={api} />);
@@ -486,6 +531,7 @@ test("标记验收测试模式可自动填充并展示验收结果", async () =>
   expect(promptField.value).toContain("手机横屏传奇手游主界面");
   expect(promptField.value).toContain("右下技能操作区");
   expect(promptField.value).toContain("主技能按钮固定右下角偏内侧");
+  expect(promptField.value).toContain("参考图影响比例为 40%");
   expect(screen.getByDisplayValue("用于测试自动标记和自动切图准确性")).toBeInTheDocument();
   await user.clear(promptField);
   await user.type(promptField, "编辑后的验收提示词：技能区需要半圆布局。");
@@ -500,6 +546,7 @@ test("标记验收测试模式可自动填充并展示验收结果", async () =>
       project_id: "project-marking",
       device_type: "mobile_landscape",
       layout_template: "classic_legend_mobile",
+      style_reference_strength: "40",
       adjustment_note: "用于测试自动标记和自动切图准确性",
     }),
   );
