@@ -151,6 +151,7 @@ def test_ui_production_generate_mark_and_export_main_ui(tmp_path: Path, monkeypa
     exported_files = {item["file"]: item for item in exported.json()["package_files"]}
     assert exported_files["confirmed_components/"]["exists"] is True
     assert exported_files["production_review.json"]["exists"] is True
+    assert exported_files["training_samples/main_ui/candidate_samples.json"]["exists"] is True
     assert exported.json()["training_samples_url"].endswith("/training_samples/main_ui/candidate_samples.json")
 
 

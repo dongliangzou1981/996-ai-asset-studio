@@ -58,6 +58,53 @@ def rect_outline(box: dict[str, int]) -> list[dict[str, int]]:
     return [{"x": x, "y": y}, {"x": right, "y": y}, {"x": right, "y": bottom}, {"x": x, "y": bottom}]
 
 
+def circle_outline(box: dict[str, int], segments: int = 16) -> list[dict[str, int]]:
+    import math
+
+    x = int(box["x"])
+    y = int(box["y"])
+    width = int(box["width"])
+    height = int(box["height"])
+    cx = x + width / 2
+    cy = y + height / 2
+    rx = width / 2
+    ry = height / 2
+    return [
+        {
+            "x": round(cx + math.cos(2 * math.pi * index / segments) * rx),
+            "y": round(cy + math.sin(2 * math.pi * index / segments) * ry),
+        }
+        for index in range(segments)
+    ]
+
+
+def composite_outline(box: dict[str, int]) -> list[dict[str, int]]:
+    x = int(box["x"])
+    y = int(box["y"])
+    width = int(box["width"])
+    height = int(box["height"])
+    inset_x = max(4, round(width * 0.06))
+    inset_y = max(4, round(height * 0.08))
+    return [
+        {"x": x + inset_x, "y": y},
+        {"x": x + width - inset_x, "y": y},
+        {"x": x + width, "y": y + inset_y},
+        {"x": x + width, "y": y + height - inset_y},
+        {"x": x + width - inset_x, "y": y + height},
+        {"x": x + inset_x, "y": y + height},
+        {"x": x, "y": y + height - inset_y},
+        {"x": x, "y": y + inset_y},
+    ]
+
+
+def outline_for_shape(box: dict[str, int], shape_type: str) -> list[dict[str, int]]:
+    if shape_type == "circle":
+        return circle_outline(box)
+    if shape_type == "composite":
+        return composite_outline(box)
+    return rect_outline(box)
+
+
 def candidate_record(
     *,
     width: int,
@@ -84,7 +131,7 @@ def candidate_record(
         "number": index,
         "bounds": box,
         "bbox": box,
-        "outline_points": rect_outline(box),
+        "outline_points": outline_for_shape(box, shape_type),
         "shape_type": shape_type,
         "layout_zone": layout_zone,
         "level": level,
@@ -286,7 +333,7 @@ def style_reference_note(style_reference_strength: str) -> str:
         "copy": "\u9ad8\u590d\u523b",
     }
     label = labels.get(style_reference_strength, style_reference_strength or "\u4e0d\u53c2\u8003\u98ce\u683c")
-    return f"{label}\uff1a\u5df2\u5199\u5165\u63d0\u793a\u8bcd\uff0c\u6548\u679c\u53d6\u51b3\u6a21\u578b"
+    return f"{label}\uff1a\u5df2\u5199\u5165\u63d0\u793a\u8bcd/生成参数；当前模型不保证精确百分比控制"
 
 
 def create_candidate_options(package_dir: Path, source: Path) -> list[dict[str, str]]:
@@ -355,6 +402,11 @@ def write_base_package_files(
             "requirement": requirement,
             "style_reference_strength": style_reference_strength,
             "style_reference_note": style_reference_note(style_reference_strength),
+            "generation_parameters": {
+                "style_reference_strength": style_reference_strength,
+                "style_reference_note": style_reference_note(style_reference_strength),
+                "model_supports_exact_style_strength": False,
+            },
             "final_prompt": f"{requirement}\n\u98ce\u683c\u53c2\u8003\uff1a{style_reference_note(style_reference_strength)}".strip(),
             "candidate_options": candidate_options,
             "selected_candidate_id": "candidate_1",
@@ -462,24 +514,25 @@ def mark_candidate_components(package_dir: str | Path) -> dict[str, Any]:
             "generation_job_id": package_path.name,
             "coordinate_space": "main_ui_pixels",
             "candidate_preview": "candidate_preview.jpg",
+            "fixed_layout_zones": [
+                "bottom_left_joystick",
+                "right_skill",
+                "right_top_map",
+                "top_info",
+                "bottom_status",
+                "chat",
+                "right_system_entry",
+                "left_task",
+                "left_status",
+            ],
             "candidates": candidates,
             "updated_at": utc_now(),
         },
     )
     acceptance = read_json(package_path / "manual_acceptance.json")
-    acceptance["components"] = [
-        {
-            "component_id": item["component_id"],
-            "component_type": item["component_type"],
-            "number": item["number"],
-            "confirmed": item["confirmed"],
-            "review_status": "pending",
-            "remarks": "",
-        }
-        for item in candidates
-    ]
     acceptance["updated_at"] = utc_now()
     write_json(package_path / "manual_acceptance.json", acceptance)
+    write_manual_acceptance_components(package_path, candidates)
     return {"package_dir": str(package_path), "candidates_count": len(candidates)}
 
 
@@ -492,6 +545,50 @@ def save_candidate_manifest(package_dir: Path, manifest: dict[str, Any]) -> None
     write_json(package_dir / "candidate_manifest.json", manifest)
 
 
+def write_manual_acceptance_components(package_dir: Path, candidates: list[dict[str, Any]]) -> None:
+    acceptance_path = package_dir / "manual_acceptance.json"
+    existing = read_json(acceptance_path) if acceptance_path.exists() else {}
+    existing_components = {
+        str(item.get("component_id")): item
+        for item in existing.get("components", [])
+        if isinstance(item, dict) and item.get("component_id")
+    }
+    components = []
+    for candidate in candidates:
+        component_id = str(candidate.get("component_id") or candidate.get("candidate_id") or "")
+        previous = existing_components.get(component_id, {})
+        components.append(
+            {
+                "component_id": component_id,
+                "candidate_id": candidate.get("candidate_id") or component_id,
+                "component_type": candidate.get("component_type"),
+                "number": candidate.get("number"),
+                "confirmed": bool(candidate.get("confirmed")),
+                "level": candidate.get("level"),
+                "production_category": candidate.get("production_category"),
+                "layout_zone": candidate.get("layout_zone"),
+                "shape_type": candidate.get("shape_type"),
+                "bbox": candidate.get("bbox") or candidate.get("bounds"),
+                "outline_points": candidate.get("outline_points", []),
+                "output_file": candidate.get("image_path") or "",
+                "transparent_warning": candidate.get("transparent_warning") or "",
+                "review_status": previous.get("review_status", "pending"),
+                "remarks": previous.get("remarks", ""),
+            }
+        )
+    payload = {
+        "schema_version": "1.0",
+        "review_status": str(existing.get("review_status") or "pending"),
+        "reviewer": str(existing.get("reviewer") or ""),
+        "remarks": str(existing.get("remarks") or ""),
+        "updated_at": utc_now(),
+        "accepted_at": existing.get("accepted_at"),
+        "accepted_by": str(existing.get("accepted_by") or ""),
+        "components": components,
+    }
+    write_json(acceptance_path, payload)
+
+
 def write_training_samples(package_dir: Path, candidates: list[dict[str, Any]]) -> Path:
     delivery = read_json(package_dir / "delivery_report.json")
     training_dir = package_dir / "training_samples" / "main_ui"
@@ -500,8 +597,10 @@ def write_training_samples(package_dir: Path, candidates: list[dict[str, Any]]) 
     samples = [
         {
             "source_image": str(package_dir / "main_ui.jpg"),
+            "source_image_file": "main_ui.jpg",
             "candidate_id": candidate.get("candidate_id") or candidate.get("component_id"),
             "component_id": candidate.get("component_id"),
+            "confirmation_status": "confirmed" if candidate.get("confirmed") else "rejected",
             "user_confirmed": bool(candidate.get("confirmed")),
             "component_type": candidate.get("component_type"),
             "level": candidate.get("level"),
@@ -510,6 +609,7 @@ def write_training_samples(package_dir: Path, candidates: list[dict[str, Any]]) 
             "bbox": candidate.get("bbox") or candidate.get("bounds"),
             "outline_points": candidate.get("outline_points", []),
             "output_file": candidate.get("image_path") or "",
+            "output_exists": bool(candidate.get("image_path") and (package_dir / str(candidate.get("image_path"))).exists()),
             "transparent_warning": candidate.get("transparent_warning") or "",
             "style_reference_strength": delivery.get("style_reference_strength", ""),
             "selected_candidate_id": delivery.get("selected_candidate_id", ""),
@@ -536,6 +636,8 @@ def update_candidate_confirmation(package_dir: str | Path, candidate_id: str, co
         if candidate.get("candidate_id") == candidate_id or candidate.get("component_id") == candidate_id:
             candidate["confirmed"] = confirmed
             save_candidate_manifest(package_path, manifest)
+            candidates = [item for item in manifest.get("candidates", []) if isinstance(item, dict)]
+            write_manual_acceptance_components(package_path, candidates)
             return candidate
     raise ValueError(f"Candidate not found: {candidate_id}")
 
@@ -647,6 +749,7 @@ def export_confirmed_components(package_dir: str | Path) -> dict[str, Any]:
                 "generated_at": utc_now(),
             },
         )
+    write_manual_acceptance_components(package_path, candidates)
     return {
         "package_dir": str(package_path),
         "exported": exported,

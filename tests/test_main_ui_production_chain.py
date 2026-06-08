@@ -50,12 +50,24 @@ def test_main_ui_candidates_include_levels_and_categories(tmp_path: Path) -> Non
     assert by_id["skill_01"]["layout_zone"] == "right_skill"
     assert by_id["skill_01"]["shape_type"] == "circle"
     assert by_id["skill_01"]["bbox"]
-    assert by_id["skill_01"]["outline_points"]
+    assert len(by_id["skill_01"]["outline_points"]) > 4
     assert by_id["bottom_hud"]["level"] == "B"
     assert by_id["bottom_hud"]["production_category"] == "Panel"
+    assert len(by_id["bottom_hud"]["outline_points"]) > 4
     assert by_id["screen_main_ui"]["production_category"] == "Screen"
     assert by_id["dynamic_text"]["level"] == "C"
     assert by_id["dynamic_text"]["production_category"] == "Ignore"
+    assert manifest["fixed_layout_zones"] == [
+        "bottom_left_joystick",
+        "right_skill",
+        "right_top_map",
+        "top_info",
+        "bottom_status",
+        "chat",
+        "right_system_entry",
+        "left_task",
+        "left_status",
+    ]
 
 
 def test_confirmed_components_follow_png_and_jpg_rules(tmp_path: Path) -> None:
@@ -94,4 +106,12 @@ def test_manual_confirmation_controls_export(tmp_path: Path) -> None:
     samples = json.loads((package / "training_samples" / "main_ui" / "candidate_samples.json").read_text(encoding="utf-8"))
     sample_by_id = {item["candidate_id"]: item for item in samples["samples"]}
     assert sample_by_id["skill_01"]["user_confirmed"] is False
+    assert sample_by_id["skill_01"]["confirmation_status"] == "rejected"
+    assert sample_by_id["skill_02"]["confirmation_status"] == "confirmed"
     assert sample_by_id["skill_02"]["layout_zone"] == "right_skill"
+    acceptance = json.loads((package / "manual_acceptance.json").read_text(encoding="utf-8"))
+    acceptance_by_id = {item["component_id"]: item for item in acceptance["components"]}
+    assert acceptance_by_id["skill_01"]["confirmed"] is False
+    assert acceptance_by_id["skill_01"]["output_file"] == ""
+    assert acceptance_by_id["skill_02"]["confirmed"] is True
+    assert acceptance_by_id["skill_02"]["output_file"].endswith(".png")

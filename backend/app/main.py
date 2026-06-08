@@ -249,6 +249,7 @@ def create_app(database_path: str | Path | None = None, upload_dir: str | Path |
             ("annotation.json", "annotation.json"),
             ("production_review.json", "production_review.json"),
             ("manual_acceptance.json", "manual_acceptance.json"),
+            ("training_samples", "training_samples/main_ui/candidate_samples.json"),
         ]:
             file_path = package_dir / filename
             package_files.append(

@@ -491,10 +491,11 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
     (generationMode === "reference_guided" && !referenceImagePath);
 
   const projectContext = mainUiProduction?.project_context;
+  const canPreviewPackageFile = (file: string) => /\.(png|jpe?g|webp)$/i.test(file);
 
   return (
-    <section className="grid gap-4 xl:grid-cols-[320px_180px_minmax(0,1fr)]">
-      <form className="grid gap-4 rounded-md border border-studio-line bg-white p-5" onSubmit={generate}>
+    <section className="grid gap-4 xl:grid-cols-[280px_160px_minmax(0,1fr)]">
+      <form className="grid gap-4 rounded-md border border-studio-line bg-white p-4" onSubmit={generate}>
         <div>
           <h2 className="text-lg font-semibold">生产工作台</h2>
           <p className="mt-2 text-sm leading-6 text-studio-muted">生成 996 传奇手游界面资源，结果会进入右侧结果中心。</p>
@@ -1042,14 +1043,30 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
                           {item.exists ? "已生成" : "待生成"}
                         </div>
                         {item.url ? (
-                          <a
-                            className="mt-2 inline-flex rounded-md border border-studio-line px-2 py-1 text-xs"
-                            href={api.getProductionStudioFileUrl(item.url)}
-                            rel="noreferrer"
-                            target="_blank"
-                          >
-                            查看
-                          </a>
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            {canPreviewPackageFile(item.file) ? (
+                              <button
+                                className="inline-flex rounded-md border border-studio-line px-2 py-1 text-xs"
+                                onClick={() =>
+                                  setExpandedPreview({
+                                    src: api.getProductionStudioFileUrl(item.url),
+                                    label: item.label,
+                                  })
+                                }
+                                type="button"
+                              >
+                                预览
+                              </button>
+                            ) : null}
+                            <a
+                              className="inline-flex rounded-md border border-studio-line px-2 py-1 text-xs"
+                              href={api.getProductionStudioFileUrl(item.url)}
+                              rel="noreferrer"
+                              target="_blank"
+                            >
+                              查看
+                            </a>
+                          </div>
                         ) : null}
                       </div>
                     ))}

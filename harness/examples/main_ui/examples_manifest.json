@@ -1,0 +1,37 @@
+{
+  "schema_version": "1.0",
+  "sample_set": "sprint20f_main_ui_acceptance",
+  "screen_type": "main_ui",
+  "purpose": "Local acceptance screenshots for Studio workflow, candidate marking, slicing, and transparent PNG warning optimization.",
+  "created_at": "2026-06-08T00:00:00Z",
+  "samples": [
+    {
+      "file": "0d7a616e-1b77-47da-b433-f50dc07da971.png",
+      "width": 1205,
+      "height": 716,
+      "size_bytes": 1557889,
+      "focus": ["candidate_preview_outline", "layout_zone", "confirmed_slicing", "transparent_warning"]
+    },
+    {
+      "file": "55783f78-7afb-4c47-9805-8c01d77a54e2.png",
+      "width": 588,
+      "height": 392,
+      "size_bytes": 474418,
+      "focus": ["studio_reference_upload", "main_ui_generation_flow"]
+    },
+    {
+      "file": "a0f65d04-bf20-4419-85df-e9a8e0d30898.png",
+      "width": 1455,
+      "height": 933,
+      "size_bytes": 588979,
+      "focus": ["studio_layout_density", "result_center_space", "reference_status"]
+    },
+    {
+      "file": "cd0ee2e8-9789-45b2-9158-0198a29d8b85.png",
+      "width": 1409,
+      "height": 792,
+      "size_bytes": 1613690,
+      "focus": ["manual_confirmation", "component_level_classification", "export_preview"]
+    }
+  ]
+}
