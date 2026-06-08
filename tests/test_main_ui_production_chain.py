@@ -106,8 +106,14 @@ def test_manual_confirmation_controls_export(tmp_path: Path) -> None:
     samples = json.loads((package / "training_samples" / "main_ui" / "candidate_samples.json").read_text(encoding="utf-8"))
     sample_by_id = {item["candidate_id"]: item for item in samples["samples"]}
     assert sample_by_id["skill_01"]["user_confirmed"] is False
+    assert sample_by_id["skill_01"]["accepted"] is False
     assert sample_by_id["skill_01"]["confirmation_status"] == "rejected"
+    assert sample_by_id["skill_01"]["rejected_reason"] == "not_confirmed_for_slicing"
+    assert sample_by_id["skill_01"]["bbox_delta"] == {"x": 0, "y": 0, "width": 0, "height": 0}
+    assert sample_by_id["skill_01"]["type_changed"] is False
     assert sample_by_id["skill_02"]["confirmation_status"] == "confirmed"
+    assert sample_by_id["skill_02"]["accepted"] is True
+    assert sample_by_id["skill_02"]["rejected_reason"] == ""
     assert sample_by_id["skill_02"]["layout_zone"] == "right_skill"
     acceptance = json.loads((package / "manual_acceptance.json").read_text(encoding="utf-8"))
     acceptance_by_id = {item["component_id"]: item for item in acceptance["components"]}

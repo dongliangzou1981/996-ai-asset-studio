@@ -1,0 +1,1940 @@
+{
+  "schema_version": "1.0",
+  "review_status": "pending",
+  "reviewer": "",
+  "remarks": "",
+  "updated_at": "2026-06-08T12:08:01Z",
+  "accepted_at": null,
+  "accepted_by": "",
+  "components": [
+    {
+      "component_id": "screen_main_ui",
+      "candidate_id": "screen_main_ui",
+      "component_type": "screen",
+      "number": 1,
+      "confirmed": true,
+      "level": "B",
+      "production_category": "Screen",
+      "layout_zone": "full_screen",
+      "shape_type": "rect",
+      "bbox": {
+        "x": 0,
+        "y": 0,
+        "width": 1280,
+        "height": 720
+      },
+      "outline_points": [
+        {
+          "x": 0,
+          "y": 0
+        },
+        {
+          "x": 1280,
+          "y": 0
+        },
+        {
+          "x": 1280,
+          "y": 720
+        },
+        {
+          "x": 0,
+          "y": 720
+        }
+      ],
+      "output_file": "confirmed_components/screen_main_ui.jpg",
+      "transparent_warning": "",
+      "review_status": "pending",
+      "remarks": ""
+    },
+    {
+      "component_id": "top_player_info",
+      "candidate_id": "top_player_info",
+      "component_type": "hud_bar",
+      "number": 2,
+      "confirmed": true,
+      "level": "B",
+      "production_category": "Panel",
+      "layout_zone": "top_info",
+      "shape_type": "composite",
+      "bbox": {
+        "x": 38,
+        "y": 7,
+        "width": 243,
+        "height": 144
+      },
+      "outline_points": [
+        {
+          "x": 53,
+          "y": 7
+        },
+        {
+          "x": 266,
+          "y": 7
+        },
+        {
+          "x": 281,
+          "y": 19
+        },
+        {
+          "x": 281,
+          "y": 139
+        },
+        {
+          "x": 266,
+          "y": 151
+        },
+        {
+          "x": 53,
+          "y": 151
+        },
+        {
+          "x": 38,
+          "y": 139
+        },
+        {
+          "x": 38,
+          "y": 19
+        }
+      ],
+      "output_file": "confirmed_components/panel_top_player_info.jpg",
+      "transparent_warning": "",
+      "review_status": "pending",
+      "remarks": ""
+    },
+    {
+      "component_id": "task_panel",
+      "candidate_id": "task_panel",
+      "component_type": "panel",
+      "number": 3,
+      "confirmed": true,
+      "level": "B",
+      "production_category": "Panel",
+      "layout_zone": "left_task",
+      "shape_type": "rect",
+      "bbox": {
+        "x": 0,
+        "y": 7,
+        "width": 282,
+        "height": 338
+      },
+      "outline_points": [
+        {
+          "x": 0,
+          "y": 7
+        },
+        {
+          "x": 282,
+          "y": 7
+        },
+        {
+          "x": 282,
+          "y": 345
+        },
+        {
+          "x": 0,
+          "y": 345
+        }
+      ],
+      "output_file": "confirmed_components/panel_task_panel.jpg",
+      "transparent_warning": "",
+      "review_status": "pending",
+      "remarks": ""
+    },
+    {
+      "component_id": "task_tab",
+      "candidate_id": "task_tab",
+      "component_type": "button",
+      "number": 4,
+      "confirmed": true,
+      "level": "A",
+      "production_category": "Atomic",
+      "layout_zone": "left_task",
+      "shape_type": "rect",
+      "bbox": {
+        "x": 0,
+        "y": 14,
+        "width": 45,
+        "height": 72
+      },
+      "outline_points": [
+        {
+          "x": 0,
+          "y": 14
+        },
+        {
+          "x": 45,
+          "y": 14
+        },
+        {
+          "x": 45,
+          "y": 86
+        },
+        {
+          "x": 0,
+          "y": 86
+        }
+      ],
+      "output_file": "confirmed_components/btn_task_tab.png",
+      "transparent_warning": "源图无透明像素，已输出 PNG 但需要人工抠透明背景",
+      "review_status": "pending",
+      "remarks": ""
+    },
+    {
+      "component_id": "team_tab",
+      "candidate_id": "team_tab",
+      "component_type": "button",
+      "number": 5,
+      "confirmed": true,
+      "level": "A",
+      "production_category": "Atomic",
+      "layout_zone": "left_task",
+      "shape_type": "rect",
+      "bbox": {
+        "x": 0,
+        "y": 187,
+        "width": 45,
+        "height": 86
+      },
+      "outline_points": [
+        {
+          "x": 0,
+          "y": 187
+        },
+        {
+          "x": 45,
+          "y": 187
+        },
+        {
+          "x": 45,
+          "y": 273
+        },
+        {
+          "x": 0,
+          "y": 273
+        }
+      ],
+      "output_file": "confirmed_components/btn_team_tab.png",
+      "transparent_warning": "源图无透明像素，已输出 PNG 但需要人工抠透明背景",
+      "review_status": "pending",
+      "remarks": ""
+    },
+    {
+      "component_id": "status_panel",
+      "candidate_id": "status_panel",
+      "component_type": "panel",
+      "number": 6,
+      "confirmed": true,
+      "level": "B",
+      "production_category": "Panel",
+      "layout_zone": "left_status",
+      "shape_type": "rect",
+      "bbox": {
+        "x": 0,
+        "y": 223,
+        "width": 269,
+        "height": 130
+      },
+      "outline_points": [
+        {
+          "x": 0,
+          "y": 223
+        },
+        {
+          "x": 269,
+          "y": 223
+        },
+        {
+          "x": 269,
+          "y": 353
+        },
+        {
+          "x": 0,
+          "y": 353
+        }
+      ],
+      "output_file": "confirmed_components/panel_status_panel.jpg",
+      "transparent_warning": "",
+      "review_status": "pending",
+      "remarks": ""
+    },
+    {
+      "component_id": "health_bar",
+      "candidate_id": "health_bar",
+      "component_type": "hud_bar",
+      "number": 7,
+      "confirmed": true,
+      "level": "B",
+      "production_category": "Panel",
+      "layout_zone": "left_status",
+      "shape_type": "rect",
+      "bbox": {
+        "x": 64,
+        "y": 310,
+        "width": 154,
+        "height": 22
+      },
+      "outline_points": [
+        {
+          "x": 64,
+          "y": 310
+        },
+        {
+          "x": 218,
+          "y": 310
+        },
+        {
+          "x": 218,
+          "y": 332
+        },
+        {
+          "x": 64,
+          "y": 332
+        }
+      ],
+      "output_file": "confirmed_components/panel_health_bar.jpg",
+      "transparent_warning": "",
+      "review_status": "pending",
+      "remarks": ""
+    },
+    {
+      "component_id": "left_joystick",
+      "candidate_id": "left_joystick",
+      "component_type": "joystick",
+      "number": 8,
+      "confirmed": true,
+      "level": "A",
+      "production_category": "Atomic",
+      "layout_zone": "bottom_left_joystick",
+      "shape_type": "circle",
+      "bbox": {
+        "x": 77,
+        "y": 497,
+        "width": 128,
+        "height": 130
+      },
+      "outline_points": [
+        {
+          "x": 205,
+          "y": 562
+        },
+        {
+          "x": 200,
+          "y": 587
+        },
+        {
+          "x": 186,
+          "y": 608
+        },
+        {
+          "x": 165,
+          "y": 622
+        },
+        {
+          "x": 141,
+          "y": 627
+        },
+        {
+          "x": 117,
+          "y": 622
+        },
+        {
+          "x": 96,
+          "y": 608
+        },
+        {
+          "x": 82,
+          "y": 587
+        },
+        {
+          "x": 77,
+          "y": 562
+        },
+        {
+          "x": 82,
+          "y": 537
+        },
+        {
+          "x": 96,
+          "y": 516
+        },
+        {
+          "x": 117,
+          "y": 502
+        },
+        {
+          "x": 141,
+          "y": 497
+        },
+        {
+          "x": 165,
+          "y": 502
+        },
+        {
+          "x": 186,
+          "y": 516
+        },
+        {
+          "x": 200,
+          "y": 537
+        }
+      ],
+      "output_file": "confirmed_components/btn_left_joystick.png",
+      "transparent_warning": "源图无透明像素，已输出 PNG 但需要人工抠透明背景",
+      "review_status": "pending",
+      "remarks": ""
+    },
+    {
+      "component_id": "run_button",
+      "candidate_id": "run_button",
+      "component_type": "button",
+      "number": 9,
+      "confirmed": true,
+      "level": "A",
+      "production_category": "Atomic",
+      "layout_zone": "bottom_left_joystick",
+      "shape_type": "circle",
+      "bbox": {
+        "x": 205,
+        "y": 454,
+        "width": 70,
+        "height": 65
+      },
+      "outline_points": [
+        {
+          "x": 275,
+          "y": 486
+        },
+        {
+          "x": 272,
+          "y": 499
+        },
+        {
+          "x": 265,
+          "y": 509
+        },
+        {
+          "x": 253,
+          "y": 517
+        },
+        {
+          "x": 240,
+          "y": 519
+        },
+        {
+          "x": 227,
+          "y": 517
+        },
+        {
+          "x": 215,
+          "y": 509
+        },
+        {
+          "x": 208,
+          "y": 499
+        },
+        {
+          "x": 205,
+          "y": 486
+        },
+        {
+          "x": 208,
+          "y": 474
+        },
+        {
+          "x": 215,
+          "y": 464
+        },
+        {
+          "x": 227,
+          "y": 456
+        },
+        {
+          "x": 240,
+          "y": 454
+        },
+        {
+          "x": 253,
+          "y": 456
+        },
+        {
+          "x": 265,
+          "y": 464
+        },
+        {
+          "x": 272,
+          "y": 474
+        }
+      ],
+      "output_file": "confirmed_components/btn_run_button.png",
+      "transparent_warning": "源图无透明像素，已输出 PNG 但需要人工抠透明背景",
+      "review_status": "pending",
+      "remarks": ""
+    },
+    {
+      "component_id": "walk_button",
+      "candidate_id": "walk_button",
+      "component_type": "button",
+      "number": 10,
+      "confirmed": true,
+      "level": "A",
+      "production_category": "Atomic",
+      "layout_zone": "bottom_left_joystick",
+      "shape_type": "circle",
+      "bbox": {
+        "x": 102,
+        "y": 576,
+        "width": 70,
+        "height": 65
+      },
+      "outline_points": [
+        {
+          "x": 172,
+          "y": 608
+        },
+        {
+          "x": 169,
+          "y": 621
+        },
+        {
+          "x": 162,
+          "y": 631
+        },
+        {
+          "x": 150,
+          "y": 639
+        },
+        {
+          "x": 137,
+          "y": 641
+        },
+        {
+          "x": 124,
+          "y": 639
+        },
+        {
+          "x": 112,
+          "y": 631
+        },
+        {
+          "x": 105,
+          "y": 621
+        },
+        {
+          "x": 102,
+          "y": 608
+        },
+        {
+          "x": 105,
+          "y": 596
+        },
+        {
+          "x": 112,
+          "y": 586
+        },
+        {
+          "x": 124,
+          "y": 578
+        },
+        {
+          "x": 137,
+          "y": 576
+        },
+        {
+          "x": 150,
+          "y": 578
+        },
+        {
+          "x": 162,
+          "y": 586
+        },
+        {
+          "x": 169,
+          "y": 596
+        }
+      ],
+      "output_file": "confirmed_components/btn_walk_button.png",
+      "transparent_warning": "源图无透明像素，已输出 PNG 但需要人工抠透明背景",
+      "review_status": "pending",
+      "remarks": ""
+    },
+    {
+      "component_id": "bottom_hud",
+      "candidate_id": "bottom_hud",
+      "component_type": "hud_bar",
+      "number": 11,
+      "confirmed": true,
+      "level": "B",
+      "production_category": "Panel",
+      "layout_zone": "bottom_status",
+      "shape_type": "composite",
+      "bbox": {
+        "x": 294,
+        "y": 518,
+        "width": 717,
+        "height": 187
+      },
+      "outline_points": [
+        {
+          "x": 337,
+          "y": 518
+        },
+        {
+          "x": 968,
+          "y": 518
+        },
+        {
+          "x": 1011,
+          "y": 533
+        },
+        {
+          "x": 1011,
+          "y": 690
+        },
+        {
+          "x": 968,
+          "y": 705
+        },
+        {
+          "x": 337,
+          "y": 705
+        },
+        {
+          "x": 294,
+          "y": 690
+        },
+        {
+          "x": 294,
+          "y": 533
+        }
+      ],
+      "output_file": "confirmed_components/panel_bottom_hud.jpg",
+      "transparent_warning": "",
+      "review_status": "pending",
+      "remarks": ""
+    },
+    {
+      "component_id": "hp_orb",
+      "candidate_id": "hp_orb",
+      "component_type": "icon",
+      "number": 12,
+      "confirmed": true,
+      "level": "A",
+      "production_category": "Atomic",
+      "layout_zone": "bottom_status",
+      "shape_type": "circle",
+      "bbox": {
+        "x": 358,
+        "y": 547,
+        "width": 115,
+        "height": 115
+      },
+      "outline_points": [
+        {
+          "x": 473,
+          "y": 604
+        },
+        {
+          "x": 469,
+          "y": 627
+        },
+        {
+          "x": 456,
+          "y": 645
+        },
+        {
+          "x": 438,
+          "y": 658
+        },
+        {
+          "x": 416,
+          "y": 662
+        },
+        {
+          "x": 393,
+          "y": 658
+        },
+        {
+          "x": 375,
+          "y": 645
+        },
+        {
+          "x": 362,
+          "y": 627
+        },
+        {
+          "x": 358,
+          "y": 604
+        },
+        {
+          "x": 362,
+          "y": 582
+        },
+        {
+          "x": 375,
+          "y": 564
+        },
+        {
+          "x": 393,
+          "y": 551
+        },
+        {
+          "x": 416,
+          "y": 547
+        },
+        {
+          "x": 438,
+          "y": 551
+        },
+        {
+          "x": 456,
+          "y": 564
+        },
+        {
+          "x": 469,
+          "y": 582
+        }
+      ],
+      "output_file": "confirmed_components/icon_hp_orb.png",
+      "transparent_warning": "源图无透明像素，已输出 PNG 但需要人工抠透明背景",
+      "review_status": "pending",
+      "remarks": ""
+    },
+    {
+      "component_id": "mp_orb",
+      "candidate_id": "mp_orb",
+      "component_type": "icon",
+      "number": 13,
+      "confirmed": true,
+      "level": "A",
+      "production_category": "Atomic",
+      "layout_zone": "bottom_status",
+      "shape_type": "circle",
+      "bbox": {
+        "x": 448,
+        "y": 547,
+        "width": 115,
+        "height": 115
+      },
+      "outline_points": [
+        {
+          "x": 563,
+          "y": 604
+        },
+        {
+          "x": 559,
+          "y": 627
+        },
+        {
+          "x": 546,
+          "y": 645
+        },
+        {
+          "x": 528,
+          "y": 658
+        },
+        {
+          "x": 506,
+          "y": 662
+        },
+        {
+          "x": 483,
+          "y": 658
+        },
+        {
+          "x": 465,
+          "y": 645
+        },
+        {
+          "x": 452,
+          "y": 627
+        },
+        {
+          "x": 448,
+          "y": 604
+        },
+        {
+          "x": 452,
+          "y": 582
+        },
+        {
+          "x": 465,
+          "y": 564
+        },
+        {
+          "x": 483,
+          "y": 551
+        },
+        {
+          "x": 506,
+          "y": 547
+        },
+        {
+          "x": 528,
+          "y": 551
+        },
+        {
+          "x": 546,
+          "y": 564
+        },
+        {
+          "x": 559,
+          "y": 582
+        }
+      ],
+      "output_file": "confirmed_components/icon_mp_orb.png",
+      "transparent_warning": "源图无透明像素，已输出 PNG 但需要人工抠透明背景",
+      "review_status": "pending",
+      "remarks": ""
+    },
+    {
+      "component_id": "dragon_frame",
+      "candidate_id": "dragon_frame",
+      "component_type": "decoration",
+      "number": 14,
+      "confirmed": false,
+      "level": "C",
+      "production_category": "Effect",
+      "layout_zone": "bottom_status",
+      "shape_type": "composite",
+      "bbox": {
+        "x": 333,
+        "y": 490,
+        "width": 256,
+        "height": 216
+      },
+      "outline_points": [
+        {
+          "x": 348,
+          "y": 490
+        },
+        {
+          "x": 574,
+          "y": 490
+        },
+        {
+          "x": 589,
+          "y": 507
+        },
+        {
+          "x": 589,
+          "y": 689
+        },
+        {
+          "x": 574,
+          "y": 706
+        },
+        {
+          "x": 348,
+          "y": 706
+        },
+        {
+          "x": 333,
+          "y": 689
+        },
+        {
+          "x": 333,
+          "y": 507
+        }
+      ],
+      "output_file": "",
+      "transparent_warning": "",
+      "review_status": "pending",
+      "remarks": ""
+    },
+    {
+      "component_id": "item_slot_01",
+      "candidate_id": "item_slot_01",
+      "component_type": "equipment_slot",
+      "number": 15,
+      "confirmed": true,
+      "level": "A",
+      "production_category": "Atomic",
+      "layout_zone": "bottom_status",
+      "shape_type": "rect",
+      "bbox": {
+        "x": 666,
+        "y": 540,
+        "width": 58,
+        "height": 72
+      },
+      "outline_points": [
+        {
+          "x": 666,
+          "y": 540
+        },
+        {
+          "x": 724,
+          "y": 540
+        },
+        {
+          "x": 724,
+          "y": 612
+        },
+        {
+          "x": 666,
+          "y": 612
+        }
+      ],
+      "output_file": "confirmed_components/slot_item_slot_01.png",
+      "transparent_warning": "源图无透明像素，已输出 PNG 但需要人工抠透明背景",
+      "review_status": "pending",
+      "remarks": ""
+    },
+    {
+      "component_id": "item_slot_02",
+      "candidate_id": "item_slot_02",
+      "component_type": "equipment_slot",
+      "number": 16,
+      "confirmed": true,
+      "level": "A",
+      "production_category": "Atomic",
+      "layout_zone": "bottom_status",
+      "shape_type": "rect",
+      "bbox": {
+        "x": 723,
+        "y": 540,
+        "width": 58,
+        "height": 72
+      },
+      "outline_points": [
+        {
+          "x": 723,
+          "y": 540
+        },
+        {
+          "x": 781,
+          "y": 540
+        },
+        {
+          "x": 781,
+          "y": 612
+        },
+        {
+          "x": 723,
+          "y": 612
+        }
+      ],
+      "output_file": "confirmed_components/slot_item_slot_02.png",
+      "transparent_warning": "源图无透明像素，已输出 PNG 但需要人工抠透明背景",
+      "review_status": "pending",
+      "remarks": ""
+    },
+    {
+      "component_id": "item_slot_03",
+      "candidate_id": "item_slot_03",
+      "component_type": "equipment_slot",
+      "number": 17,
+      "confirmed": true,
+      "level": "A",
+      "production_category": "Atomic",
+      "layout_zone": "bottom_status",
+      "shape_type": "rect",
+      "bbox": {
+        "x": 781,
+        "y": 540,
+        "width": 58,
+        "height": 72
+      },
+      "outline_points": [
+        {
+          "x": 781,
+          "y": 540
+        },
+        {
+          "x": 839,
+          "y": 540
+        },
+        {
+          "x": 839,
+          "y": 612
+        },
+        {
+          "x": 781,
+          "y": 612
+        }
+      ],
+      "output_file": "confirmed_components/slot_item_slot_03.png",
+      "transparent_warning": "源图无透明像素，已输出 PNG 但需要人工抠透明背景",
+      "review_status": "pending",
+      "remarks": ""
+    },
+    {
+      "component_id": "item_slot_04",
+      "candidate_id": "item_slot_04",
+      "component_type": "equipment_slot",
+      "number": 18,
+      "confirmed": true,
+      "level": "A",
+      "production_category": "Atomic",
+      "layout_zone": "bottom_status",
+      "shape_type": "rect",
+      "bbox": {
+        "x": 838,
+        "y": 540,
+        "width": 58,
+        "height": 72
+      },
+      "outline_points": [
+        {
+          "x": 838,
+          "y": 540
+        },
+        {
+          "x": 896,
+          "y": 540
+        },
+        {
+          "x": 896,
+          "y": 612
+        },
+        {
+          "x": 838,
+          "y": 612
+        }
+      ],
+      "output_file": "confirmed_components/slot_item_slot_04.png",
+      "transparent_warning": "源图无透明像素，已输出 PNG 但需要人工抠透明背景",
+      "review_status": "pending",
+      "remarks": ""
+    },
+    {
+      "component_id": "chat_panel",
+      "candidate_id": "chat_panel",
+      "component_type": "chat",
+      "number": 19,
+      "confirmed": true,
+      "level": "B",
+      "production_category": "Panel",
+      "layout_zone": "chat",
+      "shape_type": "rect",
+      "bbox": {
+        "x": 614,
+        "y": 576,
+        "width": 320,
+        "height": 115
+      },
+      "outline_points": [
+        {
+          "x": 614,
+          "y": 576
+        },
+        {
+          "x": 934,
+          "y": 576
+        },
+        {
+          "x": 934,
+          "y": 691
+        },
+        {
+          "x": 614,
+          "y": 691
+        }
+      ],
+      "output_file": "confirmed_components/panel_chat_panel.jpg",
+      "transparent_warning": "",
+      "review_status": "pending",
+      "remarks": ""
+    },
+    {
+      "component_id": "skill_01",
+      "candidate_id": "skill_01",
+      "component_type": "skill_button",
+      "number": 20,
+      "confirmed": true,
+      "level": "A",
+      "production_category": "Atomic",
+      "layout_zone": "right_skill",
+      "shape_type": "circle",
+      "bbox": {
+        "x": 1088,
+        "y": 526,
+        "width": 102,
+        "height": 101
+      },
+      "outline_points": [
+        {
+          "x": 1190,
+          "y": 576
+        },
+        {
+          "x": 1186,
+          "y": 596
+        },
+        {
+          "x": 1175,
+          "y": 612
+        },
+        {
+          "x": 1159,
+          "y": 623
+        },
+        {
+          "x": 1139,
+          "y": 627
+        },
+        {
+          "x": 1119,
+          "y": 623
+        },
+        {
+          "x": 1103,
+          "y": 612
+        },
+        {
+          "x": 1092,
+          "y": 596
+        },
+        {
+          "x": 1088,
+          "y": 576
+        },
+        {
+          "x": 1092,
+          "y": 557
+        },
+        {
+          "x": 1103,
+          "y": 541
+        },
+        {
+          "x": 1119,
+          "y": 530
+        },
+        {
+          "x": 1139,
+          "y": 526
+        },
+        {
+          "x": 1159,
+          "y": 530
+        },
+        {
+          "x": 1175,
+          "y": 541
+        },
+        {
+          "x": 1186,
+          "y": 557
+        }
+      ],
+      "output_file": "confirmed_components/btn_skill_01.png",
+      "transparent_warning": "源图无透明像素，已输出 PNG 但需要人工抠透明背景",
+      "review_status": "pending",
+      "remarks": ""
+    },
+    {
+      "component_id": "skill_02",
+      "candidate_id": "skill_02",
+      "component_type": "skill_button",
+      "number": 21,
+      "confirmed": true,
+      "level": "A",
+      "production_category": "Atomic",
+      "layout_zone": "right_skill",
+      "shape_type": "circle",
+      "bbox": {
+        "x": 1178,
+        "y": 562,
+        "width": 90,
+        "height": 86
+      },
+      "outline_points": [
+        {
+          "x": 1268,
+          "y": 605
+        },
+        {
+          "x": 1265,
+          "y": 621
+        },
+        {
+          "x": 1255,
+          "y": 635
+        },
+        {
+          "x": 1240,
+          "y": 645
+        },
+        {
+          "x": 1223,
+          "y": 648
+        },
+        {
+          "x": 1206,
+          "y": 645
+        },
+        {
+          "x": 1191,
+          "y": 635
+        },
+        {
+          "x": 1181,
+          "y": 621
+        },
+        {
+          "x": 1178,
+          "y": 605
+        },
+        {
+          "x": 1181,
+          "y": 589
+        },
+        {
+          "x": 1191,
+          "y": 575
+        },
+        {
+          "x": 1206,
+          "y": 565
+        },
+        {
+          "x": 1223,
+          "y": 562
+        },
+        {
+          "x": 1240,
+          "y": 565
+        },
+        {
+          "x": 1255,
+          "y": 575
+        },
+        {
+          "x": 1265,
+          "y": 589
+        }
+      ],
+      "output_file": "confirmed_components/btn_skill_02.png",
+      "transparent_warning": "源图无透明像素，已输出 PNG 但需要人工抠透明背景",
+      "review_status": "pending",
+      "remarks": ""
+    },
+    {
+      "component_id": "skill_03",
+      "candidate_id": "skill_03",
+      "component_type": "skill_button",
+      "number": 22,
+      "confirmed": true,
+      "level": "A",
+      "production_category": "Atomic",
+      "layout_zone": "right_skill",
+      "shape_type": "circle",
+      "bbox": {
+        "x": 1165,
+        "y": 454,
+        "width": 90,
+        "height": 86
+      },
+      "outline_points": [
+        {
+          "x": 1255,
+          "y": 497
+        },
+        {
+          "x": 1252,
+          "y": 513
+        },
+        {
+          "x": 1242,
+          "y": 527
+        },
+        {
+          "x": 1227,
+          "y": 537
+        },
+        {
+          "x": 1210,
+          "y": 540
+        },
+        {
+          "x": 1193,
+          "y": 537
+        },
+        {
+          "x": 1178,
+          "y": 527
+        },
+        {
+          "x": 1168,
+          "y": 513
+        },
+        {
+          "x": 1165,
+          "y": 497
+        },
+        {
+          "x": 1168,
+          "y": 481
+        },
+        {
+          "x": 1178,
+          "y": 467
+        },
+        {
+          "x": 1193,
+          "y": 457
+        },
+        {
+          "x": 1210,
+          "y": 454
+        },
+        {
+          "x": 1227,
+          "y": 457
+        },
+        {
+          "x": 1242,
+          "y": 467
+        },
+        {
+          "x": 1252,
+          "y": 481
+        }
+      ],
+      "output_file": "confirmed_components/btn_skill_03.png",
+      "transparent_warning": "源图无透明像素，已输出 PNG 但需要人工抠透明背景",
+      "review_status": "pending",
+      "remarks": ""
+    },
+    {
+      "component_id": "auto_button",
+      "candidate_id": "auto_button",
+      "component_type": "button",
+      "number": 23,
+      "confirmed": true,
+      "level": "A",
+      "production_category": "Atomic",
+      "layout_zone": "right_system_entry",
+      "shape_type": "circle",
+      "bbox": {
+        "x": 1152,
+        "y": 324,
+        "width": 77,
+        "height": 72
+      },
+      "outline_points": [
+        {
+          "x": 1229,
+          "y": 360
+        },
+        {
+          "x": 1226,
+          "y": 374
+        },
+        {
+          "x": 1218,
+          "y": 385
+        },
+        {
+          "x": 1205,
+          "y": 393
+        },
+        {
+          "x": 1190,
+          "y": 396
+        },
+        {
+          "x": 1176,
+          "y": 393
+        },
+        {
+          "x": 1163,
+          "y": 385
+        },
+        {
+          "x": 1155,
+          "y": 374
+        },
+        {
+          "x": 1152,
+          "y": 360
+        },
+        {
+          "x": 1155,
+          "y": 346
+        },
+        {
+          "x": 1163,
+          "y": 335
+        },
+        {
+          "x": 1176,
+          "y": 327
+        },
+        {
+          "x": 1190,
+          "y": 324
+        },
+        {
+          "x": 1205,
+          "y": 327
+        },
+        {
+          "x": 1218,
+          "y": 335
+        },
+        {
+          "x": 1226,
+          "y": 346
+        }
+      ],
+      "output_file": "confirmed_components/btn_auto_button.png",
+      "transparent_warning": "源图无透明像素，已输出 PNG 但需要人工抠透明背景",
+      "review_status": "pending",
+      "remarks": ""
+    },
+    {
+      "component_id": "role_entry",
+      "candidate_id": "role_entry",
+      "component_type": "system_entry_icon",
+      "number": 24,
+      "confirmed": true,
+      "level": "A",
+      "production_category": "Atomic",
+      "layout_zone": "right_system_entry",
+      "shape_type": "circle",
+      "bbox": {
+        "x": 1101,
+        "y": 223,
+        "width": 70,
+        "height": 68
+      },
+      "outline_points": [
+        {
+          "x": 1171,
+          "y": 257
+        },
+        {
+          "x": 1168,
+          "y": 270
+        },
+        {
+          "x": 1161,
+          "y": 281
+        },
+        {
+          "x": 1149,
+          "y": 288
+        },
+        {
+          "x": 1136,
+          "y": 291
+        },
+        {
+          "x": 1123,
+          "y": 288
+        },
+        {
+          "x": 1111,
+          "y": 281
+        },
+        {
+          "x": 1104,
+          "y": 270
+        },
+        {
+          "x": 1101,
+          "y": 257
+        },
+        {
+          "x": 1104,
+          "y": 244
+        },
+        {
+          "x": 1111,
+          "y": 233
+        },
+        {
+          "x": 1123,
+          "y": 226
+        },
+        {
+          "x": 1136,
+          "y": 223
+        },
+        {
+          "x": 1149,
+          "y": 226
+        },
+        {
+          "x": 1161,
+          "y": 233
+        },
+        {
+          "x": 1168,
+          "y": 244
+        }
+      ],
+      "output_file": "confirmed_components/icon_role_entry.png",
+      "transparent_warning": "源图无透明像素，已输出 PNG 但需要人工抠透明背景",
+      "review_status": "pending",
+      "remarks": ""
+    },
+    {
+      "component_id": "bag_entry",
+      "candidate_id": "bag_entry",
+      "component_type": "system_entry_icon",
+      "number": 25,
+      "confirmed": true,
+      "level": "A",
+      "production_category": "Atomic",
+      "layout_zone": "right_system_entry",
+      "shape_type": "circle",
+      "bbox": {
+        "x": 1190,
+        "y": 223,
+        "width": 70,
+        "height": 68
+      },
+      "outline_points": [
+        {
+          "x": 1260,
+          "y": 257
+        },
+        {
+          "x": 1257,
+          "y": 270
+        },
+        {
+          "x": 1250,
+          "y": 281
+        },
+        {
+          "x": 1238,
+          "y": 288
+        },
+        {
+          "x": 1225,
+          "y": 291
+        },
+        {
+          "x": 1212,
+          "y": 288
+        },
+        {
+          "x": 1200,
+          "y": 281
+        },
+        {
+          "x": 1193,
+          "y": 270
+        },
+        {
+          "x": 1190,
+          "y": 257
+        },
+        {
+          "x": 1193,
+          "y": 244
+        },
+        {
+          "x": 1200,
+          "y": 233
+        },
+        {
+          "x": 1212,
+          "y": 226
+        },
+        {
+          "x": 1225,
+          "y": 223
+        },
+        {
+          "x": 1238,
+          "y": 226
+        },
+        {
+          "x": 1250,
+          "y": 233
+        },
+        {
+          "x": 1257,
+          "y": 244
+        }
+      ],
+      "output_file": "confirmed_components/icon_bag_entry.png",
+      "transparent_warning": "源图无透明像素，已输出 PNG 但需要人工抠透明背景",
+      "review_status": "pending",
+      "remarks": ""
+    },
+    {
+      "component_id": "shop_entry",
+      "candidate_id": "shop_entry",
+      "component_type": "system_entry_icon",
+      "number": 26,
+      "confirmed": true,
+      "level": "A",
+      "production_category": "Atomic",
+      "layout_zone": "right_system_entry",
+      "shape_type": "circle",
+      "bbox": {
+        "x": 986,
+        "y": 576,
+        "width": 83,
+        "height": 86
+      },
+      "outline_points": [
+        {
+          "x": 1069,
+          "y": 619
+        },
+        {
+          "x": 1066,
+          "y": 635
+        },
+        {
+          "x": 1057,
+          "y": 649
+        },
+        {
+          "x": 1043,
+          "y": 659
+        },
+        {
+          "x": 1028,
+          "y": 662
+        },
+        {
+          "x": 1012,
+          "y": 659
+        },
+        {
+          "x": 998,
+          "y": 649
+        },
+        {
+          "x": 989,
+          "y": 635
+        },
+        {
+          "x": 986,
+          "y": 619
+        },
+        {
+          "x": 989,
+          "y": 603
+        },
+        {
+          "x": 998,
+          "y": 589
+        },
+        {
+          "x": 1012,
+          "y": 579
+        },
+        {
+          "x": 1028,
+          "y": 576
+        },
+        {
+          "x": 1043,
+          "y": 579
+        },
+        {
+          "x": 1057,
+          "y": 589
+        },
+        {
+          "x": 1066,
+          "y": 603
+        }
+      ],
+      "output_file": "confirmed_components/icon_shop_entry.png",
+      "transparent_warning": "源图无透明像素，已输出 PNG 但需要人工抠透明背景",
+      "review_status": "pending",
+      "remarks": ""
+    },
+    {
+      "component_id": "activity_entry",
+      "candidate_id": "activity_entry",
+      "component_type": "system_entry_icon",
+      "number": 27,
+      "confirmed": true,
+      "level": "A",
+      "production_category": "Atomic",
+      "layout_zone": "right_system_entry",
+      "shape_type": "circle",
+      "bbox": {
+        "x": 1229,
+        "y": 324,
+        "width": 45,
+        "height": 47
+      },
+      "outline_points": [
+        {
+          "x": 1274,
+          "y": 348
+        },
+        {
+          "x": 1272,
+          "y": 356
+        },
+        {
+          "x": 1267,
+          "y": 364
+        },
+        {
+          "x": 1260,
+          "y": 369
+        },
+        {
+          "x": 1252,
+          "y": 371
+        },
+        {
+          "x": 1243,
+          "y": 369
+        },
+        {
+          "x": 1236,
+          "y": 364
+        },
+        {
+          "x": 1231,
+          "y": 356
+        },
+        {
+          "x": 1229,
+          "y": 348
+        },
+        {
+          "x": 1231,
+          "y": 339
+        },
+        {
+          "x": 1236,
+          "y": 331
+        },
+        {
+          "x": 1243,
+          "y": 326
+        },
+        {
+          "x": 1252,
+          "y": 324
+        },
+        {
+          "x": 1260,
+          "y": 326
+        },
+        {
+          "x": 1267,
+          "y": 331
+        },
+        {
+          "x": 1272,
+          "y": 339
+        }
+      ],
+      "output_file": "confirmed_components/icon_activity_entry.png",
+      "transparent_warning": "源图无透明像素，已输出 PNG 但需要人工抠透明背景",
+      "review_status": "pending",
+      "remarks": ""
+    },
+    {
+      "component_id": "mini_map",
+      "candidate_id": "mini_map",
+      "component_type": "map",
+      "number": 28,
+      "confirmed": true,
+      "level": "B",
+      "production_category": "Panel",
+      "layout_zone": "right_top_map",
+      "shape_type": "rect",
+      "bbox": {
+        "x": 1101,
+        "y": 14,
+        "width": 179,
+        "height": 180
+      },
+      "outline_points": [
+        {
+          "x": 1101,
+          "y": 14
+        },
+        {
+          "x": 1280,
+          "y": 14
+        },
+        {
+          "x": 1280,
+          "y": 194
+        },
+        {
+          "x": 1101,
+          "y": 194
+        }
+      ],
+      "output_file": "confirmed_components/panel_mini_map.jpg",
+      "transparent_warning": "",
+      "review_status": "pending",
+      "remarks": ""
+    },
+    {
+      "component_id": "map_zoom",
+      "candidate_id": "map_zoom",
+      "component_type": "system_entry_icon",
+      "number": 29,
+      "confirmed": true,
+      "level": "A",
+      "production_category": "Atomic",
+      "layout_zone": "right_top_map",
+      "shape_type": "rect",
+      "bbox": {
+        "x": 1062,
+        "y": 14,
+        "width": 45,
+        "height": 137
+      },
+      "outline_points": [
+        {
+          "x": 1062,
+          "y": 14
+        },
+        {
+          "x": 1107,
+          "y": 14
+        },
+        {
+          "x": 1107,
+          "y": 151
+        },
+        {
+          "x": 1062,
+          "y": 151
+        }
+      ],
+      "output_file": "confirmed_components/icon_map_zoom.png",
+      "transparent_warning": "源图无透明像素，已输出 PNG 但需要人工抠透明背景",
+      "review_status": "pending",
+      "remarks": ""
+    },
+    {
+      "component_id": "currency",
+      "candidate_id": "currency",
+      "component_type": "currency_icon",
+      "number": 30,
+      "confirmed": true,
+      "level": "A",
+      "production_category": "Atomic",
+      "layout_zone": "bottom_status",
+      "shape_type": "circle",
+      "bbox": {
+        "x": 973,
+        "y": 641,
+        "width": 45,
+        "height": 40
+      },
+      "outline_points": [
+        {
+          "x": 1018,
+          "y": 661
+        },
+        {
+          "x": 1016,
+          "y": 669
+        },
+        {
+          "x": 1011,
+          "y": 675
+        },
+        {
+          "x": 1004,
+          "y": 679
+        },
+        {
+          "x": 996,
+          "y": 681
+        },
+        {
+          "x": 987,
+          "y": 679
+        },
+        {
+          "x": 980,
+          "y": 675
+        },
+        {
+          "x": 975,
+          "y": 669
+        },
+        {
+          "x": 973,
+          "y": 661
+        },
+        {
+          "x": 975,
+          "y": 653
+        },
+        {
+          "x": 980,
+          "y": 647
+        },
+        {
+          "x": 987,
+          "y": 643
+        },
+        {
+          "x": 996,
+          "y": 641
+        },
+        {
+          "x": 1004,
+          "y": 643
+        },
+        {
+          "x": 1011,
+          "y": 647
+        },
+        {
+          "x": 1016,
+          "y": 653
+        }
+      ],
+      "output_file": "confirmed_components/icon_currency.png",
+      "transparent_warning": "源图无透明像素，已输出 PNG 但需要人工抠透明背景",
+      "review_status": "pending",
+      "remarks": ""
+    },
+    {
+      "component_id": "dynamic_text",
+      "candidate_id": "dynamic_text",
+      "component_type": "dynamic_content",
+      "number": 31,
+      "confirmed": false,
+      "level": "C",
+      "production_category": "Ignore",
+      "layout_zone": "top_info",
+      "shape_type": "rect",
+      "bbox": {
+        "x": 499,
+        "y": 22,
+        "width": 205,
+        "height": 43
+      },
+      "outline_points": [
+        {
+          "x": 499,
+          "y": 22
+        },
+        {
+          "x": 704,
+          "y": 22
+        },
+        {
+          "x": 704,
+          "y": 65
+        },
+        {
+          "x": 499,
+          "y": 65
+        }
+      ],
+      "output_file": "",
+      "transparent_warning": "",
+      "review_status": "pending",
+      "remarks": ""
+    }
+  ]
+}

@@ -1,0 +1,368 @@
+{
+  "project_code": "MARKING_TEST",
+  "candidate_id": "candidate_1",
+  "total_marks": 31,
+  "background_count": 1,
+  "panel_count": 9,
+  "button_count": 10,
+  "icon_count": 8,
+  "skill_count": 3,
+  "by_type": {
+    "background": 1,
+    "panel": 9,
+    "button": 10,
+    "icon": 8,
+    "skill": 3
+  },
+  "slice_success": 29,
+  "slice_failed": 0,
+  "missing_required": [],
+  "warnings": [
+    "png output has no transparent pixels: activity_entry",
+    "png output has no transparent pixels: auto_button",
+    "png output has no transparent pixels: bag_entry",
+    "png output has no transparent pixels: currency",
+    "png output has no transparent pixels: hp_orb",
+    "png output has no transparent pixels: item_slot_01",
+    "png output has no transparent pixels: item_slot_02",
+    "png output has no transparent pixels: item_slot_03",
+    "png output has no transparent pixels: item_slot_04",
+    "png output has no transparent pixels: left_joystick",
+    "png output has no transparent pixels: map_zoom",
+    "png output has no transparent pixels: mp_orb",
+    "png output has no transparent pixels: role_entry",
+    "png output has no transparent pixels: run_button",
+    "png output has no transparent pixels: shop_entry",
+    "png output has no transparent pixels: skill_01",
+    "png output has no transparent pixels: skill_02",
+    "png output has no transparent pixels: skill_03",
+    "png output has no transparent pixels: task_tab",
+    "png output has no transparent pixels: team_tab",
+    "png output has no transparent pixels: walk_button",
+    "源图无透明像素，已输出 PNG 但需要人工抠透明背景"
+  ],
+  "key_component_checks": {
+    "required": [
+      "top_bar",
+      "mini_map",
+      "skill_area",
+      "chat_area",
+      "joystick_area"
+    ],
+    "missing": []
+  },
+  "bbox_health": {
+    "checked": 31,
+    "image_width": 1280,
+    "image_height": 720,
+    "invalid_size": [],
+    "out_of_bounds": [],
+    "overlap_warnings": [],
+    "invalid_size_count": 0,
+    "out_of_bounds_count": 0,
+    "abnormal_overlap_count": 0,
+    "ok": true
+  },
+  "slice_health": {
+    "checked": 29,
+    "file_missing": [],
+    "png_without_alpha": [
+      "task_tab",
+      "team_tab",
+      "left_joystick",
+      "run_button",
+      "walk_button",
+      "hp_orb",
+      "mp_orb",
+      "item_slot_01",
+      "item_slot_02",
+      "item_slot_03",
+      "item_slot_04",
+      "skill_01",
+      "skill_02",
+      "skill_03",
+      "auto_button",
+      "role_entry",
+      "bag_entry",
+      "shop_entry",
+      "activity_entry",
+      "map_zoom",
+      "currency"
+    ],
+    "jpg_invalid": [],
+    "file_missing_count": 0,
+    "png_without_alpha_count": 21,
+    "jpg_invalid_count": 0,
+    "ok": true,
+    "details": [
+      {
+        "component_id": "screen_main_ui",
+        "file": "confirmed_components/screen_main_ui.jpg",
+        "exists": true,
+        "format": "jpg",
+        "png_has_transparency": false,
+        "jpg_valid": true,
+        "warning": ""
+      },
+      {
+        "component_id": "top_player_info",
+        "file": "confirmed_components/panel_top_player_info.jpg",
+        "exists": true,
+        "format": "jpg",
+        "png_has_transparency": false,
+        "jpg_valid": true,
+        "warning": ""
+      },
+      {
+        "component_id": "task_panel",
+        "file": "confirmed_components/panel_task_panel.jpg",
+        "exists": true,
+        "format": "jpg",
+        "png_has_transparency": false,
+        "jpg_valid": true,
+        "warning": ""
+      },
+      {
+        "component_id": "task_tab",
+        "file": "confirmed_components/btn_task_tab.png",
+        "exists": true,
+        "format": "png",
+        "png_has_transparency": false,
+        "jpg_valid": false,
+        "warning": "png output has no transparent pixels"
+      },
+      {
+        "component_id": "team_tab",
+        "file": "confirmed_components/btn_team_tab.png",
+        "exists": true,
+        "format": "png",
+        "png_has_transparency": false,
+        "jpg_valid": false,
+        "warning": "png output has no transparent pixels"
+      },
+      {
+        "component_id": "status_panel",
+        "file": "confirmed_components/panel_status_panel.jpg",
+        "exists": true,
+        "format": "jpg",
+        "png_has_transparency": false,
+        "jpg_valid": true,
+        "warning": ""
+      },
+      {
+        "component_id": "health_bar",
+        "file": "confirmed_components/panel_health_bar.jpg",
+        "exists": true,
+        "format": "jpg",
+        "png_has_transparency": false,
+        "jpg_valid": true,
+        "warning": ""
+      },
+      {
+        "component_id": "left_joystick",
+        "file": "confirmed_components/btn_left_joystick.png",
+        "exists": true,
+        "format": "png",
+        "png_has_transparency": false,
+        "jpg_valid": false,
+        "warning": "png output has no transparent pixels"
+      },
+      {
+        "component_id": "run_button",
+        "file": "confirmed_components/btn_run_button.png",
+        "exists": true,
+        "format": "png",
+        "png_has_transparency": false,
+        "jpg_valid": false,
+        "warning": "png output has no transparent pixels"
+      },
+      {
+        "component_id": "walk_button",
+        "file": "confirmed_components/btn_walk_button.png",
+        "exists": true,
+        "format": "png",
+        "png_has_transparency": false,
+        "jpg_valid": false,
+        "warning": "png output has no transparent pixels"
+      },
+      {
+        "component_id": "bottom_hud",
+        "file": "confirmed_components/panel_bottom_hud.jpg",
+        "exists": true,
+        "format": "jpg",
+        "png_has_transparency": false,
+        "jpg_valid": true,
+        "warning": ""
+      },
+      {
+        "component_id": "hp_orb",
+        "file": "confirmed_components/icon_hp_orb.png",
+        "exists": true,
+        "format": "png",
+        "png_has_transparency": false,
+        "jpg_valid": false,
+        "warning": "png output has no transparent pixels"
+      },
+      {
+        "component_id": "mp_orb",
+        "file": "confirmed_components/icon_mp_orb.png",
+        "exists": true,
+        "format": "png",
+        "png_has_transparency": false,
+        "jpg_valid": false,
+        "warning": "png output has no transparent pixels"
+      },
+      {
+        "component_id": "item_slot_01",
+        "file": "confirmed_components/slot_item_slot_01.png",
+        "exists": true,
+        "format": "png",
+        "png_has_transparency": false,
+        "jpg_valid": false,
+        "warning": "png output has no transparent pixels"
+      },
+      {
+        "component_id": "item_slot_02",
+        "file": "confirmed_components/slot_item_slot_02.png",
+        "exists": true,
+        "format": "png",
+        "png_has_transparency": false,
+        "jpg_valid": false,
+        "warning": "png output has no transparent pixels"
+      },
+      {
+        "component_id": "item_slot_03",
+        "file": "confirmed_components/slot_item_slot_03.png",
+        "exists": true,
+        "format": "png",
+        "png_has_transparency": false,
+        "jpg_valid": false,
+        "warning": "png output has no transparent pixels"
+      },
+      {
+        "component_id": "item_slot_04",
+        "file": "confirmed_components/slot_item_slot_04.png",
+        "exists": true,
+        "format": "png",
+        "png_has_transparency": false,
+        "jpg_valid": false,
+        "warning": "png output has no transparent pixels"
+      },
+      {
+        "component_id": "chat_panel",
+        "file": "confirmed_components/panel_chat_panel.jpg",
+        "exists": true,
+        "format": "jpg",
+        "png_has_transparency": false,
+        "jpg_valid": true,
+        "warning": ""
+      },
+      {
+        "component_id": "skill_01",
+        "file": "confirmed_components/btn_skill_01.png",
+        "exists": true,
+        "format": "png",
+        "png_has_transparency": false,
+        "jpg_valid": false,
+        "warning": "png output has no transparent pixels"
+      },
+      {
+        "component_id": "skill_02",
+        "file": "confirmed_components/btn_skill_02.png",
+        "exists": true,
+        "format": "png",
+        "png_has_transparency": false,
+        "jpg_valid": false,
+        "warning": "png output has no transparent pixels"
+      },
+      {
+        "component_id": "skill_03",
+        "file": "confirmed_components/btn_skill_03.png",
+        "exists": true,
+        "format": "png",
+        "png_has_transparency": false,
+        "jpg_valid": false,
+        "warning": "png output has no transparent pixels"
+      },
+      {
+        "component_id": "auto_button",
+        "file": "confirmed_components/btn_auto_button.png",
+        "exists": true,
+        "format": "png",
+        "png_has_transparency": false,
+        "jpg_valid": false,
+        "warning": "png output has no transparent pixels"
+      },
+      {
+        "component_id": "role_entry",
+        "file": "confirmed_components/icon_role_entry.png",
+        "exists": true,
+        "format": "png",
+        "png_has_transparency": false,
+        "jpg_valid": false,
+        "warning": "png output has no transparent pixels"
+      },
+      {
+        "component_id": "bag_entry",
+        "file": "confirmed_components/icon_bag_entry.png",
+        "exists": true,
+        "format": "png",
+        "png_has_transparency": false,
+        "jpg_valid": false,
+        "warning": "png output has no transparent pixels"
+      },
+      {
+        "component_id": "shop_entry",
+        "file": "confirmed_components/icon_shop_entry.png",
+        "exists": true,
+        "format": "png",
+        "png_has_transparency": false,
+        "jpg_valid": false,
+        "warning": "png output has no transparent pixels"
+      },
+      {
+        "component_id": "activity_entry",
+        "file": "confirmed_components/icon_activity_entry.png",
+        "exists": true,
+        "format": "png",
+        "png_has_transparency": false,
+        "jpg_valid": false,
+        "warning": "png output has no transparent pixels"
+      },
+      {
+        "component_id": "mini_map",
+        "file": "confirmed_components/panel_mini_map.jpg",
+        "exists": true,
+        "format": "jpg",
+        "png_has_transparency": false,
+        "jpg_valid": true,
+        "warning": ""
+      },
+      {
+        "component_id": "map_zoom",
+        "file": "confirmed_components/icon_map_zoom.png",
+        "exists": true,
+        "format": "png",
+        "png_has_transparency": false,
+        "jpg_valid": false,
+        "warning": "png output has no transparent pixels"
+      },
+      {
+        "component_id": "currency",
+        "file": "confirmed_components/icon_currency.png",
+        "exists": true,
+        "format": "png",
+        "png_has_transparency": false,
+        "jpg_valid": false,
+        "warning": "png output has no transparent pixels"
+      }
+    ]
+  },
+  "project_id": "b3abe62fdecd43c0bf4f4a9a231bd8ae",
+  "manifest_path": "C:\\Users\\86186\\Documents\\996美术资产生成\\harness\\examples\\main_ui\\marking_test\\manifest.json",
+  "marking_json_path": "C:\\Users\\86186\\Documents\\996美术资产生成\\harness\\examples\\main_ui\\marking_test\\marking.json",
+  "manual_acceptance_path": "C:\\Users\\86186\\Documents\\996美术资产生成\\harness\\examples\\main_ui\\marking_test\\manual_acceptance.json",
+  "training_samples_path": "C:\\Users\\86186\\Documents\\996美术资产生成\\assets\\uploads\\996-ready\\SPRINT20C_UI_PRODUCTION\\main_ui\\main-ui-20260608-120800\\training_samples\\main_ui\\candidate_samples.json",
+  "harness_dir": "C:\\Users\\86186\\Documents\\996美术资产生成\\harness\\examples\\main_ui\\marking_test",
+  "candidate_preview_path": "C:\\Users\\86186\\Documents\\996美术资产生成\\harness\\examples\\main_ui\\marking_test\\candidate_preview.png"
+}

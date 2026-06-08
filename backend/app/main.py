@@ -411,6 +411,136 @@ def create_app(database_path: str | Path | None = None, upload_dir: str | Path |
         with Image.open(source) as image:
             image.save(target, format="PNG")
 
+    def candidate_bbox(candidate: dict) -> dict:
+        raw = candidate.get("bbox") or candidate.get("bounds") or {}
+        return raw if isinstance(raw, dict) else {}
+
+    def required_marking_components(candidates: list[dict]) -> tuple[list[str], list[str]]:
+        requirements = {
+            "top_bar": lambda item: item.get("layout_zone") == "top_info" or item.get("component_id") == "top_player_info",
+            "mini_map": lambda item: item.get("layout_zone") == "right_top_map" or item.get("component_id") == "mini_map",
+            "skill_area": lambda item: item.get("layout_zone") == "right_skill",
+            "chat_area": lambda item: item.get("layout_zone") == "chat" or item.get("component_id") == "chat_panel",
+            "joystick_area": lambda item: item.get("layout_zone") == "bottom_left_joystick" or item.get("component_id") == "left_joystick",
+        }
+        missing = [key for key, matcher in requirements.items() if not any(matcher(candidate) for candidate in candidates)]
+        warnings = [f"missing required main_ui component: {key}" for key in missing]
+        return missing, warnings
+
+    def bbox_health_report(candidates: list[dict], image_size: tuple[int, int]) -> dict:
+        image_width, image_height = image_size
+        invalid_size: list[str] = []
+        out_of_bounds: list[str] = []
+        overlap_warnings: list[str] = []
+        boxes: list[tuple[str, str, dict]] = []
+        container_types = {"screen", "panel", "hud_bar", "chat", "map", "skill_bar", "decoration"}
+        for candidate in candidates:
+            component_id = str(candidate.get("component_id") or candidate.get("candidate_id") or "")
+            box = candidate_bbox(candidate)
+            x = int(box.get("x") or 0)
+            y = int(box.get("y") or 0)
+            width = int(box.get("width") or 0)
+            height = int(box.get("height") or 0)
+            if width <= 0 or height <= 0:
+                invalid_size.append(component_id)
+                continue
+            if x < 0 or y < 0 or x + width > image_width or y + height > image_height:
+                out_of_bounds.append(component_id)
+            if candidate.get("component_type") != "screen" and candidate.get("level") != "C":
+                boxes.append((component_id, str(candidate.get("component_type") or ""), {"x": x, "y": y, "width": width, "height": height}))
+        for index, (left_id, left_type, left_box) in enumerate(boxes):
+            for right_id, right_type, right_box in boxes[index + 1 :]:
+                if left_type in container_types or right_type in container_types:
+                    continue
+                left_area = left_box["width"] * left_box["height"]
+                right_area = right_box["width"] * right_box["height"]
+                if left_area <= 0 or right_area <= 0:
+                    continue
+                ix1 = max(left_box["x"], right_box["x"])
+                iy1 = max(left_box["y"], right_box["y"])
+                ix2 = min(left_box["x"] + left_box["width"], right_box["x"] + right_box["width"])
+                iy2 = min(left_box["y"] + left_box["height"], right_box["y"] + right_box["height"])
+                intersection = max(0, ix2 - ix1) * max(0, iy2 - iy1)
+                if intersection / min(left_area, right_area) > 0.85:
+                    overlap_warnings.append(f"{left_id} overlaps {right_id}")
+        return {
+            "checked": len(candidates),
+            "image_width": image_width,
+            "image_height": image_height,
+            "invalid_size": invalid_size,
+            "out_of_bounds": out_of_bounds,
+            "overlap_warnings": overlap_warnings,
+            "invalid_size_count": len(invalid_size),
+            "out_of_bounds_count": len(out_of_bounds),
+            "abnormal_overlap_count": len(overlap_warnings),
+            "ok": not invalid_size and not out_of_bounds and not overlap_warnings,
+        }
+
+    def inspect_slice_file(path: Path, expected_format: str) -> dict:
+        result = {
+            "exists": path.exists(),
+            "format": expected_format,
+            "png_has_transparency": False,
+            "jpg_valid": False,
+            "warning": "",
+        }
+        if not path.exists():
+            result["warning"] = "slice file missing"
+            return result
+        try:
+            from PIL import Image
+
+            with Image.open(path) as image:
+                actual_format = (image.format or "").lower()
+                if expected_format == "png":
+                    result["png_has_transparency"] = image_has_alpha_pixels(path)
+                    if actual_format != "png":
+                        result["warning"] = "png output is not a PNG file"
+                    elif not result["png_has_transparency"]:
+                        result["warning"] = "png output has no transparent pixels"
+                elif expected_format in {"jpg", "jpeg"}:
+                    result["jpg_valid"] = actual_format in {"jpeg", "jpg"} and image.width > 0 and image.height > 0
+                    if not result["jpg_valid"]:
+                        result["warning"] = "jpg output is invalid"
+        except OSError as exc:
+            result["warning"] = f"slice file unreadable: {exc}"
+        return result
+
+    def slice_health_report(package_dir: Path, confirmed_components: list) -> dict:
+        checked = 0
+        file_missing: list[str] = []
+        png_without_alpha: list[str] = []
+        jpg_invalid: list[str] = []
+        details: list[dict] = []
+        for component in confirmed_components:
+            if not isinstance(component, dict) or not component.get("confirmed"):
+                continue
+            file_name = str(component.get("file") or "")
+            if not file_name:
+                continue
+            checked += 1
+            expected_format = str(component.get("format") or Path(file_name).suffix.lstrip(".")).lower()
+            check = inspect_slice_file(package_dir / file_name, expected_format)
+            component_id = str(component.get("component_id") or "")
+            details.append({"component_id": component_id, "file": file_name, **check})
+            if not check["exists"]:
+                file_missing.append(component_id)
+            elif expected_format == "png" and not check["png_has_transparency"]:
+                png_without_alpha.append(component_id)
+            elif expected_format in {"jpg", "jpeg"} and not check["jpg_valid"]:
+                jpg_invalid.append(component_id)
+        return {
+            "checked": checked,
+            "file_missing": file_missing,
+            "png_without_alpha": png_without_alpha,
+            "jpg_invalid": jpg_invalid,
+            "file_missing_count": len(file_missing),
+            "png_without_alpha_count": len(png_without_alpha),
+            "jpg_invalid_count": len(jpg_invalid),
+            "ok": not file_missing and not jpg_invalid,
+            "details": details,
+        }
+
     def write_marking_acceptance_outputs(package_dir: Path, production: dict, project: Project) -> dict:
         candidate_manifest = read_package_json(package_dir, "candidate_manifest.json")
         candidates = [item for item in candidate_manifest.get("candidates", []) if isinstance(item, dict)]
@@ -420,6 +550,7 @@ def create_app(database_path: str | Path | None = None, upload_dir: str | Path |
         by_type = {"background": 0, "panel": 0, "button": 0, "icon": 0, "skill": 0}
         for candidate in candidates:
             by_type[marking_type(str(candidate.get("component_type") or ""))] += 1
+        missing_key_components, key_component_warnings = required_marking_components(candidates)
 
         slice_success = 0
         slice_failed = 0
@@ -432,13 +563,36 @@ def create_app(database_path: str | Path | None = None, upload_dir: str | Path |
             else:
                 slice_failed += 1
 
-        missing_required = [key for key, value in by_type.items() if value == 0]
+        missing_mark_types = [key for key, value in by_type.items() if value == 0]
+        image_size = (0, 0)
+        try:
+            from PIL import Image
+
+            with Image.open(package_dir / "main_ui.jpg") as image:
+                image_size = image.size
+        except OSError:
+            image_size = (0, 0)
+        bbox_health = bbox_health_report(candidates, image_size)
+        slice_health = slice_health_report(package_dir, confirmed_components if isinstance(confirmed_components, list) else [])
         warnings = sorted(
             {
                 str(candidate.get("transparent_warning"))
                 for candidate in candidates
                 if isinstance(candidate.get("transparent_warning"), str) and candidate.get("transparent_warning")
             }
+        )
+        warnings = sorted(
+            set(
+                warnings
+                + key_component_warnings
+                + [f"missing marking type: {item}" for item in missing_mark_types]
+                + [f"invalid bbox size: {item}" for item in bbox_health["invalid_size"]]
+                + [f"bbox out of bounds: {item}" for item in bbox_health["out_of_bounds"]]
+                + [f"abnormal bbox overlap: {item}" for item in bbox_health["overlap_warnings"]]
+                + [f"slice file missing: {item}" for item in slice_health["file_missing"]]
+                + [f"png output has no transparent pixels: {item}" for item in slice_health["png_without_alpha"]]
+                + [f"jpg output invalid: {item}" for item in slice_health["jpg_invalid"]]
+            )
         )
 
         harness_dir = (harness_examples_root / "main_ui" / "marking_test").resolve()
@@ -462,11 +616,22 @@ def create_app(database_path: str | Path | None = None, upload_dir: str | Path |
             "project_code": "MARKING_TEST",
             "candidate_id": selected_candidate_id,
             "total_marks": len(candidates),
+            "background_count": by_type["background"],
+            "panel_count": by_type["panel"],
+            "button_count": by_type["button"],
+            "icon_count": by_type["icon"],
+            "skill_count": by_type["skill"],
             "by_type": by_type,
             "slice_success": slice_success,
             "slice_failed": slice_failed,
-            "missing_required": missing_required,
+            "missing_required": missing_key_components,
             "warnings": warnings,
+            "key_component_checks": {
+                "required": ["top_bar", "mini_map", "skill_area", "chat_area", "joystick_area"],
+                "missing": missing_key_components,
+            },
+            "bbox_health": bbox_health,
+            "slice_health": slice_health,
             "project_id": project.id,
             "manifest_path": str(harness_dir / "manifest.json"),
             "marking_json_path": str(harness_dir / "marking.json"),

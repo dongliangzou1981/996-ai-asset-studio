@@ -248,9 +248,25 @@ def test_marking_acceptance_test_generates_harness_outputs(tmp_path: Path, monke
 
     report = json.loads((output_dir / "marking_acceptance_report.json").read_text(encoding="utf-8"))
     assert report["project_code"] == "MARKING_TEST"
+    assert report["total_marks"] == body["total_marks"]
+    assert report["background_count"] == report["by_type"]["background"]
+    assert report["panel_count"] == report["by_type"]["panel"]
+    assert report["button_count"] == report["by_type"]["button"]
+    assert report["icon_count"] == report["by_type"]["icon"]
+    assert report["skill_count"] == report["by_type"]["skill"]
     assert report["by_type"]["background"] >= 1
     assert report["by_type"]["button"] >= 1
     assert report["by_type"]["skill"] >= 1
+    assert report["missing_required"] == []
+    assert report["key_component_checks"]["missing"] == []
+    assert report["key_component_checks"]["required"] == ["top_bar", "mini_map", "skill_area", "chat_area", "joystick_area"]
+    assert report["bbox_health"]["checked"] == report["total_marks"]
+    assert report["bbox_health"]["invalid_size_count"] == 0
+    assert report["bbox_health"]["out_of_bounds_count"] == 0
+    assert "abnormal_overlap_count" in report["bbox_health"]
+    assert report["slice_health"]["checked"] >= report["slice_success"]
+    assert report["slice_health"]["file_missing_count"] == 0
+    assert "png_without_alpha_count" in report["slice_health"]
     assert report["marking_json_path"].endswith("marking.json")
     prompt_samples = json.loads((tmp_path / "training_samples" / "prompts" / "prompt_samples.json").read_text(encoding="utf-8"))
     sample = prompt_samples["samples"][0]
