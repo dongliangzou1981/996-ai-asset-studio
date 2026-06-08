@@ -641,8 +641,10 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
       setUiAdjustmentImagePath(asset.file_path);
       setUiAdjustmentImageName(asset.original_filename || file.name);
       setUiProductionMessage("调整截图已保存，下次生成会带入调整记录。");
-    } catch {
-      setUiAdjustmentUploadError("调整截图上传失败，请使用 PNG、JPG 或 JPEG。");
+    } catch (exc) {
+      setUiAdjustmentImagePath(null);
+      setUiAdjustmentImageName("");
+      setUiAdjustmentUploadError(`调整截图上传失败：${exc instanceof Error ? exc.message : "未知错误"}`);
     } finally {
       event.target.value = "";
     }
@@ -670,12 +672,18 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
     setUiReferenceUploadError("");
     setUiProductionMessage("");
     try {
+      const referenceImagePath = useReference ? uiProductionReferencePath : null;
+      const referenceInfluencePercent = shouldUseUiReferenceRatio(uiProductionGenerationMode)
+        ? Number(uiProductionStyleReference) || 0
+        : null;
       const response = await api.generateUiProductionPackage({
         screen_type: uiProductionScreenType,
-        reference_image_path: useReference ? uiProductionReferencePath : null,
+        reference_image_path: referenceImagePath,
+        reference_image: referenceImagePath,
         system_prompt: uiProductionSystemPrompt,
         requirement: uiProductionRequirement,
         style_reference_strength: uiStyleReferenceStrength(uiProductionGenerationMode, uiProductionStyleReference),
+        reference_influence_percent: referenceInfluencePercent,
         project_id: selectedProjectId,
         device_type: deviceType,
         layout_template: layoutTemplate,

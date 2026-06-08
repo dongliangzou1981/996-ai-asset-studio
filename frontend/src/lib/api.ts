@@ -331,6 +331,7 @@ export type MainUiProductionResult = {
   candidate_options?: MainUiCandidateOption[];
   selected_candidate_id?: string;
   style_reference_strength?: string;
+  reference_influence_percent?: number | null;
   style_reference_note?: string;
   project_context?: MainUiProjectContext;
   training_samples_url?: string;
@@ -573,9 +574,11 @@ export const studioApi = {
   generateUiProductionPackage(payload: {
     screen_type: string;
     reference_image_path?: string | null;
+    reference_image?: string | null;
     system_prompt?: string;
     requirement: string;
     style_reference_strength: string;
+    reference_influence_percent?: number | null;
     project_id?: string;
     device_type?: string;
     layout_template?: string;
@@ -619,9 +622,11 @@ export const studioApi = {
   },
   runMarkingAcceptanceTest(payload: {
     reference_image_path?: string | null;
+    reference_image?: string | null;
     system_prompt?: string;
     requirement: string;
     style_reference_strength: string;
+    reference_influence_percent?: number | null;
     project_id?: string;
     device_type?: string;
     layout_template?: string;

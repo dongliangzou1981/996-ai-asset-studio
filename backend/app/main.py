@@ -376,6 +376,25 @@ def create_app(database_path: str | Path | None = None, upload_dir: str | Path |
             raise HTTPException(status_code=404, detail="Reference image not found")
         return candidate
 
+    def payload_reference_image(payload: dict) -> str | None:
+        value = payload.get("reference_image_path")
+        if value:
+            return str(value)
+        value = payload.get("reference_image")
+        return str(value) if value else None
+
+    def reference_influence_percent(payload: dict) -> int | None:
+        value = payload.get("reference_influence_percent")
+        if value is None or value == "":
+            strength = str(payload.get("style_reference_strength") or "")
+            value = strength if strength.isdigit() else None
+        if value is None:
+            return None
+        try:
+            return max(0, min(100, int(value)))
+        except (TypeError, ValueError):
+            raise HTTPException(status_code=400, detail="reference_influence_percent must be between 0 and 100") from None
+
     def image_has_alpha_pixels(path: Path) -> bool:
         if not path.exists() or path.suffix.lower() != ".png":
             return False
@@ -735,6 +754,7 @@ def create_app(database_path: str | Path | None = None, upload_dir: str | Path |
             "candidate_options": candidate_options,
             "selected_candidate_id": delivery_report.get("selected_candidate_id", "candidate_1"),
             "style_reference_strength": delivery_report.get("style_reference_strength", ""),
+            "reference_influence_percent": delivery_report.get("reference_influence_percent"),
             "style_reference_note": delivery_report.get("style_reference_note", ""),
             "project_context": {
                 "project_name": "996 UI Asset Studio",
@@ -811,7 +831,7 @@ def create_app(database_path: str | Path | None = None, upload_dir: str | Path |
     @app.post("/production-studio/main-ui-production/run")
     def run_main_ui_production(payload: dict | None = None) -> dict:
         try:
-            source = resolve_uploaded_source_file((payload or {}).get("reference_image_path"))
+            source = resolve_uploaded_source_file(payload_reference_image(payload or {}))
             result = create_main_ui_package(upload_root=upload_root, source_image=source)
         except (FileNotFoundError, RuntimeError, ValueError) as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
@@ -830,13 +850,14 @@ def create_app(database_path: str | Path | None = None, upload_dir: str | Path |
                 "message": "该界面类型即将支持，本轮仅 main_ui 可完整跑通",
             }
         try:
-            source = resolve_uploaded_source_file(payload.get("reference_image_path"))
+            source = resolve_uploaded_source_file(payload_reference_image(payload))
             result = create_ui_package(
                 upload_root=upload_root,
                 screen_type=screen_type,
                 source_image=source,
                 requirement=str(payload.get("requirement") or ""),
                 style_reference_strength=str(payload.get("style_reference_strength") or "none"),
+                reference_influence_percent=reference_influence_percent(payload),
                 adjustment_note=str(payload.get("adjustment_note") or ""),
                 adjustment_image_path=str(payload.get("adjustment_image_path") or ""),
             )
@@ -904,13 +925,14 @@ def create_app(database_path: str | Path | None = None, upload_dir: str | Path |
         payload = payload or {}
         project = ensure_marking_test_project()
         try:
-            source = resolve_uploaded_source_file(payload.get("reference_image_path"))
+            source = resolve_uploaded_source_file(payload_reference_image(payload))
             result = create_ui_package(
                 upload_root=upload_root,
                 screen_type="main_ui",
                 source_image=source,
                 requirement=str(payload.get("requirement") or "生成一张用于996传奇引擎的主界面UI"),
                 style_reference_strength=str(payload.get("style_reference_strength") or "none"),
+                reference_influence_percent=reference_influence_percent(payload),
                 adjustment_note=str(payload.get("adjustment_note") or "用于测试自动标记和自动切图准确性"),
                 adjustment_image_path=str(payload.get("adjustment_image_path") or ""),
             )

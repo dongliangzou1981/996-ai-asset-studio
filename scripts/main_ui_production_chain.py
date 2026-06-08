@@ -39,7 +39,7 @@ def utc_now() -> str:
 
 
 def safe_job_id(prefix: str = "ui-production") -> str:
-    return datetime.now(timezone.utc).strftime(f"{prefix}-%Y%m%d-%H%M%S")
+    return datetime.now(timezone.utc).strftime(f"{prefix}-%Y%m%d-%H%M%S-%f")
 
 
 def bounds(width: int, height: int, x: float, y: float, w: float, h: float) -> dict[str, int]:
@@ -128,6 +128,15 @@ def candidate_record(
         "component_id": component_id,
         "component_name": name,
         "component_type": component_type,
+        "layer_name": component_id,
+        "layer_group": layout_zone,
+        "layer_order": index,
+        "slice_layer": {
+            "name": component_id,
+            "group": layout_zone,
+            "order": index,
+            "component_type": component_type,
+        },
         "number": index,
         "bounds": box,
         "bbox": box,
@@ -413,6 +422,7 @@ def write_base_package_files(
     style_reference_strength: str,
     source_note: dict[str, Any],
     candidate_options: list[dict[str, str]],
+    reference_influence_percent: int | None = None,
     adjustment_note: str = "",
     adjustment_image_path: str = "",
 ) -> None:
@@ -455,9 +465,11 @@ def write_base_package_files(
             "style_reference_note": style_reference_note(style_reference_strength),
             "generation_parameters": {
                 "style_reference_strength": style_reference_strength,
+                "reference_influence_percent": reference_influence_percent,
                 "style_reference_note": style_reference_note(style_reference_strength),
                 "model_supports_exact_style_strength": False,
             },
+            "reference_influence_percent": reference_influence_percent,
             "final_prompt": f"{requirement}\n\u98ce\u683c\u53c2\u8003\uff1a{style_reference_note(style_reference_strength)}".strip(),
             "candidate_options": candidate_options,
             "selected_candidate_id": "candidate_1",
@@ -485,6 +497,7 @@ def create_ui_package(
     job_id: str | None = None,
     requirement: str = "",
     style_reference_strength: str = "none",
+    reference_influence_percent: int | None = None,
     adjustment_note: str = "",
     adjustment_image_path: str = "",
 ) -> dict[str, Any]:
@@ -514,6 +527,7 @@ def create_ui_package(
         requirement=requirement,
         style_reference_strength=style_reference_strength,
         candidate_options=candidate_options,
+        reference_influence_percent=reference_influence_percent,
         adjustment_note=adjustment_note,
         adjustment_image_path=adjustment_image_path,
         source_note={
@@ -619,6 +633,10 @@ def write_manual_acceptance_components(package_dir: Path, candidates: list[dict[
                 "production_category": candidate.get("production_category"),
                 "layout_zone": candidate.get("layout_zone"),
                 "shape_type": candidate.get("shape_type"),
+                "layer_name": candidate.get("layer_name"),
+                "layer_group": candidate.get("layer_group"),
+                "layer_order": candidate.get("layer_order"),
+                "slice_layer": candidate.get("slice_layer"),
                 "bbox": candidate.get("bbox") or candidate.get("bounds"),
                 "outline_points": candidate.get("outline_points", []),
                 "output_file": candidate.get("image_path") or "",
@@ -660,6 +678,10 @@ def write_training_samples(package_dir: Path, candidates: list[dict[str, Any]]) 
             "level": candidate.get("level"),
             "layout_zone": candidate.get("layout_zone"),
             "shape_type": candidate.get("shape_type"),
+            "layer_name": candidate.get("layer_name"),
+            "layer_group": candidate.get("layer_group"),
+            "layer_order": candidate.get("layer_order"),
+            "slice_layer": candidate.get("slice_layer"),
             "bbox": candidate.get("bbox") or candidate.get("bounds"),
             "bbox_delta": {"x": 0, "y": 0, "width": 0, "height": 0},
             "outline_points": candidate.get("outline_points", []),
@@ -753,6 +775,16 @@ def export_confirmed_components(package_dir: str | Path) -> dict[str, Any]:
             "bbox": candidate.get("bbox") or candidate["bounds"],
             "layout_zone": candidate.get("layout_zone", ""),
             "shape_type": candidate.get("shape_type", "rect"),
+            "layer_name": candidate.get("layer_name") or candidate["component_id"],
+            "layer_group": candidate.get("layer_group") or candidate.get("layout_zone", ""),
+            "layer_order": candidate.get("layer_order") or candidate.get("number"),
+            "slice_layer": candidate.get("slice_layer")
+            or {
+                "name": candidate["component_id"],
+                "group": candidate.get("layout_zone", ""),
+                "order": candidate.get("number"),
+                "component_type": candidate.get("component_type", ""),
+            },
             "outline_points": candidate.get("outline_points", []),
             "transparent_png_required": bool(candidate.get("transparent_required")),
             "transparent_warning": warning,

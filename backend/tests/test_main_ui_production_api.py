@@ -102,6 +102,7 @@ def test_ui_production_generate_mark_export_and_prompt_samples(tmp_path: Path) -
             "system_prompt": "system generated prompt",
             "requirement": "main ui layout",
             "style_reference_strength": "60",
+            "reference_influence_percent": 60,
             "project_id": "project-1",
             "device_type": "mobile_landscape",
             "layout_template": "classic_legend_mobile",
@@ -111,6 +112,7 @@ def test_ui_production_generate_mark_export_and_prompt_samples(tmp_path: Path) -
     assert generated.status_code == 200
     package_dir = generated.json()["package_dir"]
     assert generated.json()["main_ui_url"].endswith("/main_ui.jpg")
+    assert generated.json()["reference_influence_percent"] == 60
     assert generated.json()["candidates"] == []
     generated_files = {item["file"]: item for item in generated.json()["package_files"]}
     assert generated_files["main_ui.jpg"]["exists"] is True
@@ -126,6 +128,9 @@ def test_ui_production_generate_mark_export_and_prompt_samples(tmp_path: Path) -
     assert sample["layout_template"] == "classic_legend_mobile"
     assert sample["accepted"] is False
     assert sample["manual_adjustment_note"] == "manual note"
+    delivery = json.loads((Path(package_dir) / "delivery_report.json").read_text(encoding="utf-8"))
+    assert delivery["reference_influence_percent"] == 60
+    assert delivery["generation_parameters"]["reference_influence_percent"] == 60
 
     marked = client.post("/production-studio/ui-production/mark-candidates", params={"package_dir": package_dir})
     assert marked.status_code == 200
@@ -134,6 +139,11 @@ def test_ui_production_generate_mark_export_and_prompt_samples(tmp_path: Path) -
     by_candidate = {item["component_id"]: item for item in marked.json()["candidates"]}
     assert by_candidate["skill_01"]["layout_zone"] == "right_skill"
     assert by_candidate["skill_01"]["shape_type"] == "circle"
+    assert len(by_candidate["skill_01"]["outline_points"]) > 4
+    assert by_candidate["skill_01"]["layer_name"] == "skill_01"
+    assert by_candidate["skill_01"]["slice_layer"]["group"] == "right_skill"
+    assert by_candidate["bottom_hud"]["shape_type"] == "composite"
+    assert len(by_candidate["bottom_hud"]["outline_points"]) > 4
     marked_files = {item["file"]: item for item in marked.json()["package_files"]}
     assert marked_files["candidate_manifest.json"]["exists"] is True
 
@@ -162,6 +172,12 @@ def test_ui_production_generate_mark_export_and_prompt_samples(tmp_path: Path) -
     assert exported_files["production_review.json"]["exists"] is True
     assert exported_files["training_samples/main_ui/candidate_samples.json"]["exists"] is True
     assert exported.json()["training_samples_url"].endswith("/training_samples/main_ui/candidate_samples.json")
+    manifest = json.loads((Path(package_dir) / "manifest.json").read_text(encoding="utf-8"))
+    manifest_by_id = {item["component_id"]: item for item in manifest["components"]}
+    assert manifest_by_id["bottom_hud"]["slice_layer"]["group"] == "bottom_status"
+    samples = json.loads((Path(package_dir) / "training_samples" / "main_ui" / "candidate_samples.json").read_text(encoding="utf-8"))
+    sample_by_id = {item["component_id"]: item for item in samples["samples"]}
+    assert sample_by_id["skill_01"]["slice_layer"]["name"] == "skill_01"
     prompt_samples = json.loads(prompt_samples_path.read_text(encoding="utf-8"))
     sample = prompt_samples["samples"][0]
     assert sample["marking_result"]["status"] == "exported"
@@ -288,7 +304,7 @@ def test_marking_acceptance_test_prefers_uploaded_reference(tmp_path: Path, monk
     response = client.post(
         "/production-studio/marking-acceptance-test/run",
         json={
-            "reference_image_path": str(reference),
+            "reference_image": str(reference),
             "requirement": "uploaded reference prompt",
             "adjustment_note": "uploaded reference adjustment",
         },

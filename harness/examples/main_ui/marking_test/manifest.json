@@ -2,7 +2,7 @@
   "schema_version": "1.0",
   "package_type": "996-ready",
   "template": "main_ui",
-  "generation_job_id": "main-ui-20260608-120800",
+  "generation_job_id": "main-ui-20260608-190437-591628",
   "ui_preview": "ui_preview.png",
   "main_ui": "main_ui.jpg",
   "components_dir": "confirmed_components",
@@ -26,6 +26,15 @@
       },
       "layout_zone": "full_screen",
       "shape_type": "rect",
+      "layer_name": "screen_main_ui",
+      "layer_group": "full_screen",
+      "layer_order": 1,
+      "slice_layer": {
+        "name": "screen_main_ui",
+        "group": "full_screen",
+        "order": 1,
+        "component_type": "screen"
+      },
       "outline_points": [
         {
           "x": 0,
@@ -66,6 +75,15 @@
       },
       "layout_zone": "top_info",
       "shape_type": "composite",
+      "layer_name": "top_player_info",
+      "layer_group": "top_info",
+      "layer_order": 2,
+      "slice_layer": {
+        "name": "top_player_info",
+        "group": "top_info",
+        "order": 2,
+        "component_type": "hud_bar"
+      },
       "outline_points": [
         {
           "x": 53,
@@ -122,6 +140,15 @@
       },
       "layout_zone": "left_task",
       "shape_type": "rect",
+      "layer_name": "task_panel",
+      "layer_group": "left_task",
+      "layer_order": 3,
+      "slice_layer": {
+        "name": "task_panel",
+        "group": "left_task",
+        "order": 3,
+        "component_type": "panel"
+      },
       "outline_points": [
         {
           "x": 0,
@@ -162,6 +189,15 @@
       },
       "layout_zone": "left_task",
       "shape_type": "rect",
+      "layer_name": "task_tab",
+      "layer_group": "left_task",
+      "layer_order": 4,
+      "slice_layer": {
+        "name": "task_tab",
+        "group": "left_task",
+        "order": 4,
+        "component_type": "button"
+      },
       "outline_points": [
         {
           "x": 0,
@@ -202,6 +238,15 @@
       },
       "layout_zone": "left_task",
       "shape_type": "rect",
+      "layer_name": "team_tab",
+      "layer_group": "left_task",
+      "layer_order": 5,
+      "slice_layer": {
+        "name": "team_tab",
+        "group": "left_task",
+        "order": 5,
+        "component_type": "button"
+      },
       "outline_points": [
         {
           "x": 0,
@@ -242,6 +287,15 @@
       },
       "layout_zone": "left_status",
       "shape_type": "rect",
+      "layer_name": "status_panel",
+      "layer_group": "left_status",
+      "layer_order": 6,
+      "slice_layer": {
+        "name": "status_panel",
+        "group": "left_status",
+        "order": 6,
+        "component_type": "panel"
+      },
       "outline_points": [
         {
           "x": 0,
@@ -282,6 +336,15 @@
       },
       "layout_zone": "left_status",
       "shape_type": "rect",
+      "layer_name": "health_bar",
+      "layer_group": "left_status",
+      "layer_order": 7,
+      "slice_layer": {
+        "name": "health_bar",
+        "group": "left_status",
+        "order": 7,
+        "component_type": "hud_bar"
+      },
       "outline_points": [
         {
           "x": 64,
@@ -322,6 +385,15 @@
       },
       "layout_zone": "bottom_left_joystick",
       "shape_type": "circle",
+      "layer_name": "left_joystick",
+      "layer_group": "bottom_left_joystick",
+      "layer_order": 8,
+      "slice_layer": {
+        "name": "left_joystick",
+        "group": "bottom_left_joystick",
+        "order": 8,
+        "component_type": "joystick"
+      },
       "outline_points": [
         {
           "x": 205,
@@ -410,6 +482,15 @@
       },
       "layout_zone": "bottom_left_joystick",
       "shape_type": "circle",
+      "layer_name": "run_button",
+      "layer_group": "bottom_left_joystick",
+      "layer_order": 9,
+      "slice_layer": {
+        "name": "run_button",
+        "group": "bottom_left_joystick",
+        "order": 9,
+        "component_type": "button"
+      },
       "outline_points": [
         {
           "x": 275,
@@ -498,6 +579,15 @@
       },
       "layout_zone": "bottom_left_joystick",
       "shape_type": "circle",
+      "layer_name": "walk_button",
+      "layer_group": "bottom_left_joystick",
+      "layer_order": 10,
+      "slice_layer": {
+        "name": "walk_button",
+        "group": "bottom_left_joystick",
+        "order": 10,
+        "component_type": "button"
+      },
       "outline_points": [
         {
           "x": 172,
@@ -586,6 +676,15 @@
       },
       "layout_zone": "bottom_status",
       "shape_type": "composite",
+      "layer_name": "bottom_hud",
+      "layer_group": "bottom_status",
+      "layer_order": 11,
+      "slice_layer": {
+        "name": "bottom_hud",
+        "group": "bottom_status",
+        "order": 11,
+        "component_type": "hud_bar"
+      },
       "outline_points": [
         {
           "x": 337,
@@ -642,6 +741,15 @@
       },
       "layout_zone": "bottom_status",
       "shape_type": "circle",
+      "layer_name": "hp_orb",
+      "layer_group": "bottom_status",
+      "layer_order": 12,
+      "slice_layer": {
+        "name": "hp_orb",
+        "group": "bottom_status",
+        "order": 12,
+        "component_type": "icon"
+      },
       "outline_points": [
         {
           "x": 473,
@@ -730,6 +838,15 @@
       },
       "layout_zone": "bottom_status",
       "shape_type": "circle",
+      "layer_name": "mp_orb",
+      "layer_group": "bottom_status",
+      "layer_order": 13,
+      "slice_layer": {
+        "name": "mp_orb",
+        "group": "bottom_status",
+        "order": 13,
+        "component_type": "icon"
+      },
       "outline_points": [
         {
           "x": 563,
@@ -818,6 +935,15 @@
       },
       "layout_zone": "bottom_status",
       "shape_type": "rect",
+      "layer_name": "item_slot_01",
+      "layer_group": "bottom_status",
+      "layer_order": 15,
+      "slice_layer": {
+        "name": "item_slot_01",
+        "group": "bottom_status",
+        "order": 15,
+        "component_type": "equipment_slot"
+      },
       "outline_points": [
         {
           "x": 666,
@@ -858,6 +984,15 @@
       },
       "layout_zone": "bottom_status",
       "shape_type": "rect",
+      "layer_name": "item_slot_02",
+      "layer_group": "bottom_status",
+      "layer_order": 16,
+      "slice_layer": {
+        "name": "item_slot_02",
+        "group": "bottom_status",
+        "order": 16,
+        "component_type": "equipment_slot"
+      },
       "outline_points": [
         {
           "x": 723,
@@ -898,6 +1033,15 @@
       },
       "layout_zone": "bottom_status",
       "shape_type": "rect",
+      "layer_name": "item_slot_03",
+      "layer_group": "bottom_status",
+      "layer_order": 17,
+      "slice_layer": {
+        "name": "item_slot_03",
+        "group": "bottom_status",
+        "order": 17,
+        "component_type": "equipment_slot"
+      },
       "outline_points": [
         {
           "x": 781,
@@ -938,6 +1082,15 @@
       },
       "layout_zone": "bottom_status",
       "shape_type": "rect",
+      "layer_name": "item_slot_04",
+      "layer_group": "bottom_status",
+      "layer_order": 18,
+      "slice_layer": {
+        "name": "item_slot_04",
+        "group": "bottom_status",
+        "order": 18,
+        "component_type": "equipment_slot"
+      },
       "outline_points": [
         {
           "x": 838,
@@ -978,6 +1131,15 @@
       },
       "layout_zone": "chat",
       "shape_type": "rect",
+      "layer_name": "chat_panel",
+      "layer_group": "chat",
+      "layer_order": 19,
+      "slice_layer": {
+        "name": "chat_panel",
+        "group": "chat",
+        "order": 19,
+        "component_type": "chat"
+      },
       "outline_points": [
         {
           "x": 614,
@@ -1018,6 +1180,15 @@
       },
       "layout_zone": "right_skill",
       "shape_type": "circle",
+      "layer_name": "skill_01",
+      "layer_group": "right_skill",
+      "layer_order": 20,
+      "slice_layer": {
+        "name": "skill_01",
+        "group": "right_skill",
+        "order": 20,
+        "component_type": "skill_button"
+      },
       "outline_points": [
         {
           "x": 1190,
@@ -1106,6 +1277,15 @@
       },
       "layout_zone": "right_skill",
       "shape_type": "circle",
+      "layer_name": "skill_02",
+      "layer_group": "right_skill",
+      "layer_order": 21,
+      "slice_layer": {
+        "name": "skill_02",
+        "group": "right_skill",
+        "order": 21,
+        "component_type": "skill_button"
+      },
       "outline_points": [
         {
           "x": 1268,
@@ -1194,6 +1374,15 @@
       },
       "layout_zone": "right_skill",
       "shape_type": "circle",
+      "layer_name": "skill_03",
+      "layer_group": "right_skill",
+      "layer_order": 22,
+      "slice_layer": {
+        "name": "skill_03",
+        "group": "right_skill",
+        "order": 22,
+        "component_type": "skill_button"
+      },
       "outline_points": [
         {
           "x": 1255,
@@ -1282,6 +1471,15 @@
       },
       "layout_zone": "right_system_entry",
       "shape_type": "circle",
+      "layer_name": "auto_button",
+      "layer_group": "right_system_entry",
+      "layer_order": 23,
+      "slice_layer": {
+        "name": "auto_button",
+        "group": "right_system_entry",
+        "order": 23,
+        "component_type": "button"
+      },
       "outline_points": [
         {
           "x": 1229,
@@ -1370,6 +1568,15 @@
       },
       "layout_zone": "right_system_entry",
       "shape_type": "circle",
+      "layer_name": "role_entry",
+      "layer_group": "right_system_entry",
+      "layer_order": 24,
+      "slice_layer": {
+        "name": "role_entry",
+        "group": "right_system_entry",
+        "order": 24,
+        "component_type": "system_entry_icon"
+      },
       "outline_points": [
         {
           "x": 1171,
@@ -1458,6 +1665,15 @@
       },
       "layout_zone": "right_system_entry",
       "shape_type": "circle",
+      "layer_name": "bag_entry",
+      "layer_group": "right_system_entry",
+      "layer_order": 25,
+      "slice_layer": {
+        "name": "bag_entry",
+        "group": "right_system_entry",
+        "order": 25,
+        "component_type": "system_entry_icon"
+      },
       "outline_points": [
         {
           "x": 1260,
@@ -1546,6 +1762,15 @@
       },
       "layout_zone": "right_system_entry",
       "shape_type": "circle",
+      "layer_name": "shop_entry",
+      "layer_group": "right_system_entry",
+      "layer_order": 26,
+      "slice_layer": {
+        "name": "shop_entry",
+        "group": "right_system_entry",
+        "order": 26,
+        "component_type": "system_entry_icon"
+      },
       "outline_points": [
         {
           "x": 1069,
@@ -1634,6 +1859,15 @@
       },
       "layout_zone": "right_system_entry",
       "shape_type": "circle",
+      "layer_name": "activity_entry",
+      "layer_group": "right_system_entry",
+      "layer_order": 27,
+      "slice_layer": {
+        "name": "activity_entry",
+        "group": "right_system_entry",
+        "order": 27,
+        "component_type": "system_entry_icon"
+      },
       "outline_points": [
         {
           "x": 1274,
@@ -1722,6 +1956,15 @@
       },
       "layout_zone": "right_top_map",
       "shape_type": "rect",
+      "layer_name": "mini_map",
+      "layer_group": "right_top_map",
+      "layer_order": 28,
+      "slice_layer": {
+        "name": "mini_map",
+        "group": "right_top_map",
+        "order": 28,
+        "component_type": "map"
+      },
       "outline_points": [
         {
           "x": 1101,
@@ -1762,6 +2005,15 @@
       },
       "layout_zone": "right_top_map",
       "shape_type": "rect",
+      "layer_name": "map_zoom",
+      "layer_group": "right_top_map",
+      "layer_order": 29,
+      "slice_layer": {
+        "name": "map_zoom",
+        "group": "right_top_map",
+        "order": 29,
+        "component_type": "system_entry_icon"
+      },
       "outline_points": [
         {
           "x": 1062,
@@ -1802,6 +2054,15 @@
       },
       "layout_zone": "bottom_status",
       "shape_type": "circle",
+      "layer_name": "currency",
+      "layer_group": "bottom_status",
+      "layer_order": 30,
+      "slice_layer": {
+        "name": "currency",
+        "group": "bottom_status",
+        "order": 30,
+        "component_type": "currency_icon"
+      },
       "outline_points": [
         {
           "x": 1018,

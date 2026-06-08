@@ -9,6 +9,7 @@ from PIL import Image
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from scripts.main_ui_production_chain import create_main_ui_package
+from scripts.main_ui_production_chain import create_ui_package
 from scripts.main_ui_production_chain import export_confirmed_components
 from scripts.main_ui_production_chain import update_candidate_confirmation
 
@@ -35,6 +36,16 @@ def test_main_ui_package_generates_required_files(tmp_path: Path) -> None:
     assert (package / "manual_acceptance.json").exists()
     assert (package / "production_review.json").exists()
     assert (package / "confirmed_components").is_dir()
+
+
+def test_ui_package_uses_unique_job_dirs_for_rapid_generations(tmp_path: Path) -> None:
+    source = tmp_path / "main.jpg"
+    write_source(source)
+
+    first = create_ui_package(tmp_path / "uploads", source_image=source)
+    second = create_ui_package(tmp_path / "uploads", source_image=source)
+
+    assert first["package_dir"] != second["package_dir"]
 
 
 def test_main_ui_candidates_include_levels_and_categories(tmp_path: Path) -> None:

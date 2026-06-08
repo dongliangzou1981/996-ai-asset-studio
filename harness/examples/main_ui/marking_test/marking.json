@@ -2,7 +2,7 @@
   "schema_version": "1.0",
   "package_type": "996-ready",
   "source_asset_id": "sprint20c-ui-production",
-  "generation_job_id": "main-ui-20260608-120800",
+  "generation_job_id": "main-ui-20260608-190437-591628",
   "coordinate_space": "main_ui_pixels",
   "candidate_preview": "candidate_preview.jpg",
   "fixed_layout_zones": [
@@ -22,6 +22,15 @@
       "component_id": "screen_main_ui",
       "component_name": "完整主界面",
       "component_type": "screen",
+      "layer_name": "screen_main_ui",
+      "layer_group": "full_screen",
+      "layer_order": 1,
+      "slice_layer": {
+        "name": "screen_main_ui",
+        "group": "full_screen",
+        "order": 1,
+        "component_type": "screen"
+      },
       "number": 1,
       "bounds": {
         "x": 0,
@@ -71,6 +80,15 @@
       "component_id": "top_player_info",
       "component_name": "顶部角色状态区",
       "component_type": "hud_bar",
+      "layer_name": "top_player_info",
+      "layer_group": "top_info",
+      "layer_order": 2,
+      "slice_layer": {
+        "name": "top_player_info",
+        "group": "top_info",
+        "order": 2,
+        "component_type": "hud_bar"
+      },
       "number": 2,
       "bounds": {
         "x": 38,
@@ -136,6 +154,15 @@
       "component_id": "task_panel",
       "component_name": "左侧任务栏",
       "component_type": "panel",
+      "layer_name": "task_panel",
+      "layer_group": "left_task",
+      "layer_order": 3,
+      "slice_layer": {
+        "name": "task_panel",
+        "group": "left_task",
+        "order": 3,
+        "component_type": "panel"
+      },
       "number": 3,
       "bounds": {
         "x": 0,
@@ -185,6 +212,15 @@
       "component_id": "task_tab",
       "component_name": "任务页签",
       "component_type": "button",
+      "layer_name": "task_tab",
+      "layer_group": "left_task",
+      "layer_order": 4,
+      "slice_layer": {
+        "name": "task_tab",
+        "group": "left_task",
+        "order": 4,
+        "component_type": "button"
+      },
       "number": 4,
       "bounds": {
         "x": 0,
@@ -234,6 +270,15 @@
       "component_id": "team_tab",
       "component_name": "组队页签",
       "component_type": "button",
+      "layer_name": "team_tab",
+      "layer_group": "left_task",
+      "layer_order": 5,
+      "slice_layer": {
+        "name": "team_tab",
+        "group": "left_task",
+        "order": 5,
+        "component_type": "button"
+      },
       "number": 5,
       "bounds": {
         "x": 0,
@@ -283,6 +328,15 @@
       "component_id": "status_panel",
       "component_name": "左侧状态区",
       "component_type": "panel",
+      "layer_name": "status_panel",
+      "layer_group": "left_status",
+      "layer_order": 6,
+      "slice_layer": {
+        "name": "status_panel",
+        "group": "left_status",
+        "order": 6,
+        "component_type": "panel"
+      },
       "number": 6,
       "bounds": {
         "x": 0,
@@ -332,6 +386,15 @@
       "component_id": "health_bar",
       "component_name": "卫士血量条",
       "component_type": "hud_bar",
+      "layer_name": "health_bar",
+      "layer_group": "left_status",
+      "layer_order": 7,
+      "slice_layer": {
+        "name": "health_bar",
+        "group": "left_status",
+        "order": 7,
+        "component_type": "hud_bar"
+      },
       "number": 7,
       "bounds": {
         "x": 64,
@@ -381,6 +444,15 @@
       "component_id": "left_joystick",
       "component_name": "左下摇杆",
       "component_type": "joystick",
+      "layer_name": "left_joystick",
+      "layer_group": "bottom_left_joystick",
+      "layer_order": 8,
+      "slice_layer": {
+        "name": "left_joystick",
+        "group": "bottom_left_joystick",
+        "order": 8,
+        "component_type": "joystick"
+      },
       "number": 8,
       "bounds": {
         "x": 77,
@@ -478,6 +550,15 @@
       "component_id": "run_button",
       "component_name": "跑步按钮",
       "component_type": "button",
+      "layer_name": "run_button",
+      "layer_group": "bottom_left_joystick",
+      "layer_order": 9,
+      "slice_layer": {
+        "name": "run_button",
+        "group": "bottom_left_joystick",
+        "order": 9,
+        "component_type": "button"
+      },
       "number": 9,
       "bounds": {
         "x": 205,
@@ -575,6 +656,15 @@
       "component_id": "walk_button",
       "component_name": "行走按钮",
       "component_type": "button",
+      "layer_name": "walk_button",
+      "layer_group": "bottom_left_joystick",
+      "layer_order": 10,
+      "slice_layer": {
+        "name": "walk_button",
+        "group": "bottom_left_joystick",
+        "order": 10,
+        "component_type": "button"
+      },
       "number": 10,
       "bounds": {
         "x": 102,
@@ -672,6 +762,15 @@
       "component_id": "bottom_hud",
       "component_name": "底部主 HUD",
       "component_type": "hud_bar",
+      "layer_name": "bottom_hud",
+      "layer_group": "bottom_status",
+      "layer_order": 11,
+      "slice_layer": {
+        "name": "bottom_hud",
+        "group": "bottom_status",
+        "order": 11,
+        "component_type": "hud_bar"
+      },
       "number": 11,
       "bounds": {
         "x": 294,
@@ -737,6 +836,15 @@
       "component_id": "hp_orb",
       "component_name": "血量球",
       "component_type": "icon",
+      "layer_name": "hp_orb",
+      "layer_group": "bottom_status",
+      "layer_order": 12,
+      "slice_layer": {
+        "name": "hp_orb",
+        "group": "bottom_status",
+        "order": 12,
+        "component_type": "icon"
+      },
       "number": 12,
       "bounds": {
         "x": 358,
@@ -834,6 +942,15 @@
       "component_id": "mp_orb",
       "component_name": "魔法球",
       "component_type": "icon",
+      "layer_name": "mp_orb",
+      "layer_group": "bottom_status",
+      "layer_order": 13,
+      "slice_layer": {
+        "name": "mp_orb",
+        "group": "bottom_status",
+        "order": 13,
+        "component_type": "icon"
+      },
       "number": 13,
       "bounds": {
         "x": 448,
@@ -931,6 +1048,15 @@
       "component_id": "dragon_frame",
       "component_name": "龙纹状态框",
       "component_type": "decoration",
+      "layer_name": "dragon_frame",
+      "layer_group": "bottom_status",
+      "layer_order": 14,
+      "slice_layer": {
+        "name": "dragon_frame",
+        "group": "bottom_status",
+        "order": 14,
+        "component_type": "decoration"
+      },
       "number": 14,
       "bounds": {
         "x": 333,
@@ -995,6 +1121,15 @@
       "component_id": "item_slot_01",
       "component_name": "物品格 1",
       "component_type": "equipment_slot",
+      "layer_name": "item_slot_01",
+      "layer_group": "bottom_status",
+      "layer_order": 15,
+      "slice_layer": {
+        "name": "item_slot_01",
+        "group": "bottom_status",
+        "order": 15,
+        "component_type": "equipment_slot"
+      },
       "number": 15,
       "bounds": {
         "x": 666,
@@ -1044,6 +1179,15 @@
       "component_id": "item_slot_02",
       "component_name": "物品格 2",
       "component_type": "equipment_slot",
+      "layer_name": "item_slot_02",
+      "layer_group": "bottom_status",
+      "layer_order": 16,
+      "slice_layer": {
+        "name": "item_slot_02",
+        "group": "bottom_status",
+        "order": 16,
+        "component_type": "equipment_slot"
+      },
       "number": 16,
       "bounds": {
         "x": 723,
@@ -1093,6 +1237,15 @@
       "component_id": "item_slot_03",
       "component_name": "物品格 3",
       "component_type": "equipment_slot",
+      "layer_name": "item_slot_03",
+      "layer_group": "bottom_status",
+      "layer_order": 17,
+      "slice_layer": {
+        "name": "item_slot_03",
+        "group": "bottom_status",
+        "order": 17,
+        "component_type": "equipment_slot"
+      },
       "number": 17,
       "bounds": {
         "x": 781,
@@ -1142,6 +1295,15 @@
       "component_id": "item_slot_04",
       "component_name": "物品格 4",
       "component_type": "equipment_slot",
+      "layer_name": "item_slot_04",
+      "layer_group": "bottom_status",
+      "layer_order": 18,
+      "slice_layer": {
+        "name": "item_slot_04",
+        "group": "bottom_status",
+        "order": 18,
+        "component_type": "equipment_slot"
+      },
       "number": 18,
       "bounds": {
         "x": 838,
@@ -1191,6 +1353,15 @@
       "component_id": "chat_panel",
       "component_name": "聊天/系统信息",
       "component_type": "chat",
+      "layer_name": "chat_panel",
+      "layer_group": "chat",
+      "layer_order": 19,
+      "slice_layer": {
+        "name": "chat_panel",
+        "group": "chat",
+        "order": 19,
+        "component_type": "chat"
+      },
       "number": 19,
       "bounds": {
         "x": 614,
@@ -1240,6 +1411,15 @@
       "component_id": "skill_01",
       "component_name": "技能按钮 1",
       "component_type": "skill_button",
+      "layer_name": "skill_01",
+      "layer_group": "right_skill",
+      "layer_order": 20,
+      "slice_layer": {
+        "name": "skill_01",
+        "group": "right_skill",
+        "order": 20,
+        "component_type": "skill_button"
+      },
       "number": 20,
       "bounds": {
         "x": 1088,
@@ -1337,6 +1517,15 @@
       "component_id": "skill_02",
       "component_name": "技能按钮 2",
       "component_type": "skill_button",
+      "layer_name": "skill_02",
+      "layer_group": "right_skill",
+      "layer_order": 21,
+      "slice_layer": {
+        "name": "skill_02",
+        "group": "right_skill",
+        "order": 21,
+        "component_type": "skill_button"
+      },
       "number": 21,
       "bounds": {
         "x": 1178,
@@ -1434,6 +1623,15 @@
       "component_id": "skill_03",
       "component_name": "技能按钮 3",
       "component_type": "skill_button",
+      "layer_name": "skill_03",
+      "layer_group": "right_skill",
+      "layer_order": 22,
+      "slice_layer": {
+        "name": "skill_03",
+        "group": "right_skill",
+        "order": 22,
+        "component_type": "skill_button"
+      },
       "number": 22,
       "bounds": {
         "x": 1165,
@@ -1531,6 +1729,15 @@
       "component_id": "auto_button",
       "component_name": "自动按钮",
       "component_type": "button",
+      "layer_name": "auto_button",
+      "layer_group": "right_system_entry",
+      "layer_order": 23,
+      "slice_layer": {
+        "name": "auto_button",
+        "group": "right_system_entry",
+        "order": 23,
+        "component_type": "button"
+      },
       "number": 23,
       "bounds": {
         "x": 1152,
@@ -1628,6 +1835,15 @@
       "component_id": "role_entry",
       "component_name": "角色入口",
       "component_type": "system_entry_icon",
+      "layer_name": "role_entry",
+      "layer_group": "right_system_entry",
+      "layer_order": 24,
+      "slice_layer": {
+        "name": "role_entry",
+        "group": "right_system_entry",
+        "order": 24,
+        "component_type": "system_entry_icon"
+      },
       "number": 24,
       "bounds": {
         "x": 1101,
@@ -1725,6 +1941,15 @@
       "component_id": "bag_entry",
       "component_name": "背包入口",
       "component_type": "system_entry_icon",
+      "layer_name": "bag_entry",
+      "layer_group": "right_system_entry",
+      "layer_order": 25,
+      "slice_layer": {
+        "name": "bag_entry",
+        "group": "right_system_entry",
+        "order": 25,
+        "component_type": "system_entry_icon"
+      },
       "number": 25,
       "bounds": {
         "x": 1190,
@@ -1822,6 +2047,15 @@
       "component_id": "shop_entry",
       "component_name": "商城入口",
       "component_type": "system_entry_icon",
+      "layer_name": "shop_entry",
+      "layer_group": "right_system_entry",
+      "layer_order": 26,
+      "slice_layer": {
+        "name": "shop_entry",
+        "group": "right_system_entry",
+        "order": 26,
+        "component_type": "system_entry_icon"
+      },
       "number": 26,
       "bounds": {
         "x": 986,
@@ -1919,6 +2153,15 @@
       "component_id": "activity_entry",
       "component_name": "活动入口",
       "component_type": "system_entry_icon",
+      "layer_name": "activity_entry",
+      "layer_group": "right_system_entry",
+      "layer_order": 27,
+      "slice_layer": {
+        "name": "activity_entry",
+        "group": "right_system_entry",
+        "order": 27,
+        "component_type": "system_entry_icon"
+      },
       "number": 27,
       "bounds": {
         "x": 1229,
@@ -2016,6 +2259,15 @@
       "component_id": "mini_map",
       "component_name": "右上小地图",
       "component_type": "map",
+      "layer_name": "mini_map",
+      "layer_group": "right_top_map",
+      "layer_order": 28,
+      "slice_layer": {
+        "name": "mini_map",
+        "group": "right_top_map",
+        "order": 28,
+        "component_type": "map"
+      },
       "number": 28,
       "bounds": {
         "x": 1101,
@@ -2065,6 +2317,15 @@
       "component_id": "map_zoom",
       "component_name": "地图缩进图标",
       "component_type": "system_entry_icon",
+      "layer_name": "map_zoom",
+      "layer_group": "right_top_map",
+      "layer_order": 29,
+      "slice_layer": {
+        "name": "map_zoom",
+        "group": "right_top_map",
+        "order": 29,
+        "component_type": "system_entry_icon"
+      },
       "number": 29,
       "bounds": {
         "x": 1062,
@@ -2114,6 +2375,15 @@
       "component_id": "currency",
       "component_name": "货币图标",
       "component_type": "currency_icon",
+      "layer_name": "currency",
+      "layer_group": "bottom_status",
+      "layer_order": 30,
+      "slice_layer": {
+        "name": "currency",
+        "group": "bottom_status",
+        "order": 30,
+        "component_type": "currency_icon"
+      },
       "number": 30,
       "bounds": {
         "x": 973,
@@ -2211,6 +2481,15 @@
       "component_id": "dynamic_text",
       "component_name": "动态数值文字",
       "component_type": "dynamic_content",
+      "layer_name": "dynamic_text",
+      "layer_group": "top_info",
+      "layer_order": 31,
+      "slice_layer": {
+        "name": "dynamic_text",
+        "group": "top_info",
+        "order": 31,
+        "component_type": "dynamic_content"
+      },
       "number": 31,
       "bounds": {
         "x": 499,
@@ -2255,5 +2534,5 @@
       "image_path": ""
     }
   ],
-  "updated_at": "2026-06-08T12:08:01Z"
+  "updated_at": "2026-06-08T19:04:37Z"
 }

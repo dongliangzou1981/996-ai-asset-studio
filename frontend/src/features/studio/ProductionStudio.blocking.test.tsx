@@ -157,3 +157,63 @@ test("generation failures expose request URL status and backend error", async ()
   expect(screen.getByText(/status=500/)).toBeInTheDocument();
   expect(screen.getByText(/error=mock failed/)).toBeInTheDocument();
 });
+
+test("reference ratio generation sends reference image and influence percent", async () => {
+  const api = makeApi();
+  const user = userEvent.setup();
+  render(<ProductionStudio api={api} />);
+
+  await user.selectOptions(await screen.findByLabelText("生成模式"), "reference_ratio");
+  const file = new File(["fake"], "reference-main-ui.png", { type: "image/png" });
+  await user.upload(screen.getByLabelText("2. 上传参考图"), file);
+  await user.clear(screen.getByLabelText("参考图影响比例数值"));
+  await user.type(screen.getByLabelText("参考图影响比例数值"), "65");
+  await user.click(screen.getByRole("button", { name: "生成界面" }));
+
+  expect(api.generateUiProductionPackage).toHaveBeenCalledWith(
+    expect.objectContaining({
+      reference_image_path: "assets/uploads/reference-main-ui.png",
+      reference_image: "assets/uploads/reference-main-ui.png",
+      style_reference_strength: "65",
+      reference_influence_percent: 65,
+    }),
+  );
+});
+
+test("adjustment screenshot upload failure clears bound path before generation", async () => {
+  const api = makeApi();
+  api.uploadAsset
+    .mockResolvedValueOnce({
+      id: "asset-adjustment-ok",
+      project_id: null,
+      asset_type: "reference_image",
+      device_type: "mobile_landscape",
+      width: 300,
+      height: 200,
+      file_path: "assets/uploads/adjustment-ok.png",
+      original_filename: "adjustment-ok.png",
+      metadata_json: "{}",
+      source: "uploaded",
+      generation_job_id: null,
+      thumbnail_path: "",
+      created_at: "",
+      updated_at: "",
+    })
+    .mockRejectedValueOnce(
+      new Error("请求失败：http://127.0.0.1:8000/assets/upload，status=500，error=upload failed"),
+    );
+  const user = userEvent.setup();
+  render(<ProductionStudio api={api} />);
+
+  const adjustmentInput = await screen.findByLabelText("上传调整截图");
+  await user.upload(adjustmentInput, new File(["ok"], "adjustment-ok.png", { type: "image/png" }));
+  await user.upload(screen.getByLabelText("上传调整截图"), new File(["bad"], "adjustment-bad.jpg", { type: "image/jpeg" }));
+
+  expect(await screen.findByText(/调整截图上传失败：请求失败：http:\/\/127\.0\.0\.1:8000\/assets\/upload/)).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "生成界面" }));
+  expect(api.generateUiProductionPackage).toHaveBeenCalledWith(
+    expect.objectContaining({
+      adjustment_image_path: null,
+    }),
+  );
+});

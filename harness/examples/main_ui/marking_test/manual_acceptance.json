@@ -3,7 +3,7 @@
   "review_status": "pending",
   "reviewer": "",
   "remarks": "",
-  "updated_at": "2026-06-08T12:08:01Z",
+  "updated_at": "2026-06-08T19:04:37Z",
   "accepted_at": null,
   "accepted_by": "",
   "components": [
@@ -17,6 +17,15 @@
       "production_category": "Screen",
       "layout_zone": "full_screen",
       "shape_type": "rect",
+      "layer_name": "screen_main_ui",
+      "layer_group": "full_screen",
+      "layer_order": 1,
+      "slice_layer": {
+        "name": "screen_main_ui",
+        "group": "full_screen",
+        "order": 1,
+        "component_type": "screen"
+      },
       "bbox": {
         "x": 0,
         "y": 0,
@@ -56,6 +65,15 @@
       "production_category": "Panel",
       "layout_zone": "top_info",
       "shape_type": "composite",
+      "layer_name": "top_player_info",
+      "layer_group": "top_info",
+      "layer_order": 2,
+      "slice_layer": {
+        "name": "top_player_info",
+        "group": "top_info",
+        "order": 2,
+        "component_type": "hud_bar"
+      },
       "bbox": {
         "x": 38,
         "y": 7,
@@ -111,6 +129,15 @@
       "production_category": "Panel",
       "layout_zone": "left_task",
       "shape_type": "rect",
+      "layer_name": "task_panel",
+      "layer_group": "left_task",
+      "layer_order": 3,
+      "slice_layer": {
+        "name": "task_panel",
+        "group": "left_task",
+        "order": 3,
+        "component_type": "panel"
+      },
       "bbox": {
         "x": 0,
         "y": 7,
@@ -150,6 +177,15 @@
       "production_category": "Atomic",
       "layout_zone": "left_task",
       "shape_type": "rect",
+      "layer_name": "task_tab",
+      "layer_group": "left_task",
+      "layer_order": 4,
+      "slice_layer": {
+        "name": "task_tab",
+        "group": "left_task",
+        "order": 4,
+        "component_type": "button"
+      },
       "bbox": {
         "x": 0,
         "y": 14,
@@ -189,6 +225,15 @@
       "production_category": "Atomic",
       "layout_zone": "left_task",
       "shape_type": "rect",
+      "layer_name": "team_tab",
+      "layer_group": "left_task",
+      "layer_order": 5,
+      "slice_layer": {
+        "name": "team_tab",
+        "group": "left_task",
+        "order": 5,
+        "component_type": "button"
+      },
       "bbox": {
         "x": 0,
         "y": 187,
@@ -228,6 +273,15 @@
       "production_category": "Panel",
       "layout_zone": "left_status",
       "shape_type": "rect",
+      "layer_name": "status_panel",
+      "layer_group": "left_status",
+      "layer_order": 6,
+      "slice_layer": {
+        "name": "status_panel",
+        "group": "left_status",
+        "order": 6,
+        "component_type": "panel"
+      },
       "bbox": {
         "x": 0,
         "y": 223,
@@ -267,6 +321,15 @@
       "production_category": "Panel",
       "layout_zone": "left_status",
       "shape_type": "rect",
+      "layer_name": "health_bar",
+      "layer_group": "left_status",
+      "layer_order": 7,
+      "slice_layer": {
+        "name": "health_bar",
+        "group": "left_status",
+        "order": 7,
+        "component_type": "hud_bar"
+      },
       "bbox": {
         "x": 64,
         "y": 310,
@@ -306,6 +369,15 @@
       "production_category": "Atomic",
       "layout_zone": "bottom_left_joystick",
       "shape_type": "circle",
+      "layer_name": "left_joystick",
+      "layer_group": "bottom_left_joystick",
+      "layer_order": 8,
+      "slice_layer": {
+        "name": "left_joystick",
+        "group": "bottom_left_joystick",
+        "order": 8,
+        "component_type": "joystick"
+      },
       "bbox": {
         "x": 77,
         "y": 497,
@@ -393,6 +465,15 @@
       "production_category": "Atomic",
       "layout_zone": "bottom_left_joystick",
       "shape_type": "circle",
+      "layer_name": "run_button",
+      "layer_group": "bottom_left_joystick",
+      "layer_order": 9,
+      "slice_layer": {
+        "name": "run_button",
+        "group": "bottom_left_joystick",
+        "order": 9,
+        "component_type": "button"
+      },
       "bbox": {
         "x": 205,
         "y": 454,
@@ -480,6 +561,15 @@
       "production_category": "Atomic",
       "layout_zone": "bottom_left_joystick",
       "shape_type": "circle",
+      "layer_name": "walk_button",
+      "layer_group": "bottom_left_joystick",
+      "layer_order": 10,
+      "slice_layer": {
+        "name": "walk_button",
+        "group": "bottom_left_joystick",
+        "order": 10,
+        "component_type": "button"
+      },
       "bbox": {
         "x": 102,
         "y": 576,
@@ -567,6 +657,15 @@
       "production_category": "Panel",
       "layout_zone": "bottom_status",
       "shape_type": "composite",
+      "layer_name": "bottom_hud",
+      "layer_group": "bottom_status",
+      "layer_order": 11,
+      "slice_layer": {
+        "name": "bottom_hud",
+        "group": "bottom_status",
+        "order": 11,
+        "component_type": "hud_bar"
+      },
       "bbox": {
         "x": 294,
         "y": 518,
@@ -622,6 +721,15 @@
       "production_category": "Atomic",
       "layout_zone": "bottom_status",
       "shape_type": "circle",
+      "layer_name": "hp_orb",
+      "layer_group": "bottom_status",
+      "layer_order": 12,
+      "slice_layer": {
+        "name": "hp_orb",
+        "group": "bottom_status",
+        "order": 12,
+        "component_type": "icon"
+      },
       "bbox": {
         "x": 358,
         "y": 547,
@@ -709,6 +817,15 @@
       "production_category": "Atomic",
       "layout_zone": "bottom_status",
       "shape_type": "circle",
+      "layer_name": "mp_orb",
+      "layer_group": "bottom_status",
+      "layer_order": 13,
+      "slice_layer": {
+        "name": "mp_orb",
+        "group": "bottom_status",
+        "order": 13,
+        "component_type": "icon"
+      },
       "bbox": {
         "x": 448,
         "y": 547,
@@ -796,6 +913,15 @@
       "production_category": "Effect",
       "layout_zone": "bottom_status",
       "shape_type": "composite",
+      "layer_name": "dragon_frame",
+      "layer_group": "bottom_status",
+      "layer_order": 14,
+      "slice_layer": {
+        "name": "dragon_frame",
+        "group": "bottom_status",
+        "order": 14,
+        "component_type": "decoration"
+      },
       "bbox": {
         "x": 333,
         "y": 490,
@@ -851,6 +977,15 @@
       "production_category": "Atomic",
       "layout_zone": "bottom_status",
       "shape_type": "rect",
+      "layer_name": "item_slot_01",
+      "layer_group": "bottom_status",
+      "layer_order": 15,
+      "slice_layer": {
+        "name": "item_slot_01",
+        "group": "bottom_status",
+        "order": 15,
+        "component_type": "equipment_slot"
+      },
       "bbox": {
         "x": 666,
         "y": 540,
@@ -890,6 +1025,15 @@
       "production_category": "Atomic",
       "layout_zone": "bottom_status",
       "shape_type": "rect",
+      "layer_name": "item_slot_02",
+      "layer_group": "bottom_status",
+      "layer_order": 16,
+      "slice_layer": {
+        "name": "item_slot_02",
+        "group": "bottom_status",
+        "order": 16,
+        "component_type": "equipment_slot"
+      },
       "bbox": {
         "x": 723,
         "y": 540,
@@ -929,6 +1073,15 @@
       "production_category": "Atomic",
       "layout_zone": "bottom_status",
       "shape_type": "rect",
+      "layer_name": "item_slot_03",
+      "layer_group": "bottom_status",
+      "layer_order": 17,
+      "slice_layer": {
+        "name": "item_slot_03",
+        "group": "bottom_status",
+        "order": 17,
+        "component_type": "equipment_slot"
+      },
       "bbox": {
         "x": 781,
         "y": 540,
@@ -968,6 +1121,15 @@
       "production_category": "Atomic",
       "layout_zone": "bottom_status",
       "shape_type": "rect",
+      "layer_name": "item_slot_04",
+      "layer_group": "bottom_status",
+      "layer_order": 18,
+      "slice_layer": {
+        "name": "item_slot_04",
+        "group": "bottom_status",
+        "order": 18,
+        "component_type": "equipment_slot"
+      },
       "bbox": {
         "x": 838,
         "y": 540,
@@ -1007,6 +1169,15 @@
       "production_category": "Panel",
       "layout_zone": "chat",
       "shape_type": "rect",
+      "layer_name": "chat_panel",
+      "layer_group": "chat",
+      "layer_order": 19,
+      "slice_layer": {
+        "name": "chat_panel",
+        "group": "chat",
+        "order": 19,
+        "component_type": "chat"
+      },
       "bbox": {
         "x": 614,
         "y": 576,
@@ -1046,6 +1217,15 @@
       "production_category": "Atomic",
       "layout_zone": "right_skill",
       "shape_type": "circle",
+      "layer_name": "skill_01",
+      "layer_group": "right_skill",
+      "layer_order": 20,
+      "slice_layer": {
+        "name": "skill_01",
+        "group": "right_skill",
+        "order": 20,
+        "component_type": "skill_button"
+      },
       "bbox": {
         "x": 1088,
         "y": 526,
@@ -1133,6 +1313,15 @@
       "production_category": "Atomic",
       "layout_zone": "right_skill",
       "shape_type": "circle",
+      "layer_name": "skill_02",
+      "layer_group": "right_skill",
+      "layer_order": 21,
+      "slice_layer": {
+        "name": "skill_02",
+        "group": "right_skill",
+        "order": 21,
+        "component_type": "skill_button"
+      },
       "bbox": {
         "x": 1178,
         "y": 562,
@@ -1220,6 +1409,15 @@
       "production_category": "Atomic",
       "layout_zone": "right_skill",
       "shape_type": "circle",
+      "layer_name": "skill_03",
+      "layer_group": "right_skill",
+      "layer_order": 22,
+      "slice_layer": {
+        "name": "skill_03",
+        "group": "right_skill",
+        "order": 22,
+        "component_type": "skill_button"
+      },
       "bbox": {
         "x": 1165,
         "y": 454,
@@ -1307,6 +1505,15 @@
       "production_category": "Atomic",
       "layout_zone": "right_system_entry",
       "shape_type": "circle",
+      "layer_name": "auto_button",
+      "layer_group": "right_system_entry",
+      "layer_order": 23,
+      "slice_layer": {
+        "name": "auto_button",
+        "group": "right_system_entry",
+        "order": 23,
+        "component_type": "button"
+      },
       "bbox": {
         "x": 1152,
         "y": 324,
@@ -1394,6 +1601,15 @@
       "production_category": "Atomic",
       "layout_zone": "right_system_entry",
       "shape_type": "circle",
+      "layer_name": "role_entry",
+      "layer_group": "right_system_entry",
+      "layer_order": 24,
+      "slice_layer": {
+        "name": "role_entry",
+        "group": "right_system_entry",
+        "order": 24,
+        "component_type": "system_entry_icon"
+      },
       "bbox": {
         "x": 1101,
         "y": 223,
@@ -1481,6 +1697,15 @@
       "production_category": "Atomic",
       "layout_zone": "right_system_entry",
       "shape_type": "circle",
+      "layer_name": "bag_entry",
+      "layer_group": "right_system_entry",
+      "layer_order": 25,
+      "slice_layer": {
+        "name": "bag_entry",
+        "group": "right_system_entry",
+        "order": 25,
+        "component_type": "system_entry_icon"
+      },
       "bbox": {
         "x": 1190,
         "y": 223,
@@ -1568,6 +1793,15 @@
       "production_category": "Atomic",
       "layout_zone": "right_system_entry",
       "shape_type": "circle",
+      "layer_name": "shop_entry",
+      "layer_group": "right_system_entry",
+      "layer_order": 26,
+      "slice_layer": {
+        "name": "shop_entry",
+        "group": "right_system_entry",
+        "order": 26,
+        "component_type": "system_entry_icon"
+      },
       "bbox": {
         "x": 986,
         "y": 576,
@@ -1655,6 +1889,15 @@
       "production_category": "Atomic",
       "layout_zone": "right_system_entry",
       "shape_type": "circle",
+      "layer_name": "activity_entry",
+      "layer_group": "right_system_entry",
+      "layer_order": 27,
+      "slice_layer": {
+        "name": "activity_entry",
+        "group": "right_system_entry",
+        "order": 27,
+        "component_type": "system_entry_icon"
+      },
       "bbox": {
         "x": 1229,
         "y": 324,
@@ -1742,6 +1985,15 @@
       "production_category": "Panel",
       "layout_zone": "right_top_map",
       "shape_type": "rect",
+      "layer_name": "mini_map",
+      "layer_group": "right_top_map",
+      "layer_order": 28,
+      "slice_layer": {
+        "name": "mini_map",
+        "group": "right_top_map",
+        "order": 28,
+        "component_type": "map"
+      },
       "bbox": {
         "x": 1101,
         "y": 14,
@@ -1781,6 +2033,15 @@
       "production_category": "Atomic",
       "layout_zone": "right_top_map",
       "shape_type": "rect",
+      "layer_name": "map_zoom",
+      "layer_group": "right_top_map",
+      "layer_order": 29,
+      "slice_layer": {
+        "name": "map_zoom",
+        "group": "right_top_map",
+        "order": 29,
+        "component_type": "system_entry_icon"
+      },
       "bbox": {
         "x": 1062,
         "y": 14,
@@ -1820,6 +2081,15 @@
       "production_category": "Atomic",
       "layout_zone": "bottom_status",
       "shape_type": "circle",
+      "layer_name": "currency",
+      "layer_group": "bottom_status",
+      "layer_order": 30,
+      "slice_layer": {
+        "name": "currency",
+        "group": "bottom_status",
+        "order": 30,
+        "component_type": "currency_icon"
+      },
       "bbox": {
         "x": 973,
         "y": 641,
@@ -1907,6 +2177,15 @@
       "production_category": "Ignore",
       "layout_zone": "top_info",
       "shape_type": "rect",
+      "layer_name": "dynamic_text",
+      "layer_group": "top_info",
+      "layer_order": 31,
+      "slice_layer": {
+        "name": "dynamic_text",
+        "group": "top_info",
+        "order": 31,
+        "component_type": "dynamic_content"
+      },
       "bbox": {
         "x": 499,
         "y": 22,
