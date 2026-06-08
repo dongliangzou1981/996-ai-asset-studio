@@ -10,6 +10,7 @@ const api = {
   selectUiProductionCandidate: jest.fn(),
   updateUiProductionCandidate: jest.fn(),
   exportUiProductionComponents: jest.fn(),
+  runMarkingAcceptanceTest: jest.fn(),
   runMainUiProduction: jest.fn(),
   getMainUiProduction: jest.fn(),
   updateMainUiCandidate: jest.fn(),
@@ -137,6 +138,40 @@ const mainUiProductionResult = {
   exported_count: 1,
 } as const;
 
+const markingAcceptanceResult = {
+  project_code: "MARKING_TEST",
+  candidate_id: "candidate_1",
+  total_marks: 8,
+  by_type: {
+    background: 1,
+    panel: 3,
+    button: 3,
+    icon: 1,
+  },
+  slice_success: 6,
+  slice_failed: 0,
+  missing_required: [],
+  warnings: [],
+  project: {
+    id: "project-marking",
+    name: "标记验收测试",
+    description: "MARKING_TEST",
+    status: "draft",
+    created_at: "2026-06-08T00:00:00Z",
+    updated_at: "2026-06-08T00:00:00Z",
+  },
+  candidate_preview_url:
+    "/production-studio/files/996-ready/SPRINT20B_MAIN_UI/main_ui/job-main-ui/candidate_preview.jpg",
+  candidate_preview_path: "harness/examples/main_ui/marking_test/candidate_preview.png",
+  manifest_path: "harness/examples/main_ui/marking_test/manifest.json",
+  manual_acceptance_path: "harness/examples/main_ui/marking_test/manual_acceptance.json",
+  training_samples_path:
+    "assets/uploads/996-ready/SPRINT20B_MAIN_UI/main_ui/job-main-ui/training_samples/main_ui/candidate_samples.json",
+  harness_dir: "harness/examples/main_ui/marking_test",
+  report_path: "harness/examples/main_ui/marking_test/marking_acceptance_report.json",
+  production: mainUiProductionResult,
+} as const;
+
 beforeAll(() => {
   global.URL.createObjectURL = jest.fn(() => "blob:reference-preview");
   global.URL.revokeObjectURL = jest.fn();
@@ -229,6 +264,7 @@ beforeEach(() => {
     })),
   });
   api.exportUiProductionComponents.mockResolvedValue(mainUiProductionResult);
+  api.runMarkingAcceptanceTest.mockResolvedValue(markingAcceptanceResult);
   api.updateMainUiCandidate.mockResolvedValue({
     ...mainUiProductionResult.candidates[0],
     confirmed: false,
@@ -420,4 +456,39 @@ test("生产工作台基础选项可调整，素材生产区保留参考图和�
 
   await user.click(screen.getByRole("button", { name: "移除参考图" }));
   expect(screen.queryByAltText("UI素材生产参考图预览")).not.toBeInTheDocument();
+});
+test("标记验收测试模式可自动填充并展示验收结果", async () => {
+  const user = userEvent.setup();
+  render(<ProductionStudio api={api} />);
+
+  expect(await screen.findByText("验收测试模式")).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "进入标记验收测试" }));
+
+  expect(api.createProject).toHaveBeenCalledWith({
+    name: "标记验收测试",
+    description: "MARKING_TEST",
+    status: "draft",
+  });
+  expect(await screen.findByText("当前模式：标记验收测试 / MARKING_TEST")).toBeInTheDocument();
+  expect(screen.getByDisplayValue("生成一张用于996传奇引擎的主界面UI")).toBeInTheDocument();
+  expect(screen.getByDisplayValue("用于测试自动标记和自动切图准确性")).toBeInTheDocument();
+
+  await user.click(screen.getByRole("button", { name: "一键生成并标记测试" }));
+
+  expect(api.runMarkingAcceptanceTest).toHaveBeenCalledTimes(1);
+  expect(await screen.findByText("标记验收结果")).toBeInTheDocument();
+  expect(screen.getByAltText("标记验收 candidate_preview")).toHaveAttribute(
+    "src",
+    "http://127.0.0.1:8000/production-studio/files/996-ready/SPRINT20B_MAIN_UI/main_ui/job-main-ui/candidate_preview.jpg",
+  );
+  expect(screen.getByText("标记组件总数")).toBeInTheDocument();
+  expect(screen.getByText("背景数量")).toBeInTheDocument();
+  expect(screen.getByText("面板数量")).toBeInTheDocument();
+  expect(screen.getByText("按钮数量")).toBeInTheDocument();
+  expect(screen.getByText("图标数量")).toBeInTheDocument();
+  expect(screen.getByText("切图成功数量")).toBeInTheDocument();
+  expect(screen.getByText("切图失败数量")).toBeInTheDocument();
+  expect(screen.getByText("harness/examples/main_ui/marking_test/manifest.json")).toBeInTheDocument();
+  expect(screen.getByText("harness/examples/main_ui/marking_test/manual_acceptance.json")).toBeInTheDocument();
+  expect(screen.getByText(/training_samples\/main_ui\/candidate_samples\.json/)).toBeInTheDocument();
 });

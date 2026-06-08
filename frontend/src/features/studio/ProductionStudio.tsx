@@ -8,6 +8,7 @@ import {
   ProductionDeviceType,
   ProductionGenerationMode,
   MainUiProductionResult,
+  MarkingAcceptanceResult,
   ManualAcceptanceStatus,
   ProductionLayoutTemplate,
   ProductionScreenType,
@@ -81,6 +82,7 @@ type ProductionStudioApi = Pick<
   | "selectUiProductionCandidate"
   | "updateUiProductionCandidate"
   | "exportUiProductionComponents"
+  | "runMarkingAcceptanceTest"
   | "runMainUiProduction"
   | "getMainUiProduction"
   | "updateMainUiCandidate"
@@ -110,6 +112,11 @@ const STYLE_REFERENCE_OPTIONS = [
   { value: "90", label: "90%参考" },
   { value: "copy", label: "高复刻" },
 ];
+
+const MARKING_TEST_PROJECT_NAME = "标记验收测试";
+const MARKING_TEST_PROJECT_CODE = "MARKING_TEST";
+const MARKING_TEST_REQUIREMENT = "生成一张用于996传奇引擎的主界面UI";
+const MARKING_TEST_ADJUSTMENT = "用于测试自动标记和自动切图准确性";
 
 function isUiProductionResult(value: unknown): value is MainUiProductionResult {
   return Boolean(value && typeof value === "object" && "package_dir" in value);
@@ -153,6 +160,9 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
   const [uiAdjustmentImagePath, setUiAdjustmentImagePath] = useState<string | null>(null);
   const [uiAdjustmentImageName, setUiAdjustmentImageName] = useState("");
   const [uiProductionMessage, setUiProductionMessage] = useState("");
+  const [markingTestMode, setMarkingTestMode] = useState(false);
+  const [markingTestLoading, setMarkingTestLoading] = useState(false);
+  const [markingAcceptanceResult, setMarkingAcceptanceResult] = useState<MarkingAcceptanceResult | null>(null);
   const [generatedAt, setGeneratedAt] = useState("");
   const [acceptance, setAcceptance] = useState<Record<string, AcceptanceRecord>>({});
   const [expandedPreview, setExpandedPreview] = useState<{ src: string; label: string } | null>(null);
@@ -251,6 +261,71 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
       setError("新建项目失败，请确认项目服务可用。");
     } finally {
       setProjectLoading(false);
+    }
+  }
+
+  async function enterMarkingAcceptanceMode() {
+    setProjectLoading(true);
+    setError("");
+    setUiProductionMessage("");
+    setMarkingAcceptanceResult(null);
+    try {
+      const projectList = await api.listProjects();
+      setProjects(projectList.items);
+      let project = projectList.items.find(
+        (item) => item.name === MARKING_TEST_PROJECT_NAME && item.description === MARKING_TEST_PROJECT_CODE,
+      );
+      if (!project) {
+        project = await api.createProject({
+          name: MARKING_TEST_PROJECT_NAME,
+          description: MARKING_TEST_PROJECT_CODE,
+          status: "draft",
+        });
+        setProjects((items) => [project as Project, ...items]);
+      }
+      setSelectedProjectId(project.id);
+      setDeviceType("mobile_landscape");
+      setAssetMode("resource_production");
+      setLayoutTemplate("classic_legend_mobile");
+      setUiProductionScreenType("main_ui");
+      chooseGenerationMode("auto_generate");
+      setUiProductionRequirement(MARKING_TEST_REQUIREMENT);
+      setUiAdjustmentNote(MARKING_TEST_ADJUSTMENT);
+      setUiProductionStyleReference("none");
+      setUiProductionReferencePath(null);
+      setUiProductionReferencePreviewUrl("");
+      setUiProductionReferenceFileName("");
+      setUiAdjustmentImagePath(null);
+      setUiAdjustmentImageName("");
+      setMarkingTestMode(true);
+      setUiProductionMessage("已进入标记验收测试：参数已自动填充，请点击一键生成并标记测试。");
+    } catch {
+      setError("进入标记验收测试失败，请稍后重试。");
+    } finally {
+      setProjectLoading(false);
+    }
+  }
+
+  async function runMarkingAcceptanceTest() {
+    setMarkingTestLoading(true);
+    setMainUiLoading(true);
+    setError("");
+    setUiProductionMessage("正在自动生成三张候选图、选择第一张、标记组件并执行切图...");
+    try {
+      const response = await api.runMarkingAcceptanceTest();
+      setMarkingAcceptanceResult(response);
+      setMainUiProduction(response.production);
+      setSelectedProjectId(response.project.id);
+      setProjects((items) =>
+        items.some((item) => item.id === response.project.id) ? items : [response.project, ...items],
+      );
+      window.localStorage.setItem("uiProductionPackageDir", response.production.package_dir);
+      setUiProductionMessage("标记验收测试完成：已输出 candidate_preview、marking JSON、切图和验收报告。");
+    } catch {
+      setError("一键生成并标记测试失败，请检查后端服务和生产链输出。");
+    } finally {
+      setMarkingTestLoading(false);
+      setMainUiLoading(false);
     }
   }
 
@@ -651,6 +726,39 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
 
       <div className="min-w-0 rounded-md border border-studio-line bg-white p-5">
         <h2 className="text-lg font-semibold">结果中心 / 素材生产</h2>
+        <section className="mt-4 grid gap-3 rounded-md border border-amber-300 bg-amber-50 p-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="min-w-0">
+              <h3 className="font-semibold text-amber-950">验收测试模式</h3>
+              <p className="mt-1 text-sm leading-6 text-amber-900">
+                自动准备 MARKING_TEST 项目和主界面生产参数，用于直接验收自动标记与切图结果。
+              </p>
+            </div>
+            <button
+              className="rounded-md bg-amber-700 px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+              disabled={projectLoading || markingTestLoading}
+              onClick={enterMarkingAcceptanceMode}
+              type="button"
+            >
+              进入标记验收测试
+            </button>
+          </div>
+          {markingTestMode ? (
+            <div className="flex flex-wrap items-center gap-3 rounded-md bg-white/70 p-3">
+              <span className="text-sm font-medium text-amber-950">
+                当前模式：{MARKING_TEST_PROJECT_NAME} / {MARKING_TEST_PROJECT_CODE}
+              </span>
+              <button
+                className="rounded-md bg-studio-action px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+                disabled={markingTestLoading}
+                onClick={runMarkingAcceptanceTest}
+                type="button"
+              >
+                {markingTestLoading ? "验收测试执行中..." : "一键生成并标记测试"}
+              </button>
+            </div>
+          ) : null}
+        </section>
         <section className="mt-4 grid gap-4 rounded-md border border-studio-line bg-white p-4">
           <div>
             <h3 className="font-semibold">UI素材生产</h3>
@@ -776,6 +884,84 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
             </button>
           </div>
           {uiProductionMessage ? <p className="text-sm text-amber-700">{uiProductionMessage}</p> : null}
+          {markingAcceptanceResult ? (
+            <section className="grid gap-4 rounded-md border border-emerald-300 bg-emerald-50 p-4">
+              <div>
+                <h3 className="font-semibold text-emerald-950">标记验收结果</h3>
+                <p className="mt-1 text-sm text-emerald-900">
+                  candidate_preview、marking JSON、切图和验收报告已生成，可直接截图验收。
+                </p>
+              </div>
+              {markingAcceptanceResult.candidate_preview_url ? (
+                <div className="grid gap-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="text-sm font-medium">candidate_preview 预览图</div>
+                    <button
+                      className="rounded-md border border-emerald-300 bg-white px-2 py-1 text-xs"
+                      onClick={() =>
+                        setExpandedPreview({
+                          src: api.getProductionStudioFileUrl(markingAcceptanceResult.candidate_preview_url),
+                          label: "candidate_preview 预览图",
+                        })
+                      }
+                      type="button"
+                    >
+                      预览
+                    </button>
+                  </div>
+                  <img
+                    alt="标记验收 candidate_preview"
+                    className="aspect-video w-full rounded-md border border-emerald-300 bg-slate-950 object-contain"
+                    src={api.getProductionStudioFileUrl(markingAcceptanceResult.candidate_preview_url)}
+                  />
+                </div>
+              ) : null}
+              <dl className="grid gap-2 text-sm sm:grid-cols-2 xl:grid-cols-4">
+                <div className="rounded-md bg-white p-3">
+                  <dt className="text-studio-muted">标记组件总数</dt>
+                  <dd className="mt-1 text-xl font-semibold">{markingAcceptanceResult.total_marks}</dd>
+                </div>
+                <div className="rounded-md bg-white p-3">
+                  <dt className="text-studio-muted">背景数量</dt>
+                  <dd className="mt-1 text-xl font-semibold">{markingAcceptanceResult.by_type.background}</dd>
+                </div>
+                <div className="rounded-md bg-white p-3">
+                  <dt className="text-studio-muted">面板数量</dt>
+                  <dd className="mt-1 text-xl font-semibold">{markingAcceptanceResult.by_type.panel}</dd>
+                </div>
+                <div className="rounded-md bg-white p-3">
+                  <dt className="text-studio-muted">按钮数量</dt>
+                  <dd className="mt-1 text-xl font-semibold">{markingAcceptanceResult.by_type.button}</dd>
+                </div>
+                <div className="rounded-md bg-white p-3">
+                  <dt className="text-studio-muted">图标数量</dt>
+                  <dd className="mt-1 text-xl font-semibold">{markingAcceptanceResult.by_type.icon}</dd>
+                </div>
+                <div className="rounded-md bg-white p-3">
+                  <dt className="text-studio-muted">切图成功数量</dt>
+                  <dd className="mt-1 text-xl font-semibold">{markingAcceptanceResult.slice_success}</dd>
+                </div>
+                <div className="rounded-md bg-white p-3">
+                  <dt className="text-studio-muted">切图失败数量</dt>
+                  <dd className="mt-1 text-xl font-semibold">{markingAcceptanceResult.slice_failed}</dd>
+                </div>
+              </dl>
+              <div className="grid gap-2 rounded-md bg-white p-3 text-xs leading-6">
+                <div className="break-all">
+                  <span className="font-semibold">manifest 路径：</span>
+                  {markingAcceptanceResult.manifest_path}
+                </div>
+                <div className="break-all">
+                  <span className="font-semibold">manual_acceptance.json 路径：</span>
+                  {markingAcceptanceResult.manual_acceptance_path}
+                </div>
+                <div className="break-all">
+                  <span className="font-semibold">training_samples 路径：</span>
+                  {markingAcceptanceResult.training_samples_path}
+                </div>
+              </div>
+            </section>
+          ) : null}
           {mainUiProduction ? (
             <div className="grid gap-4">
               {mainUiProduction.style_reference_note ? (

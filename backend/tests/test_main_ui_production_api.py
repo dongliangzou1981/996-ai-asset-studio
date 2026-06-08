@@ -166,3 +166,43 @@ def test_ui_production_other_screen_types_are_placeholders(tmp_path: Path) -> No
     assert response.status_code == 200
     assert response.json()["status"] == "placeholder"
     assert response.json()["screen_type"] == "bag_ui"
+
+
+def test_marking_acceptance_test_generates_harness_outputs(tmp_path: Path, monkeypatch) -> None:
+    source = tmp_path / "source.jpg"
+    write_source(source)
+    harness_root = tmp_path / "harness_examples"
+
+    def fake_default_source(upload_root):  # type: ignore[no-untyped-def]
+        return source
+
+    monkeypatch.setenv("STUDIO_HARNESS_EXAMPLES_DIR", str(harness_root))
+    monkeypatch.setattr("scripts.main_ui_production_chain.default_source_image", fake_default_source)
+    client = make_client(tmp_path)
+
+    response = client.post("/production-studio/marking-acceptance-test/run")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["project_code"] == "MARKING_TEST"
+    assert body["project"]["name"] == "标记验收测试"
+    assert body["project"]["description"] == "MARKING_TEST"
+    assert body["candidate_id"] == "candidate_1"
+    assert body["total_marks"] > 0
+    assert body["slice_success"] > 0
+    assert body["production"]["selected_candidate_id"] == "candidate_1"
+    assert body["production"]["candidate_options"][0]["selected"] is True
+
+    output_dir = harness_root / "main_ui" / "marking_test"
+    assert (output_dir / "original.jpg").exists()
+    assert (output_dir / "candidate_preview.png").exists()
+    assert (output_dir / "marking.json").exists()
+    assert (output_dir / "manifest.json").exists()
+    assert (output_dir / "manual_acceptance.json").exists()
+    assert (output_dir / "marking_acceptance_report.json").exists()
+    assert any((output_dir / "slices").iterdir())
+
+    report = json.loads((output_dir / "marking_acceptance_report.json").read_text(encoding="utf-8"))
+    assert report["project_code"] == "MARKING_TEST"
+    assert report["by_type"]["background"] >= 1
+    assert report["by_type"]["button"] >= 1

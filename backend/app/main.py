@@ -2,6 +2,7 @@ from pathlib import Path
 import json
 import os
 import re
+import shutil
 
 from fastapi import FastAPI, File, Form, HTTPException, Response, UploadFile, status
 from fastapi.exceptions import RequestValidationError
@@ -64,6 +65,13 @@ def default_upload_dir() -> Path:
     return Path(__file__).resolve().parents[2] / "assets" / "uploads"
 
 
+def default_harness_examples_dir() -> Path:
+    configured = os.getenv("STUDIO_HARNESS_EXAMPLES_DIR")
+    if configured:
+        return Path(configured)
+    return Path(__file__).resolve().parents[2] / "harness" / "examples"
+
+
 def safe_filename(filename: str) -> str:
     cleaned = re.sub(r"[^A-Za-z0-9._-]+", "_", filename.strip())
     return cleaned or "upload.bin"
@@ -118,8 +126,10 @@ def create_app(database_path: str | Path | None = None, upload_dir: str | Path |
     database.initialize()
     upload_root = Path(upload_dir) if upload_dir else default_upload_dir()
     upload_root.mkdir(parents=True, exist_ok=True)
+    harness_examples_root = default_harness_examples_dir()
     app.state.database = database
     app.state.upload_dir = upload_root
+    app.state.harness_examples_dir = harness_examples_root
 
     @app.get("/health")
     def health() -> dict[str, str]:
@@ -221,6 +231,97 @@ def create_app(database_path: str | Path | None = None, upload_dir: str | Path |
                 return minimum < 255
         except OSError:
             return False
+
+    def ensure_marking_test_project() -> Project:
+        for project in database.list_projects():
+            if project.name == "标记验收测试" and project.description == "MARKING_TEST":
+                return project
+        return database.create_project(ProjectCreate(name="标记验收测试", description="MARKING_TEST", status="draft"))
+
+    def marking_type(component_type: str) -> str:
+        value = component_type.lower()
+        if "background" in value or value == "screen":
+            return "background"
+        if "button" in value or "joystick" in value or "slot" in value:
+            return "button"
+        if "icon" in value:
+            return "icon"
+        return "panel"
+
+    def copy_image_as_png(source: Path, target: Path) -> None:
+        from PIL import Image
+
+        with Image.open(source) as image:
+            image.save(target, format="PNG")
+
+    def write_marking_acceptance_outputs(package_dir: Path, production: dict, project: Project) -> dict:
+        candidate_manifest = read_package_json(package_dir, "candidate_manifest.json")
+        candidates = [item for item in candidate_manifest.get("candidates", []) if isinstance(item, dict)]
+        confirmed_components = production.get("confirmed_components", [])
+        selected_candidate_id = str(production.get("selected_candidate_id") or "candidate_1")
+
+        by_type = {"background": 0, "panel": 0, "button": 0, "icon": 0}
+        for candidate in candidates:
+            by_type[marking_type(str(candidate.get("component_type") or ""))] += 1
+
+        slice_success = 0
+        slice_failed = 0
+        for component in confirmed_components:
+            if not isinstance(component, dict) or not component.get("confirmed"):
+                continue
+            file_name = str(component.get("file") or "")
+            if file_name and (package_dir / file_name).exists():
+                slice_success += 1
+            else:
+                slice_failed += 1
+
+        missing_required = [key for key, value in by_type.items() if value == 0]
+        warnings = sorted(
+            {
+                str(candidate.get("transparent_warning"))
+                for candidate in candidates
+                if isinstance(candidate.get("transparent_warning"), str) and candidate.get("transparent_warning")
+            }
+        )
+
+        harness_dir = (harness_examples_root / "main_ui" / "marking_test").resolve()
+        slices_dir = harness_dir / "slices"
+        harness_dir.mkdir(parents=True, exist_ok=True)
+        slices_dir.mkdir(parents=True, exist_ok=True)
+
+        shutil.copy2(package_dir / "main_ui.jpg", harness_dir / "original.jpg")
+        copy_image_as_png(package_dir / "candidate_preview.jpg", harness_dir / "candidate_preview.png")
+        shutil.copy2(package_dir / "candidate_manifest.json", harness_dir / "marking.json")
+        shutil.copy2(package_dir / "manifest.json", harness_dir / "manifest.json")
+        shutil.copy2(package_dir / "manual_acceptance.json", harness_dir / "manual_acceptance.json")
+        for component in confirmed_components:
+            if not isinstance(component, dict) or not component.get("file"):
+                continue
+            source = package_dir / str(component["file"])
+            if source.exists() and source.is_file():
+                shutil.copy2(source, slices_dir / source.name)
+
+        report = {
+            "project_code": "MARKING_TEST",
+            "candidate_id": selected_candidate_id,
+            "total_marks": len(candidates),
+            "by_type": by_type,
+            "slice_success": slice_success,
+            "slice_failed": slice_failed,
+            "missing_required": missing_required,
+            "warnings": warnings,
+            "project_id": project.id,
+            "manifest_path": str(harness_dir / "manifest.json"),
+            "manual_acceptance_path": str(harness_dir / "manual_acceptance.json"),
+            "training_samples_path": str(package_dir / "training_samples" / "main_ui" / "candidate_samples.json"),
+            "harness_dir": str(harness_dir),
+            "candidate_preview_path": str(harness_dir / "candidate_preview.png"),
+        }
+        (harness_dir / "marking_acceptance_report.json").write_text(
+            json.dumps(report, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+        return report
 
     def main_ui_package_response(package_dir: Path) -> dict:
         candidate_path = package_dir / "candidate_manifest.json"
@@ -449,6 +550,34 @@ def create_app(database_path: str | Path | None = None, upload_dir: str | Path |
         except (FileNotFoundError, RuntimeError, ValueError) as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         return main_ui_package_response(package_path)
+
+    @app.post("/production-studio/marking-acceptance-test/run")
+    def run_marking_acceptance_test() -> dict:
+        project = ensure_marking_test_project()
+        try:
+            result = create_ui_package(
+                upload_root=upload_root,
+                screen_type="main_ui",
+                requirement="生成一张用于996传奇引擎的主界面UI",
+                style_reference_strength="none",
+                adjustment_note="用于测试自动标记和自动切图准确性",
+            )
+            package_path = resolve_production_package_dir(str(result["package_dir"]))
+            select_candidate_option(package_path, "candidate_1")
+            mark_candidate_components(package_path)
+            export_confirmed_components(package_path)
+            production = main_ui_package_response(package_path)
+            report = write_marking_acceptance_outputs(package_path, production, project)
+        except (FileNotFoundError, RuntimeError, ValueError, OSError) as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+        return {
+            **report,
+            "project": project.model_dump(),
+            "candidate_preview_url": production.get("candidate_preview_url", ""),
+            "report_path": str(Path(report["harness_dir"]) / "marking_acceptance_report.json"),
+            "production": production,
+        }
 
     @app.get("/production-studio/main-ui-production")
     def get_main_ui_production(package_dir: str) -> dict:

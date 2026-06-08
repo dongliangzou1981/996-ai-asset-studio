@@ -337,6 +337,31 @@ export type MainUiProductionResult = {
   exported_count?: number;
 };
 
+export type MarkingAcceptanceResult = {
+  project_code: "MARKING_TEST";
+  candidate_id: string;
+  total_marks: number;
+  by_type: {
+    background: number;
+    panel: number;
+    button: number;
+    icon: number;
+  };
+  slice_success: number;
+  slice_failed: number;
+  missing_required: string[];
+  warnings: string[];
+  project: Project;
+  candidate_preview_url: string;
+  candidate_preview_path: string;
+  manifest_path: string;
+  manual_acceptance_path: string;
+  training_samples_path: string;
+  harness_dir: string;
+  report_path: string;
+  production: MainUiProductionResult;
+};
+
 export type ListResponse<T> = {
   items: T[];
 };
@@ -545,6 +570,9 @@ export const studioApi = {
       `/production-studio/ui-production/export?package_dir=${encodeURIComponent(packageDir)}`,
       { method: "POST" },
     );
+  },
+  runMarkingAcceptanceTest() {
+    return request<MarkingAcceptanceResult>("/production-studio/marking-acceptance-test/run", { method: "POST" });
   },
   getMainUiProduction(packageDir: string) {
     return request<MainUiProductionResult>(
