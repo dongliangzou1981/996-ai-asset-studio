@@ -13,6 +13,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.component_processing import process_ui_preview_components
 from app.db import StudioDatabase
 from app.job_runner import JobRunnerService
+from app.layer_package import LayerPackageError
+from app.layer_package import import_layer_package
 from app.mock_worker import run_mock_generation
 from app.provider_security import provider_health
 from app.production_studio import list_style_codes as list_production_style_codes
@@ -177,6 +179,23 @@ def create_app(database_path: str | Path | None = None, upload_dir: str | Path |
         if not candidate.exists() or not candidate.is_file():
             raise HTTPException(status_code=404, detail="Production studio file not found")
         return FileResponse(candidate)
+
+    @app.post("/production-studio/layer-package/import")
+    async def import_production_layer_package(file: UploadFile = File(...)) -> dict:
+        filename = file.filename or "layer_package.zip"
+        if Path(filename).suffix.lower() != ".zip":
+            raise HTTPException(status_code=400, detail="Layer package must be a zip file")
+        data = await file.read()
+        if not data:
+            raise HTTPException(status_code=400, detail="Layer package zip is empty")
+        upload_dir = upload_root / "layer-packages" / "_uploads"
+        upload_dir.mkdir(parents=True, exist_ok=True)
+        upload_path = upload_dir / f"{Path(safe_filename(filename)).stem}-{os.urandom(4).hex()}.zip"
+        upload_path.write_bytes(data)
+        try:
+            return import_layer_package(upload_path, upload_root)
+        except LayerPackageError as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     def resolve_production_package_dir(package_dir: str) -> Path:
         raw_path = Path(package_dir)

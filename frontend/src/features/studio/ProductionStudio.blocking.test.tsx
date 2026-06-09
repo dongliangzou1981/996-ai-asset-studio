@@ -99,6 +99,7 @@ function makeApi() {
       created_at: "",
       updated_at: "",
     }),
+    importLayerPackage: jest.fn(),
   };
 }
 

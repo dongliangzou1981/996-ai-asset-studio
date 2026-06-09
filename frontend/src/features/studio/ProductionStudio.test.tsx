@@ -23,6 +23,7 @@ const api = {
   getPromptSampleSuggestion: jest.fn(),
   updateProductionManualAcceptance: jest.fn(),
   uploadAsset: jest.fn(),
+  importLayerPackage: jest.fn(),
 };
 
 const mainUiProductionResult = {
@@ -176,6 +177,30 @@ const markingAcceptanceResult = {
   production: mainUiProductionResult,
 } as const;
 
+const layerPackageResult = {
+  package_id: "layer-package-test",
+  package_dir: "assets/uploads/layer-packages/layer-package-test",
+  canvas: { width: 1536, height: 864 },
+  source_url: "layer-packages/layer-package-test/source.png",
+  manifest_url: "layer-packages/layer-package-test/manifest.json",
+  psd_status: "placeholder_psd",
+  psd_file: "game_ui_layered.psd",
+  layers: [
+    {
+      id: "button_start",
+      name: "Start Button",
+      type: "button",
+      visible: true,
+      opacity: 1,
+      bbox: { x: 10, y: 20, width: 120, height: 48 },
+      file: "png_layers/button_start.png",
+      url: "layer-packages/layer-package-test/png_layers/button_start.png",
+      exists: true,
+    },
+  ],
+  warnings: [],
+} as const;
+
 beforeAll(() => {
   global.URL.createObjectURL = jest.fn(() => "blob:reference-preview");
   global.URL.revokeObjectURL = jest.fn();
@@ -229,6 +254,7 @@ beforeEach(() => {
     created_at: "",
     updated_at: "",
   });
+  api.importLayerPackage.mockResolvedValue(layerPackageResult);
   api.updateProductionManualAcceptance.mockResolvedValue({
     review_status: "accepted",
     reviewer: "",
@@ -438,6 +464,27 @@ test("UI素材生产流程可生成、标记、确认、切图并预览输出", 
   expect(screen.getByText("confirmed_components/")).toBeInTheDocument();
   expect(screen.getByText("查看输出包 manifest.json")).toBeInTheDocument();
   expect(screen.getByText("查看 training_samples")).toBeInTheDocument();
+});
+
+test("Layer Package zip import renders layer list and toggles preview visibility", async () => {
+  const user = userEvent.setup();
+  render(<ProductionStudio api={api} />);
+
+  const zip = new File(["fake zip"], "game-ui-layer-package.zip", { type: "application/zip" });
+  await user.upload(await screen.findByLabelText("Layer Package 导入"), zip);
+
+  expect(api.importLayerPackage).toHaveBeenCalledWith(zip);
+  expect(await screen.findByText("图层数：1")).toBeInTheDocument();
+  expect(screen.getByText("placeholder_psd")).toBeInTheDocument();
+  expect(screen.getByText("Start Button")).toBeInTheDocument();
+  expect(screen.getByText("png_layers/button_start.png")).toBeInTheDocument();
+  expect(screen.getByAltText("Layer Package Start Button")).toHaveAttribute(
+    "src",
+    "http://127.0.0.1:8000/production-studio/files/layer-packages/layer-package-test/png_layers/button_start.png",
+  );
+
+  await user.click(screen.getByLabelText("显示图层 Start Button"));
+  expect(screen.queryByAltText("Layer Package Start Button")).not.toBeInTheDocument();
 });
 
 test("项目栏和生产工作台只显示 Sprint20G 要求的基础信息", async () => {

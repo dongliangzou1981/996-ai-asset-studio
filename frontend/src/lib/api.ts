@@ -379,6 +379,30 @@ export type PromptSampleSuggestion = {
   updated_at?: string;
 };
 
+export type LayerPackageLayer = {
+  id: string;
+  name: string;
+  type: string;
+  visible: boolean;
+  opacity: number;
+  bbox: { x?: number; y?: number; width?: number; height?: number };
+  file: string;
+  url: string;
+  exists: boolean;
+};
+
+export type LayerPackageImportResult = {
+  package_id: string;
+  package_dir: string;
+  canvas: { width: number; height: number };
+  source_url: string;
+  manifest_url: string;
+  psd_status: "missing_psd" | "placeholder_psd" | "provided_psd";
+  psd_file: string;
+  layers: LayerPackageLayer[];
+  warnings: string[];
+};
+
 export type ListResponse<T> = {
   items: T[];
 };
@@ -630,6 +654,11 @@ export const studioApi = {
       `/production-studio/ui-production/opencv-slice?package_dir=${encodeURIComponent(packageDir)}`,
       { method: "POST" },
     );
+  },
+  importLayerPackage(file: File) {
+    const formData = new FormData();
+    formData.append("file", file);
+    return uploadRequest<LayerPackageImportResult>("/production-studio/layer-package/import", formData);
   },
   runMarkingAcceptanceTest(payload: {
     reference_image_path?: string | null;

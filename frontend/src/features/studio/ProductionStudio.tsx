@@ -4,6 +4,7 @@ import { ChangeEvent, FormEvent, useEffect, useState } from "react";
 
 import {
   Project,
+  LayerPackageImportResult,
   ProductionAssetMode,
   ProductionDeviceType,
   ProductionGenerationMode,
@@ -95,6 +96,7 @@ type ProductionStudioApi = Pick<
   | "getPromptSampleSuggestion"
   | "updateProductionManualAcceptance"
   | "uploadAsset"
+  | "importLayerPackage"
 >;
 
 type UiProductionScreenType = "main_ui" | "bag_ui" | "role_ui" | "shop_ui" | "activity_ui";
@@ -284,6 +286,10 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
   const [uiAdjustmentImagePath, setUiAdjustmentImagePath] = useState<string | null>(null);
   const [uiAdjustmentImageName, setUiAdjustmentImageName] = useState("");
   const [uiProductionMessage, setUiProductionMessage] = useState("");
+  const [layerPackage, setLayerPackage] = useState<LayerPackageImportResult | null>(null);
+  const [layerVisibility, setLayerVisibility] = useState<Record<string, boolean>>({});
+  const [layerPackageLoading, setLayerPackageLoading] = useState(false);
+  const [layerPackageError, setLayerPackageError] = useState("");
   const [markingTestMode, setMarkingTestMode] = useState(false);
   const [markingTestLoading, setMarkingTestLoading] = useState(false);
   const [markingAcceptanceResult, setMarkingAcceptanceResult] = useState<MarkingAcceptanceResult | null>(null);
@@ -649,6 +655,42 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
     } finally {
       event.target.value = "";
     }
+  }
+
+  async function importLayerPackage(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+    setLayerPackageError("");
+    setUiProductionMessage("");
+    if (!file.name.toLowerCase().endsWith(".zip")) {
+      setLayerPackage(null);
+      setLayerVisibility({});
+      setLayerPackageError("Layer Package 只支持 zip 文件。");
+      event.target.value = "";
+      return;
+    }
+    setLayerPackageLoading(true);
+    try {
+      const response = await api.importLayerPackage(file);
+      setLayerPackage(response);
+      setLayerVisibility(
+        Object.fromEntries(response.layers.map((layer) => [layer.id, layer.visible && layer.exists])),
+      );
+      setUiProductionMessage(`Layer Package 导入完成：解析 ${response.layers.length} 个图层。`);
+    } catch (exc) {
+      setLayerPackage(null);
+      setLayerVisibility({});
+      setLayerPackageError(`Layer Package 导入失败：${exc instanceof Error ? exc.message : "unknown"}`);
+    } finally {
+      setLayerPackageLoading(false);
+      event.target.value = "";
+    }
+  }
+
+  function toggleLayerVisibility(layerId: string, visible: boolean) {
+    setLayerVisibility((items) => ({ ...items, [layerId]: visible }));
   }
 
   function removeUiProductionReference() {
@@ -1194,6 +1236,103 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
             </label>
             {uiAdjustmentUploadError ? <p className="text-xs leading-5 text-red-600">{uiAdjustmentUploadError}</p> : null}
             {uiAdjustmentImageName ? <p className="text-xs text-studio-muted">已保存调整截图：{uiAdjustmentImageName}</p> : null}
+          </div>
+          <div className="grid gap-3 rounded-md border border-studio-line p-3">
+            <label className="grid gap-1 text-sm font-medium">
+              Layer Package 导入
+              <input
+                accept=".zip,application/zip"
+                className="rounded-md border border-studio-line px-3 py-2 font-normal"
+                disabled={layerPackageLoading}
+                onChange={importLayerPackage}
+                type="file"
+              />
+            </label>
+            {layerPackageError ? <p className="text-xs leading-5 text-red-600">{layerPackageError}</p> : null}
+            {layerPackage ? (
+              <div className="grid gap-3">
+                <div className="flex flex-wrap items-center gap-2 text-xs text-studio-muted">
+                  <span>图层数：{layerPackage.layers.length}</span>
+                  <span>PSD：{layerPackage.psd_status}</span>
+                  {layerPackage.psd_status === "placeholder_psd" ? (
+                    <span className="rounded-md bg-amber-50 px-2 py-1 text-amber-700">placeholder_psd</span>
+                  ) : null}
+                  {layerPackage.manifest_url ? (
+                    <a
+                      className="rounded-md border border-studio-line px-2 py-1"
+                      href={api.getProductionStudioFileUrl(`/production-studio/files/${layerPackage.manifest_url}`)}
+                      rel="noreferrer"
+                      target="_blank"
+                    >
+                      manifest.json
+                    </a>
+                  ) : null}
+                </div>
+                <div className="relative aspect-video w-full overflow-hidden rounded-md border border-studio-line bg-slate-950">
+                  {layerPackage.source_url ? (
+                    <img
+                      alt="Layer Package source"
+                      className="absolute inset-0 h-full w-full object-contain"
+                      src={api.getProductionStudioFileUrl(`/production-studio/files/${layerPackage.source_url}`)}
+                    />
+                  ) : null}
+                  {layerPackage.layers.map((layer) =>
+                    layer.exists && layer.url && layerVisibility[layer.id] ? (
+                      <img
+                        alt={`Layer Package ${layer.name}`}
+                        className="absolute inset-0 h-full w-full object-contain"
+                        key={layer.id}
+                        src={api.getProductionStudioFileUrl(`/production-studio/files/${layer.url}`)}
+                        style={{ opacity: layer.opacity }}
+                      />
+                    ) : null,
+                  )}
+                </div>
+                <div className="overflow-x-auto rounded-md border border-studio-line">
+                  <table className="w-full min-w-[720px] text-left text-sm">
+                    <thead className="bg-slate-100 text-xs text-studio-muted">
+                      <tr>
+                        <th className="px-3 py-2">显示</th>
+                        <th className="px-3 py-2">图层</th>
+                        <th className="px-3 py-2">类型</th>
+                        <th className="px-3 py-2">PNG</th>
+                        <th className="px-3 py-2">bbox</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {layerPackage.layers.map((layer) => (
+                        <tr className="border-t border-studio-line" key={layer.id}>
+                          <td className="px-3 py-2">
+                            <input
+                              aria-label={`显示图层 ${layer.name}`}
+                              checked={Boolean(layerVisibility[layer.id])}
+                              disabled={!layer.exists}
+                              onChange={(event) => toggleLayerVisibility(layer.id, event.target.checked)}
+                              type="checkbox"
+                            />
+                          </td>
+                          <td className="px-3 py-2">{layer.name}</td>
+                          <td className="px-3 py-2">{layer.type}</td>
+                          <td className="break-all px-3 py-2">{layer.file}</td>
+                          <td className="px-3 py-2">
+                            {layer.bbox.width && layer.bbox.height
+                              ? `${layer.bbox.x ?? 0},${layer.bbox.y ?? 0},${layer.bbox.width},${layer.bbox.height}`
+                              : "-"}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                {layerPackage.warnings.length ? (
+                  <div className="grid gap-1 text-xs text-amber-700">
+                    {layerPackage.warnings.map((warning) => (
+                      <div key={warning}>{warning}</div>
+                    ))}
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
           </div>
           <div className="flex flex-wrap gap-2">
             <button

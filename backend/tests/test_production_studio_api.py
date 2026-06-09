@@ -2,6 +2,7 @@ from pathlib import Path
 import json
 import shutil
 import sys
+import zipfile
 
 from fastapi.testclient import TestClient
 
@@ -325,6 +326,49 @@ def test_opencv_slice_endpoint_returns_layer_workspace_outputs(tmp_path: Path, m
     assert body["opencv_candidate_preview_url"].endswith("/output/candidate_preview.png")
     assert body["opencv_layer_manifest_url"].endswith("/output/layer_manifest.json")
     assert (package / "output" / "slices").is_dir()
+
+
+def test_layer_package_import_uses_manifest_and_png_layers(tmp_path: Path) -> None:
+    client = make_client(tmp_path)
+    source = tmp_path / "source.png"
+    layer = tmp_path / "layer_button.png"
+    write_png(source)
+    write_png(layer)
+    manifest = {
+        "canvas": {"width": 1536, "height": 864},
+        "layers": [
+            {
+                "id": "button_start",
+                "name": "Start Button",
+                "type": "button",
+                "file": "button_start.png",
+                "visible": True,
+                "bbox": {"x": 10, "y": 20, "width": 120, "height": 48},
+            }
+        ],
+    }
+    package_zip = tmp_path / "layer_package.zip"
+    with zipfile.ZipFile(package_zip, "w") as archive:
+        archive.write(source, "source.png")
+        archive.writestr("manifest.json", json.dumps(manifest))
+        archive.write(layer, "png_layers/button_start.png")
+        archive.writestr("game_ui_layered.psd", "placeholder psd")
+
+    with package_zip.open("rb") as file:
+        response = client.post(
+            "/production-studio/layer-package/import",
+            files={"file": ("layer_package.zip", file, "application/zip")},
+        )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["canvas"] == {"width": 1536, "height": 864}
+    assert body["psd_status"] == "placeholder_psd"
+    assert body["source_url"].endswith("/source.png")
+    assert body["manifest_url"].endswith("/manifest.json")
+    assert body["layers"][0]["id"] == "button_start"
+    assert body["layers"][0]["url"].endswith("/png_layers/button_start.png")
+    assert body["layers"][0]["exists"] is True
 
 
 def test_production_studio_lists_style_codes() -> None:

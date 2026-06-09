@@ -23,6 +23,7 @@ const api = {
   getPromptSampleSuggestion: jest.fn(),
   updateProductionManualAcceptance: jest.fn(),
   uploadAsset: jest.fn(),
+  importLayerPackage: jest.fn(),
 };
 
 beforeEach(() => {
