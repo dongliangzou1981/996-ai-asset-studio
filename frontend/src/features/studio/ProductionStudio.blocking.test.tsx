@@ -71,6 +71,7 @@ function makeApi() {
     selectUiProductionCandidate: jest.fn(),
     updateUiProductionCandidate: jest.fn(),
     exportUiProductionComponents: jest.fn(),
+    runOpenCvUiSlicer: jest.fn(),
     runMarkingAcceptanceTest: jest.fn().mockResolvedValue(markingAcceptanceResult),
     runMainUiProduction: jest.fn(),
     getMainUiProduction: jest.fn().mockRejectedValue(new Error("no saved package")),

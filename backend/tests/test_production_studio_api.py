@@ -8,6 +8,7 @@ from fastapi.testclient import TestClient
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from app import production_studio
+from app import main as main_app
 from app.main import create_app
 
 
@@ -282,6 +283,48 @@ def test_production_studio_reference_mode_passes_reference_image_and_prompt(tmp_
     assert delivery_report["layout_template"] == "legend_176"
     assert delivery_report["generation_mode"] == "reference_guided"
     assert delivery_report["reference_image_path"] == str(reference_image)
+
+
+def test_opencv_slice_endpoint_returns_layer_workspace_outputs(tmp_path: Path, monkeypatch) -> None:
+    client = make_client(tmp_path)
+    upload_root = tmp_path / "uploads"
+    package = write_package(upload_root, "STYLE_OPENCV", "main_ui", "job-opencv")
+
+    def fake_slicer(source_image: Path, output_dir: Path) -> dict:  # type: ignore[no-untyped-def]
+        output_dir.mkdir(parents=True)
+        slices_dir = output_dir / "slices"
+        slices_dir.mkdir()
+        shutil.copyfile(source_image, slices_dir / "component_001.png")
+        (output_dir / "layer_manifest.json").write_text(
+            json.dumps(
+                {
+                    "canvas": {"width": 1536, "height": 864},
+                    "layers": [
+                        {
+                            "id": "component_001",
+                            "type": "button",
+                            "bbox": {"x": 10, "y": 20, "width": 120, "height": 48},
+                            "outline_points": [[10, 20], [130, 20], [130, 68], [10, 68]],
+                            "slice_file": "slices/component_001.png",
+                        }
+                    ],
+                }
+            ),
+            encoding="utf-8",
+        )
+        shutil.copyfile(source_image, output_dir / "candidate_preview.png")
+        return {"layer_count": 1}
+
+    monkeypatch.setattr(main_app, "run_opencv_ui_slicer", fake_slicer)
+
+    response = client.post(f"/production-studio/ui-production/opencv-slice?package_dir={package}")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["opencv_layer_count"] == 1
+    assert body["opencv_candidate_preview_url"].endswith("/output/candidate_preview.png")
+    assert body["opencv_layer_manifest_url"].endswith("/output/layer_manifest.json")
+    assert (package / "output" / "slices").is_dir()
 
 
 def test_production_studio_lists_style_codes() -> None:

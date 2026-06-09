@@ -10,6 +10,7 @@ const api = {
   selectUiProductionCandidate: jest.fn(),
   updateUiProductionCandidate: jest.fn(),
   exportUiProductionComponents: jest.fn(),
+  runOpenCvUiSlicer: jest.fn(),
   runMarkingAcceptanceTest: jest.fn(),
   runMainUiProduction: jest.fn(),
   getMainUiProduction: jest.fn(),

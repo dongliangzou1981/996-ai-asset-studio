@@ -52,6 +52,7 @@ from scripts.main_ui_production_chain import export_confirmed_components
 from scripts.main_ui_production_chain import mark_candidate_components
 from scripts.main_ui_production_chain import select_candidate_option
 from scripts.main_ui_production_chain import update_candidate_confirmation
+from scripts.opencv_ui_slicer import slice_ui_image as run_opencv_ui_slicer
 
 
 def default_database_path() -> Path:
@@ -766,7 +767,33 @@ def create_app(database_path: str | Path | None = None, upload_dir: str | Path |
             "training_samples_url": package_file_url(package_dir, "training_samples/main_ui/candidate_samples.json")
             if (package_dir / "training_samples" / "main_ui" / "candidate_samples.json").exists()
             else "",
+            "opencv_output_dir": str(package_dir / "output") if (package_dir / "output").is_dir() else "",
+            "opencv_candidate_preview_url": package_file_url(package_dir, "output/candidate_preview.png")
+            if (package_dir / "output" / "candidate_preview.png").exists()
+            else "",
+            "opencv_layer_manifest_url": package_file_url(package_dir, "output/layer_manifest.json")
+            if (package_dir / "output" / "layer_manifest.json").exists()
+            else "",
+            "opencv_slices_dir": str(package_dir / "output" / "slices") if (package_dir / "output" / "slices").is_dir() else "",
+            "opencv_layer_count": len(read_package_json(package_dir / "output", "layer_manifest.json").get("layers") or [])
+            if (package_dir / "output" / "layer_manifest.json").exists()
+            else 0,
         }
+
+    def opencv_source_image(package_dir: Path) -> Path:
+        for filename in ["main_ui.jpg", "main_ui.png", "ui_preview.png", "original.jpg", "original.png", "candidate_preview.jpg"]:
+            candidate = package_dir / filename
+            if candidate.exists() and candidate.is_file():
+                return candidate
+        delivery_path = package_dir / "delivery_report.json"
+        if delivery_path.exists():
+            delivery = read_package_json(package_dir, "delivery_report.json")
+            selected_file = str(delivery.get("selected_candidate_file") or "")
+            if selected_file:
+                selected = package_dir / selected_file
+                if selected.exists() and selected.is_file():
+                    return selected
+        raise FileNotFoundError("No Studio candidate image found for OpenCV baseline slicing")
 
     @app.post("/production-studio/analyze")
     def analyze_production_studio_package(package_dir: str) -> dict[str, str]:
@@ -919,6 +946,16 @@ def create_app(database_path: str | Path | None = None, upload_dir: str | Path |
         marking_summary["status"] = "exported"
         upsert_prompt_sample(package_path, {}, generation_result_summary(response), marking_summary)
         return response
+
+    @app.post("/production-studio/ui-production/opencv-slice")
+    def opencv_slice_ui_production(package_dir: str) -> dict:
+        package_path = resolve_production_package_dir(package_dir)
+        try:
+            source = opencv_source_image(package_path)
+            run_opencv_ui_slicer(source, package_path / "output")
+        except (FileNotFoundError, RuntimeError, ValueError, OSError) as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        return main_ui_package_response(package_path)
 
     @app.post("/production-studio/marking-acceptance-test/run")
     def run_marking_acceptance_test(payload: dict | None = None) -> dict:

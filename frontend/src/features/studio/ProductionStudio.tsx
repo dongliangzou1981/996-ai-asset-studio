@@ -82,6 +82,7 @@ type ProductionStudioApi = Pick<
   | "selectUiProductionCandidate"
   | "updateUiProductionCandidate"
   | "exportUiProductionComponents"
+  | "runOpenCvUiSlicer"
   | "runMarkingAcceptanceTest"
   | "runMainUiProduction"
   | "getMainUiProduction"
@@ -787,6 +788,24 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
     }
   }
 
+  async function runOpenCvUiSlicer() {
+    if (!mainUiProduction) {
+      return;
+    }
+    setMainUiLoading(true);
+    setError("");
+    try {
+      const response = await api.runOpenCvUiSlicer(mainUiProduction.package_dir);
+      setMainUiProduction(response);
+      window.localStorage.setItem("uiProductionPackageDir", response.package_dir);
+      setUiProductionMessage(`OpenCV baseline 切图完成：识别 ${response.opencv_layer_count ?? 0} 个组件。`);
+    } catch (exc) {
+      setError(`OpenCV baseline 切图失败：${exc instanceof Error ? exc.message : "unknown"}`);
+    } finally {
+      setMainUiLoading(false);
+    }
+  }
+
   function chooseGenerationMode(nextMode: ProductionGenerationMode) {
     setGenerationMode(nextMode);
     setPrompt(nextMode === "reference_guided" ? REFERENCE_GUIDED_PROMPT : AUTO_GENERATE_PROMPT);
@@ -1209,6 +1228,14 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
             >
               导出 996-ready
             </button>
+            <button
+              className="rounded-md border border-studio-line px-3 py-2 text-sm disabled:opacity-60"
+              disabled={mainUiLoading || !mainUiProduction}
+              onClick={runOpenCvUiSlicer}
+              type="button"
+            >
+              OpenCV baseline 切图
+            </button>
           </div>
           {uiProductionMessage ? <p className="text-sm text-amber-700">{uiProductionMessage}</p> : null}
           {markingAcceptanceResult ? (
@@ -1305,6 +1332,43 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
             <div className="grid gap-4">
               {mainUiProduction.style_reference_note ? (
                 <p className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800">{mainUiProduction.style_reference_note}</p>
+              ) : null}
+              {mainUiProduction.opencv_candidate_preview_url ? (
+                <div className="grid gap-2 rounded-md border border-studio-line p-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="text-sm font-medium">
+                      OpenCV candidate_preview.png
+                      {typeof mainUiProduction.opencv_layer_count === "number" ? `（${mainUiProduction.opencv_layer_count}）` : ""}
+                    </div>
+                    <button
+                      className="rounded-md border border-studio-line px-2 py-1 text-xs"
+                      onClick={() =>
+                        setExpandedPreview({
+                          src: api.getProductionStudioFileUrl(mainUiProduction.opencv_candidate_preview_url || ""),
+                          label: "OpenCV candidate_preview.png",
+                        })
+                      }
+                      type="button"
+                    >
+                      预览
+                    </button>
+                  </div>
+                  <img
+                    alt="OpenCV candidate_preview"
+                    className="aspect-video w-full rounded-md border border-studio-line bg-slate-950 object-contain"
+                    src={api.getProductionStudioFileUrl(mainUiProduction.opencv_candidate_preview_url)}
+                  />
+                  {mainUiProduction.opencv_layer_manifest_url ? (
+                    <a
+                      className="w-fit rounded-md border border-studio-line px-2 py-1 text-xs"
+                      href={api.getProductionStudioFileUrl(mainUiProduction.opencv_layer_manifest_url)}
+                      rel="noreferrer"
+                      target="_blank"
+                    >
+                      打开 layer_manifest.json
+                    </a>
+                  ) : null}
+                </div>
               ) : null}
               <div className="grid gap-3 lg:grid-cols-2">
                 <div className="grid gap-2">

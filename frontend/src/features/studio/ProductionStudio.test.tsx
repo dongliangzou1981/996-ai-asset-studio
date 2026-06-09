@@ -10,6 +10,7 @@ const api = {
   selectUiProductionCandidate: jest.fn(),
   updateUiProductionCandidate: jest.fn(),
   exportUiProductionComponents: jest.fn(),
+  runOpenCvUiSlicer: jest.fn(),
   runMarkingAcceptanceTest: jest.fn(),
   runMainUiProduction: jest.fn(),
   getMainUiProduction: jest.fn(),
@@ -268,6 +269,16 @@ beforeEach(() => {
     })),
   });
   api.exportUiProductionComponents.mockResolvedValue(mainUiProductionResult);
+  api.runOpenCvUiSlicer.mockResolvedValue({
+    ...mainUiProductionResult,
+    opencv_output_dir: "assets/uploads/996-ready/SPRINT20B_MAIN_UI/main_ui/job-main-ui/output",
+    opencv_candidate_preview_url:
+      "/production-studio/files/996-ready/SPRINT20B_MAIN_UI/main_ui/job-main-ui/output/candidate_preview.png",
+    opencv_layer_manifest_url:
+      "/production-studio/files/996-ready/SPRINT20B_MAIN_UI/main_ui/job-main-ui/output/layer_manifest.json",
+    opencv_slices_dir: "assets/uploads/996-ready/SPRINT20B_MAIN_UI/main_ui/job-main-ui/output/slices",
+    opencv_layer_count: 8,
+  });
   api.runMarkingAcceptanceTest.mockResolvedValue(markingAcceptanceResult);
   api.updateMainUiCandidate.mockResolvedValue({
     ...mainUiProductionResult.candidates[0],
@@ -413,6 +424,15 @@ test("UI素材生产流程可生成、标记、确认、切图并预览输出", 
   expect(screen.getByAltText("skill_01 输出预览")).toBeInTheDocument();
   expect(screen.getByText(/透明警告/)).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "导出 996-ready" })).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "OpenCV baseline 切图" }));
+  expect(api.runOpenCvUiSlicer).toHaveBeenCalledWith(
+    "assets/uploads/996-ready/SPRINT20B_MAIN_UI/main_ui/job-main-ui",
+  );
+  expect(await screen.findByAltText("OpenCV candidate_preview")).toHaveAttribute(
+    "src",
+    "http://127.0.0.1:8000/production-studio/files/996-ready/SPRINT20B_MAIN_UI/main_ui/job-main-ui/output/candidate_preview.png",
+  );
+  expect(screen.getByText("打开 layer_manifest.json")).toBeInTheDocument();
   expect(screen.getByText("996-ready 包清单")).toBeInTheDocument();
   expect(screen.getByText("main_ui.jpg")).toBeInTheDocument();
   expect(screen.getByText("confirmed_components/")).toBeInTheDocument();

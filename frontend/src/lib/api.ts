@@ -336,6 +336,11 @@ export type MainUiProductionResult = {
   project_context?: MainUiProjectContext;
   training_samples_url?: string;
   exported_count?: number;
+  opencv_output_dir?: string;
+  opencv_candidate_preview_url?: string;
+  opencv_layer_manifest_url?: string;
+  opencv_slices_dir?: string;
+  opencv_layer_count?: number;
 };
 
 export type MarkingAcceptanceResult = {
@@ -617,6 +622,12 @@ export const studioApi = {
   exportUiProductionComponents(packageDir: string) {
     return request<MainUiProductionResult>(
       `/production-studio/ui-production/export?package_dir=${encodeURIComponent(packageDir)}`,
+      { method: "POST" },
+    );
+  },
+  runOpenCvUiSlicer(packageDir: string) {
+    return request<MainUiProductionResult>(
+      `/production-studio/ui-production/opencv-slice?package_dir=${encodeURIComponent(packageDir)}`,
       { method: "POST" },
     );
   },
