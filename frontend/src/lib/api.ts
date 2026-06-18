@@ -417,6 +417,16 @@ export type MainTaskPanelResult = {
   component_record_url?: string;
 };
 
+export type MainTaskPanelAiStatus = {
+  default_provider: string;
+  provider_type: string;
+  required_env: string;
+  api_key_configured: boolean;
+  ai_generation_available: boolean;
+  mock_generation_available: boolean;
+  message: string;
+};
+
 export type MarkingAcceptanceResult = {
   project_code: "MARKING_TEST";
   candidate_id: string;
@@ -673,6 +683,9 @@ export const studioApi = {
   },
   runMainUiProduction() {
     return request<MainUiProductionResult>("/production-studio/main-ui-production/run", { method: "POST" });
+  },
+  getMainTaskPanelAiStatus() {
+    return request<MainTaskPanelAiStatus>("/production-studio/main-task-panel/ai-status");
   },
   generateMainTaskPanelCandidates(generationMode: "mock" | "ai" = "mock") {
     return request<MainTaskPanelResult>("/production-studio/hud-modules/main-task-panel/generate", {

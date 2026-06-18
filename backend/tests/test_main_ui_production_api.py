@@ -184,6 +184,63 @@ def test_main_task_panel_api_falls_back_to_mock_when_ai_generation_fails(tmp_pat
     assert all(candidate["generation_mode"] == "mock" for candidate in body["candidates"])
 
 
+def create_ofox_provider(client: TestClient) -> None:
+    response = client.post(
+        "/ai_providers",
+        json={
+            "name": "Ofox UI Default",
+            "type": "ofox",
+            "enabled": True,
+            "config_json": json.dumps(
+                {
+                    "api_key_env": "OFOX_API_KEY",
+                    "base_url": "https://api.ofox.ai/v1",
+                    "model": "gpt-image-2",
+                }
+            ),
+        },
+    )
+    assert response.status_code == 201
+
+
+def test_main_task_panel_ai_status_reports_missing_key_without_leaking_env_value(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.delenv("OFOX_API_KEY", raising=False)
+    client = make_client(tmp_path)
+    create_ofox_provider(client)
+
+    response = client.get("/production-studio/main-task-panel/ai-status")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body == {
+        "default_provider": "Ofox UI Default",
+        "provider_type": "ofox",
+        "required_env": "OFOX_API_KEY",
+        "api_key_configured": False,
+        "ai_generation_available": False,
+        "mock_generation_available": True,
+        "message": "OFOX_API_KEY is not configured. AI generation is unavailable; mock generation is still available.",
+    }
+
+
+def test_main_task_panel_ai_status_reports_configured_key_without_leaking_env_value(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("OFOX_API_KEY", "configured-env-value-for-test")
+    client = make_client(tmp_path)
+    create_ofox_provider(client)
+
+    response = client.get("/production-studio/main-task-panel/ai-status")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["default_provider"] == "Ofox UI Default"
+    assert body["provider_type"] == "ofox"
+    assert body["required_env"] == "OFOX_API_KEY"
+    assert body["api_key_configured"] is True
+    assert body["ai_generation_available"] is True
+    assert body["mock_generation_available"] is True
+    assert "configured-env-value-for-test" not in response.text
+
+
 def test_main_ui_endpoint_rejects_outside_package_path(tmp_path: Path) -> None:
     client = make_client(tmp_path)
     outside = tmp_path / "outside"

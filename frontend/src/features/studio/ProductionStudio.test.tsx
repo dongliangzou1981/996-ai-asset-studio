@@ -16,6 +16,7 @@ const api = {
   getMainUiProduction: jest.fn(),
   updateMainUiCandidate: jest.fn(),
   exportMainUiProduction: jest.fn(),
+  getMainTaskPanelAiStatus: jest.fn(),
   generateMainTaskPanelCandidates: jest.fn(),
   selectMainTaskPanelCandidate: jest.fn(),
   previewMainTaskPanelOnCanvas: jest.fn(),
@@ -273,6 +274,23 @@ const mainTaskPanelResult = {
   component_record_url: "",
 } as const;
 
+const mainTaskPanelAiStatusUnavailable = {
+  default_provider: "Ofox UI Default",
+  provider_type: "ofox",
+  required_env: "OFOX_API_KEY",
+  api_key_configured: false,
+  ai_generation_available: false,
+  mock_generation_available: true,
+  message: "OFOX_API_KEY is not configured. AI generation is unavailable; mock generation is still available.",
+} as const;
+
+const mainTaskPanelAiStatusAvailable = {
+  ...mainTaskPanelAiStatusUnavailable,
+  api_key_configured: true,
+  ai_generation_available: true,
+  message: "AI generation is available through Ofox UI Default. Manual visual review is still required.",
+} as const;
+
 const layerPackageResult = {
   package_id: "layer-package-test",
   package_dir: "assets/uploads/layer-packages/layer-package-test",
@@ -407,6 +425,7 @@ beforeEach(() => {
     confirmed: false,
   });
   api.exportMainUiProduction.mockResolvedValue(mainUiProductionResult);
+  api.getMainTaskPanelAiStatus.mockResolvedValue(mainTaskPanelAiStatusUnavailable);
   api.generateMainTaskPanelCandidates.mockResolvedValue(mainTaskPanelResult);
   api.selectMainTaskPanelCandidate.mockResolvedValue({
     ...mainTaskPanelResult,
@@ -498,6 +517,27 @@ beforeEach(() => {
   });
 });
 
+test("主界面任务模块显示 AI 环境不可用且 mock 仍可用", async () => {
+  render(<ProductionStudio api={api} />);
+
+  expect(await screen.findByText("AI 生成不可用：未检测到 OFOX_API_KEY。mock 候选仍可使用。")).toBeInTheDocument();
+  expect(screen.getByText("当前 provider：Ofox UI Default / ofox")).toBeInTheDocument();
+  expect(screen.getByText("mock 生成可用：是")).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "生成 AI 候选" })).toBeDisabled();
+  expect(screen.queryByText("configured-env-value-for-test")).not.toBeInTheDocument();
+});
+
+test("主界面任务模块显示 AI 环境可用且不泄露 key 内容", async () => {
+  api.getMainTaskPanelAiStatus.mockResolvedValueOnce(mainTaskPanelAiStatusAvailable);
+  render(<ProductionStudio api={api} />);
+
+  expect(await screen.findByText("AI 生成可用：当前 provider 为 Ofox UI Default。AI 候选可能消耗额度，仍需人工验收。")).toBeInTheDocument();
+  expect(screen.getByText("当前 provider：Ofox UI Default / ofox")).toBeInTheDocument();
+  expect(screen.getByText("mock 生成可用：是")).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "生成 AI 候选" })).not.toBeDisabled();
+  expect(screen.queryByText("configured-env-value-for-test")).not.toBeInTheDocument();
+});
+
 test("主界面任务模块可生成候选、选择、预览到主画布并验收入库", async () => {
   const user = userEvent.setup();
   render(<ProductionStudio api={api} />);
@@ -562,6 +602,7 @@ test("主界面任务模块可生成候选、选择、预览到主画布并验�
 
 test("主界面任务模块可请求 AI 候选并显示待验收状态", async () => {
   const user = userEvent.setup();
+  api.getMainTaskPanelAiStatus.mockResolvedValueOnce(mainTaskPanelAiStatusAvailable);
   api.generateMainTaskPanelCandidates.mockResolvedValueOnce({
     ...mainTaskPanelResult,
     requested_generation_mode: "ai",
@@ -596,6 +637,7 @@ test("主界面任务模块可请求 AI 候选并显示待验收状态", async (
 
 test("主界面任务模块 AI 生成失败时显示 fallback 状态", async () => {
   const user = userEvent.setup();
+  api.getMainTaskPanelAiStatus.mockResolvedValueOnce(mainTaskPanelAiStatusAvailable);
   api.generateMainTaskPanelCandidates.mockResolvedValueOnce({
     ...mainTaskPanelResult,
     requested_generation_mode: "ai",

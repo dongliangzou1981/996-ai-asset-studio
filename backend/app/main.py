@@ -907,6 +907,45 @@ def create_app(database_path: str | Path | None = None, upload_dir: str | Path |
             "generation_job_id": completed.id,
         }
 
+    def main_task_panel_ai_status_response() -> dict[str, Any]:
+        providers = [
+            provider
+            for provider in database.list_ai_providers()
+            if provider.enabled and provider.type in {"openai", "ofox"}
+        ]
+        if not providers:
+            return {
+                "default_provider": "",
+                "provider_type": "",
+                "required_env": "",
+                "api_key_configured": False,
+                "ai_generation_available": False,
+                "mock_generation_available": True,
+                "message": "No enabled AI image provider is configured. AI generation is unavailable; mock generation is still available.",
+            }
+        provider = providers[0]
+        try:
+            config = json.loads(provider.config_json or "{}")
+        except json.JSONDecodeError:
+            config = {}
+        required_env = str(config.get("api_key_env") or "")
+        api_key_configured = bool(required_env and os.getenv(required_env))
+        if api_key_configured:
+            message = f"AI generation is available through {provider.name}. Manual visual review is still required."
+        elif required_env:
+            message = f"{required_env} is not configured. AI generation is unavailable; mock generation is still available."
+        else:
+            message = "Provider api_key_env is not configured. AI generation is unavailable; mock generation is still available."
+        return {
+            "default_provider": provider.name,
+            "provider_type": provider.type,
+            "required_env": required_env,
+            "api_key_configured": api_key_configured,
+            "ai_generation_available": api_key_configured,
+            "mock_generation_available": True,
+            "message": message,
+        }
+
     def opencv_source_image(package_dir: Path) -> Path:
         for filename in ["main_ui.jpg", "main_ui.png", "ui_preview.png", "original.jpg", "original.png", "candidate_preview.jpg"]:
             candidate = package_dir / filename
@@ -951,6 +990,10 @@ def create_app(database_path: str | Path | None = None, upload_dir: str | Path |
     @app.get("/production-studio/prompt-samples/best")
     def get_best_prompt_sample(interface_type: str = "main_ui", device_type: str = "", layout_template: str = "") -> dict:
         return best_prompt_sample(interface_type, device_type, layout_template)
+
+    @app.get("/production-studio/main-task-panel/ai-status")
+    def get_main_task_panel_ai_status() -> dict[str, Any]:
+        return main_task_panel_ai_status_response()
 
     @app.put("/production-studio/manual-acceptance")
     def update_manual_acceptance(package_dir: str, payload: dict) -> dict:

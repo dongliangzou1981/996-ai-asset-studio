@@ -5,6 +5,7 @@ import { ChangeEvent, FormEvent, useEffect, useState } from "react";
 import {
   Project,
   LayerPackageImportResult,
+  MainTaskPanelAiStatus,
   ProductionAssetMode,
   ProductionDeviceType,
   ProductionGenerationMode,
@@ -87,6 +88,7 @@ type ProductionStudioApi = Pick<
   | "runOpenCvUiSlicer"
   | "runMarkingAcceptanceTest"
   | "runMainUiProduction"
+  | "getMainTaskPanelAiStatus"
   | "generateMainTaskPanelCandidates"
   | "selectMainTaskPanelCandidate"
   | "previewMainTaskPanelOnCanvas"
@@ -279,6 +281,8 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
   const [result, setResult] = useState<ProductionStudioResult | null>(null);
   const [mainUiProduction, setMainUiProduction] = useState<MainUiProductionResult | null>(null);
   const [mainTaskPanel, setMainTaskPanel] = useState<MainTaskPanelResult | null>(null);
+  const [mainTaskPanelAiStatus, setMainTaskPanelAiStatus] = useState<MainTaskPanelAiStatus | null>(null);
+  const [mainTaskPanelAiStatusError, setMainTaskPanelAiStatusError] = useState("");
   const [mainTaskPanelLoading, setMainTaskPanelLoading] = useState(false);
   const [mainTaskPanelMessage, setMainTaskPanelMessage] = useState("");
   const [mainUiLoading, setMainUiLoading] = useState(false);
@@ -359,6 +363,34 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
       .getMainUiProduction(savedPackageDir)
       .then((response) => setMainUiProduction(response))
       .catch(() => window.localStorage.removeItem("uiProductionPackageDir"));
+  }, [api]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const getMainTaskPanelAiStatus = api.getMainTaskPanelAiStatus;
+    if (typeof getMainTaskPanelAiStatus !== "function") {
+      return () => {
+        cancelled = true;
+      };
+    }
+    getMainTaskPanelAiStatus()
+      .then((status) => {
+        if (cancelled) {
+          return;
+        }
+        setMainTaskPanelAiStatus(status);
+        setMainTaskPanelAiStatusError("");
+      })
+      .catch((exc) => {
+        if (cancelled) {
+          return;
+        }
+        setMainTaskPanelAiStatus(null);
+        setMainTaskPanelAiStatusError(`AI 环境状态检查失败：${exc instanceof Error ? exc.message : "unknown"}`);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [api]);
 
   useEffect(() => {
@@ -1020,6 +1052,12 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
   const mainTaskPanelGenerationMode = mainTaskPanel?.generation_mode || "mock";
   const mainTaskPanelFallbackUsed = Boolean(mainTaskPanel?.fallback_used);
   const mainTaskPanelVisualQualityStatus = mainTaskPanel?.visual_quality_status || "not_started";
+  const mainTaskPanelAiGenerationAvailable = Boolean(mainTaskPanelAiStatus?.ai_generation_available);
+  const mainTaskPanelMockGenerationAvailable = mainTaskPanelAiStatus?.mock_generation_available ?? true;
+  const mainTaskPanelProviderLabel = mainTaskPanelAiStatus?.default_provider
+    ? `${mainTaskPanelAiStatus.default_provider} / ${mainTaskPanelAiStatus.provider_type || "-"}`
+    : "未配置";
+  const mainTaskPanelRequiredEnv = mainTaskPanelAiStatus?.required_env || "OFOX_API_KEY";
 
   return (
     <section className="grid min-w-0 gap-4 xl:grid-cols-[260px_320px_minmax(0,1fr)]">
@@ -1475,7 +1513,7 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
                 </button>
                 <button
                   className="rounded-md border border-studio-line bg-white px-3 py-2 text-sm font-semibold disabled:opacity-60"
-                  disabled={mainTaskPanelLoading}
+                  disabled={mainTaskPanelLoading || (mainTaskPanelAiStatus !== null && !mainTaskPanelAiGenerationAvailable)}
                   onClick={() => generateMainTaskPanelCandidates("ai")}
                   type="button"
                 >
@@ -1483,6 +1521,26 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
                 </button>
               </div>
             </div>
+            {mainTaskPanelAiStatus ? (
+              <div className="grid gap-2 rounded-md border border-slate-200 bg-slate-50 p-3 text-sm text-slate-800">
+                <p>
+                  {mainTaskPanelAiGenerationAvailable
+                    ? `AI 生成可用：当前 provider 为 ${mainTaskPanelAiStatus.default_provider}。AI 候选可能消耗额度，仍需人工验收。`
+                    : `AI 生成不可用：未检测到 ${mainTaskPanelRequiredEnv}。mock 候选仍可使用。`}
+                </p>
+                <div className="grid gap-1 text-xs text-slate-600 sm:grid-cols-2">
+                  <span>{`当前 provider：${mainTaskPanelProviderLabel}`}</span>
+                  <span>{`mock 生成可用：${mainTaskPanelMockGenerationAvailable ? "是" : "否"}`}</span>
+                  <span>{`required_env=${mainTaskPanelRequiredEnv}`}</span>
+                  <span>{`api_key_configured=${String(mainTaskPanelAiStatus.api_key_configured)}`}</span>
+                </div>
+              </div>
+            ) : null}
+            {mainTaskPanelAiStatusError ? (
+              <p className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+                {mainTaskPanelAiStatusError}；mock 候选仍可使用。
+              </p>
+            ) : null}
             {mainTaskPanel ? (
               <div className="grid gap-2 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950">
                 {mainTaskPanelFallbackUsed ? (
