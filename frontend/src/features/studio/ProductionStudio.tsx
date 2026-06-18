@@ -1592,7 +1592,23 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
                         <div>{`目标位置：x=${candidate.target_x} y=${candidate.target_y}`}</div>
                         <div>{`主画布：${candidate.canvas_width}×${candidate.canvas_height}`}</div>
                         <div>{`生成类型：${candidate.generation_mode || mainTaskPanel.generation_mode || "mock"}`}</div>
+                        <div>{`alpha_channel_present=${String(Boolean(candidate.alpha_channel_present))}`}</div>
+                        <div>{`alpha_min=${candidate.alpha_min ?? "-"} alpha_max=${candidate.alpha_max ?? "-"}`}</div>
+                        <div>{`has_real_transparency=${String(Boolean(candidate.has_real_transparency))}`}</div>
+                        <div>{`transparent_guaranteed=${String(Boolean(candidate.transparent_guaranteed))}`}</div>
+                        <div>{`transparency_postprocess_applied=${String(Boolean(candidate.transparency_postprocess_applied))}`}</div>
+                        <div>{`transparency_postprocess_status=${candidate.transparency_postprocess_status || "not_checked"}`}</div>
                       </dl>
+                      {!candidate.has_real_transparency || !candidate.transparent_guaranteed ? (
+                        <p className="rounded-md border border-red-200 bg-red-50 p-2 text-xs text-red-700">
+                          透明检查未通过：当前 PNG 没有真实透明像素，不能作为最终生产图。
+                        </p>
+                      ) : candidate.transparency_postprocess_applied &&
+                        candidate.transparency_postprocess_status === "applied" ? (
+                        <p className="rounded-md border border-emerald-200 bg-emerald-50 p-2 text-xs text-emerald-700">
+                          透明后处理已完成：候选图已生成真实 alpha 透明区域，仍需人工视觉确认。
+                        </p>
+                      ) : null}
                       <button
                         className="rounded-md border border-studio-line px-2 py-1 text-xs disabled:opacity-60"
                         disabled={mainTaskPanelLoading}
@@ -1654,6 +1670,13 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
                         <span className="rounded-md bg-slate-50 px-2 py-1">{mainTaskPanel.canvas_preview_path}</span>
                       ) : null}
                     </div>
+                    {mainTaskPanel.component_url ? (
+                      <div className="rounded-md bg-slate-50 px-2 py-1 text-xs text-slate-700">
+                        {`最终透明状态：has_real_transparency=${String(
+                          Boolean(mainTaskPanel.has_real_transparency),
+                        )} / transparent_guaranteed=${String(Boolean(mainTaskPanel.transparent_guaranteed))}`}
+                      </div>
+                    ) : null}
                     <div className="flex flex-wrap gap-2">
                       {mainTaskPanel.manifest_url ? (
                         <a

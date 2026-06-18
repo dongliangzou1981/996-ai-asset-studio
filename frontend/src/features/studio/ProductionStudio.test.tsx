@@ -208,6 +208,15 @@ const mainTaskPanelResult = {
       production_ready: false,
       visual_quality_status: "not_started",
       fallback_used: false,
+      transparent_requested: true,
+      alpha_channel_present: true,
+      alpha_min: 0,
+      alpha_max: 255,
+      alpha_all_255: false,
+      has_real_transparency: true,
+      transparent_guaranteed: true,
+      transparency_postprocess_applied: false,
+      transparency_postprocess_status: "not_needed",
       width: 286,
       height: 330,
       target_x: 24,
@@ -229,6 +238,15 @@ const mainTaskPanelResult = {
       production_ready: false,
       visual_quality_status: "not_started",
       fallback_used: false,
+      transparent_requested: true,
+      alpha_channel_present: true,
+      alpha_min: 0,
+      alpha_max: 255,
+      alpha_all_255: false,
+      has_real_transparency: true,
+      transparent_guaranteed: true,
+      transparency_postprocess_applied: false,
+      transparency_postprocess_status: "not_needed",
       width: 286,
       height: 330,
       target_x: 24,
@@ -250,6 +268,15 @@ const mainTaskPanelResult = {
       production_ready: false,
       visual_quality_status: "not_started",
       fallback_used: false,
+      transparent_requested: true,
+      alpha_channel_present: true,
+      alpha_min: 0,
+      alpha_max: 255,
+      alpha_all_255: false,
+      has_real_transparency: true,
+      transparent_guaranteed: true,
+      transparency_postprocess_applied: false,
+      transparency_postprocess_status: "not_needed",
       width: 286,
       height: 330,
       target_x: 24,
@@ -446,6 +473,13 @@ beforeEach(() => {
     ...mainTaskPanelResult,
     selected_candidate_id: "main_task_panel_candidate_2",
     accepted: true,
+    alpha_channel_present: true,
+    alpha_min: 0,
+    alpha_max: 255,
+    has_real_transparency: true,
+    transparent_guaranteed: true,
+    transparency_postprocess_applied: false,
+    transparency_postprocess_status: "not_needed",
     export_dir: "assets/uploads/996-ready/HUD_MODULES/main_task_panel/job-main-task-panel/components",
     canvas_preview_path: "canvas_preview.png",
     canvas_preview_url:
@@ -569,6 +603,10 @@ test("主界面任务模块可生成候选、选择、预览到主画布并验�
   expect(screen.getAllByText("目标位置：x=24 y=40")).toHaveLength(3);
   expect(screen.getAllByText("主画布：1728×972")).toHaveLength(3);
   expect(screen.getAllByText("生成类型：mock")).toHaveLength(3);
+  expect(screen.getAllByText("alpha_channel_present=true")).toHaveLength(3);
+  expect(screen.getAllByText("has_real_transparency=true")).toHaveLength(3);
+  expect(screen.getAllByText("transparent_guaranteed=true")).toHaveLength(3);
+  expect(screen.getAllByText("transparency_postprocess_status=not_needed")).toHaveLength(3);
 
   await user.click(screen.getByRole("button", { name: "选择候选 2" }));
   expect(api.selectMainTaskPanelCandidate).toHaveBeenCalledWith(
@@ -596,6 +634,7 @@ test("主界面任务模块可生成候选、选择、预览到主画布并验�
   expect(screen.getByText("manifest.json")).toBeInTheDocument();
   expect(screen.getByText("component_record.json")).toBeInTheDocument();
   expect(screen.getByText("canvas_preview.png")).toBeInTheDocument();
+  expect(screen.getByText("最终透明状态：has_real_transparency=true / transparent_guaranteed=true")).toBeInTheDocument();
   expect(screen.getByText("查看 main_task_panel manifest")).toBeInTheDocument();
   expect(screen.getByText("查看 component_record.json")).toBeInTheDocument();
 });
@@ -617,6 +656,15 @@ test("主界面任务模块可请求 AI 候选并显示待验收状态", async (
       generation_provider: "Ofox UI Default",
       visual_quality_status: "pending_review",
       fallback_used: false,
+      raw_image_path: `raw/${candidate.candidate_id}_raw.png`,
+      processed_image_path: candidate.image_path,
+      alpha_channel_present: true,
+      alpha_min: 0,
+      alpha_max: 255,
+      has_real_transparency: true,
+      transparent_guaranteed: true,
+      transparency_postprocess_applied: true,
+      transparency_postprocess_status: "applied",
     })),
   });
   render(<ProductionStudio api={api} />);
@@ -633,6 +681,46 @@ test("主界面任务模块可请求 AI 候选并显示待验收状态", async (
   expect(screen.getByText("fallback_used=false")).toBeInTheDocument();
   expect(screen.getByText("visual_quality_status=pending_review")).toBeInTheDocument();
   expect(screen.getAllByText("生成类型：ai")).toHaveLength(3);
+  expect(screen.getAllByText("透明后处理已完成：候选图已生成真实 alpha 透明区域，仍需人工视觉确认。")).toHaveLength(3);
+  expect(screen.getAllByText("transparency_postprocess_applied=true")).toHaveLength(3);
+  expect(screen.getAllByText("transparency_postprocess_status=applied")).toHaveLength(3);
+});
+
+test("主界面任务模块显示透明检查未通过提示", async () => {
+  const user = userEvent.setup();
+  api.getMainTaskPanelAiStatus.mockResolvedValueOnce(mainTaskPanelAiStatusAvailable);
+  api.generateMainTaskPanelCandidates.mockResolvedValueOnce({
+    ...mainTaskPanelResult,
+    requested_generation_mode: "ai",
+    generation_mode: "ai",
+    generation_provider: "Ofox UI Default",
+    visual_quality_status: "pending_review",
+    candidates: mainTaskPanelResult.candidates.map((candidate) => ({
+      ...candidate,
+      requested_generation_mode: "ai",
+      generation_mode: "ai",
+      generation_provider: "Ofox UI Default",
+      alpha_channel_present: true,
+      alpha_min: 255,
+      alpha_max: 255,
+      alpha_all_255: true,
+      has_real_transparency: false,
+      transparent_guaranteed: false,
+      transparency_postprocess_applied: true,
+      transparency_postprocess_status: "failed",
+    })),
+  });
+  render(<ProductionStudio api={api} />);
+
+  expect(await screen.findByText("UI素材生产")).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "生成 AI 候选" }));
+
+  expect(
+    await screen.findAllByText("透明检查未通过：当前 PNG 没有真实透明像素，不能作为最终生产图。"),
+  ).toHaveLength(3);
+  expect(screen.getAllByText("alpha_min=255 alpha_max=255")).toHaveLength(3);
+  expect(screen.getAllByText("has_real_transparency=false")).toHaveLength(3);
+  expect(screen.getAllByText("transparent_guaranteed=false")).toHaveLength(3);
 });
 
 test("主界面任务模块 AI 生成失败时显示 fallback 状态", async () => {

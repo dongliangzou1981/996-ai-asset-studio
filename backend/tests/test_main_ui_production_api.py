@@ -22,6 +22,19 @@ def write_source(path: Path) -> None:
     Image.new("RGB", (640, 360), (24, 32, 48)).save(path)
 
 
+def write_checkerboard_task_panel(path: Path) -> None:
+    image = Image.new("RGBA", (512, 512), (232, 232, 232, 255))
+    pixels = image.load()
+    for y in range(512):
+        for x in range(512):
+            shade = 226 if ((x // 16) + (y // 16)) % 2 == 0 else 248
+            pixels[x, y] = (shade, shade, shade, 255)
+    for y in range(56, 456):
+        for x in range(48, 464):
+            pixels[x, y] = (44, 34, 24, 255)
+    image.save(path, "PNG")
+
+
 def test_main_ui_run_endpoint_generates_package(tmp_path: Path, monkeypatch) -> None:
     source = tmp_path / "source.jpg"
     write_source(source)
@@ -163,6 +176,33 @@ def test_main_task_panel_api_accepts_ai_generation_mode(tmp_path: Path, monkeypa
     assert body["visual_quality_status"] == "pending_review"
     assert len(body["candidates"]) == 3
     assert all(candidate["generation_mode"] == "ai" for candidate in body["candidates"])
+
+
+def test_main_task_panel_api_reports_ai_transparency_postprocess(tmp_path: Path, monkeypatch) -> None:
+    def fake_ai_generator(target: Path, index: int, context: dict) -> dict:  # type: ignore[type-arg]
+        write_checkerboard_task_panel(target)
+        return {"generation_provider": "fake-provider", "generation_job_id": f"job-ai-{index}"}
+
+    monkeypatch.setattr(main_module, "main_task_panel_ai_candidate_generator", fake_ai_generator)
+    client = make_client(tmp_path)
+
+    response = client.post("/production-studio/hud-modules/main-task-panel/generate", json={"generation_mode": "ai"})
+
+    assert response.status_code == 200
+    body = response.json()
+    first = body["candidates"][0]
+    assert first["requested_generation_mode"] == "ai"
+    assert first["generation_mode"] == "ai"
+    assert first["raw_image_path"] == "raw/main_task_panel_candidate_1_raw.png"
+    assert first["processed_image_path"] == "candidates/main_task_panel_candidate_1.png"
+    assert first["alpha_channel_present"] is True
+    assert first["alpha_min"] == 0
+    assert first["alpha_max"] == 255
+    assert first["has_real_transparency"] is True
+    assert first["transparent_guaranteed"] is True
+    assert first["transparency_postprocess_applied"] is True
+    assert first["transparency_postprocess_status"] == "applied"
+    assert Path(body["package_dir"], first["raw_image_path"]).exists()
 
 
 def test_main_task_panel_api_falls_back_to_mock_when_ai_generation_fails(tmp_path: Path, monkeypatch) -> None:

@@ -4,6 +4,7 @@ import argparse
 import json
 import shutil
 import sys
+from collections import deque
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable
@@ -83,6 +84,14 @@ MAIN_TASK_PANEL_PROMPT = """生成一个 996 传奇手游横屏主界面左上�
 - 不要场景背景
 - 不要其他 UI 区域
 - 不要超出画布边界
+- 不要棋盘格背景
+- 不要灰色背景
+- 不要白色背景
+- 不要纯色背景
+- 不要把透明背景画成图案
+- 不要模拟透明背景
+- 必须输出真实透明 PNG，组件以外区域 alpha=0
+- 只保留任务面板本身
 
 风格：
 暗金、金属、复古传奇、手游 HUD、边界清晰、适合叠加在游戏画面上。"""
@@ -99,6 +108,17 @@ MAIN_TASK_PANEL_PRODUCTION_STATUS: dict[str, Any] = {
     "usage_note": "Engineering loop validation only; not a production-ready AI visual asset.",
     "transparent_requested": True,
     "transparent_guaranteed": False,
+    "is_png": False,
+    "alpha_channel_present": False,
+    "alpha_min": None,
+    "alpha_max": None,
+    "alpha_all_255": False,
+    "has_real_transparency": False,
+    "suspected_baked_background": False,
+    "transparency_postprocess_applied": False,
+    "transparency_postprocess_status": "not_checked",
+    "raw_image_path": "",
+    "processed_image_path": "",
 }
 
 MAIN_TASK_PANEL_STATUS_KEYS = tuple(MAIN_TASK_PANEL_PRODUCTION_STATUS.keys())
@@ -396,6 +416,139 @@ def image_has_transparent_pixels(path: Path) -> bool:
         alpha = image.convert("RGBA").getchannel("A")
         minimum, _ = alpha.getextrema()
         return minimum < 255
+
+
+def main_task_panel_light_background_pixel(pixel: tuple[int, int, int, int]) -> bool:
+    r, g, b, alpha = pixel
+    if alpha < 255:
+        return False
+    spread = max(r, g, b) - min(r, g, b)
+    luma = (r * 299 + g * 587 + b * 114) / 1000
+    return (luma >= 160 and spread <= 42) or (min(r, g, b) >= 215 and spread <= 70)
+
+
+def main_task_panel_baked_background_ratio(image: Image.Image) -> float:
+    rgba = image.convert("RGBA")
+    width, height = rgba.size
+    if width <= 0 or height <= 0:
+        return 0.0
+    pixels = rgba.load()
+    samples: list[tuple[int, int, int, int]] = []
+    for x in range(width):
+        samples.append(pixels[x, 0])
+        samples.append(pixels[x, height - 1])
+    for y in range(height):
+        samples.append(pixels[0, y])
+        samples.append(pixels[width - 1, y])
+    if not samples:
+        return 0.0
+    light_background = sum(1 for pixel in samples if main_task_panel_light_background_pixel(pixel))
+    return light_background / len(samples)
+
+
+def inspect_main_task_panel_transparency(path: Path, *, transparent_requested: bool = True) -> dict[str, Any]:
+    with Image.open(path) as image:
+        is_png = (image.format or path.suffix.lstrip(".")).upper() == "PNG"
+        alpha_channel_present = "A" in image.getbands()
+        rgba = image.convert("RGBA")
+        alpha_min, alpha_max = rgba.getchannel("A").getextrema()
+        has_real_transparency = alpha_min < 255
+        alpha_all_255 = alpha_min == 255 and alpha_max == 255
+        suspected_baked_background = bool(alpha_all_255 and main_task_panel_baked_background_ratio(rgba) >= 0.15)
+        return {
+            "transparent_requested": transparent_requested,
+            "is_png": is_png,
+            "alpha_channel_present": alpha_channel_present,
+            "alpha_min": int(alpha_min),
+            "alpha_max": int(alpha_max),
+            "alpha_all_255": bool(alpha_all_255),
+            "has_real_transparency": bool(has_real_transparency),
+            "suspected_baked_background": suspected_baked_background,
+            "transparent_guaranteed": bool(is_png and alpha_channel_present and has_real_transparency),
+        }
+
+
+def remove_main_task_panel_light_edge_background(image: Image.Image) -> tuple[Image.Image, int]:
+    rgba = image.convert("RGBA")
+    width, height = rgba.size
+    pixels = rgba.load()
+    visited = bytearray(width * height)
+    queue: deque[tuple[int, int]] = deque()
+
+    def push_if_background(x: int, y: int) -> None:
+        index = y * width + x
+        if visited[index]:
+            return
+        visited[index] = 1
+        if main_task_panel_light_background_pixel(pixels[x, y]):
+            queue.append((x, y))
+
+    for x in range(width):
+        push_if_background(x, 0)
+        push_if_background(x, height - 1)
+    for y in range(height):
+        push_if_background(0, y)
+        push_if_background(width - 1, y)
+
+    transparent_pixels = 0
+    while queue:
+        x, y = queue.popleft()
+        r, g, b, _alpha = pixels[x, y]
+        pixels[x, y] = (r, g, b, 0)
+        transparent_pixels += 1
+        for nx, ny in ((x - 1, y), (x + 1, y), (x, y - 1), (x, y + 1)):
+            if nx < 0 or ny < 0 or nx >= width or ny >= height:
+                continue
+            index = ny * width + nx
+            if visited[index]:
+                continue
+            visited[index] = 1
+            if main_task_panel_light_background_pixel(pixels[nx, ny]):
+                queue.append((nx, ny))
+    return rgba, transparent_pixels
+
+
+def ensure_main_task_panel_candidate_transparency(
+    path: Path,
+    *,
+    raw_image_path: str = "",
+    processed_image_path: str = "",
+) -> dict[str, Any]:
+    before = inspect_main_task_panel_transparency(path)
+    status = {
+        **before,
+        "raw_alpha_channel_present": before["alpha_channel_present"],
+        "raw_alpha_min": before["alpha_min"],
+        "raw_alpha_max": before["alpha_max"],
+        "raw_has_real_transparency": before["has_real_transparency"],
+        "raw_image_path": raw_image_path,
+        "processed_image_path": processed_image_path,
+        "transparency_postprocess_applied": False,
+        "transparency_postprocess_status": "not_needed" if before["has_real_transparency"] else "skipped",
+    }
+    if before["has_real_transparency"]:
+        return status
+    if not before["alpha_all_255"]:
+        return status
+    if not before["suspected_baked_background"]:
+        return status
+
+    with Image.open(path) as image:
+        processed, transparent_pixels = remove_main_task_panel_light_edge_background(image)
+    processed.save(path, "PNG")
+    after = inspect_main_task_panel_transparency(path)
+    return {
+        **status,
+        **after,
+        "raw_alpha_channel_present": before["alpha_channel_present"],
+        "raw_alpha_min": before["alpha_min"],
+        "raw_alpha_max": before["alpha_max"],
+        "raw_has_real_transparency": before["has_real_transparency"],
+        "raw_image_path": raw_image_path,
+        "processed_image_path": processed_image_path,
+        "transparency_postprocess_applied": True,
+        "transparency_postprocess_status": "applied" if transparent_pixels and after["has_real_transparency"] else "failed",
+    }
 
 
 def default_source_image(upload_root: Path) -> Path:
@@ -1017,8 +1170,10 @@ def main_task_panel_ai_context(candidate_id: str, variant_index: int) -> dict[st
     }
 
 
-def normalize_main_task_panel_candidate_image(path: Path) -> None:
+def normalize_main_task_panel_candidate_image(path: Path, output_path: Path | None = None) -> None:
     rect = main_task_panel_rect()
+    target = output_path or path
+    target.parent.mkdir(parents=True, exist_ok=True)
     with Image.open(path) as image:
         normalized = ImageOps.fit(
             image.convert("RGBA"),
@@ -1026,7 +1181,7 @@ def normalize_main_task_panel_candidate_image(path: Path) -> None:
             method=Image.Resampling.LANCZOS,
             centering=(0.5, 0.5),
         )
-        normalized.save(path, "PNG")
+        normalized.save(target, "PNG")
 
 
 def draw_main_task_panel_placeholder(target: Path, variant_index: int) -> None:
@@ -1103,6 +1258,7 @@ def main_task_panel_candidate_record(
     variant_index: int,
     *,
     status: dict[str, Any] | None = None,
+    transparency_status: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     rect = main_task_panel_rect()
     canvas = main_task_panel_canvas()
@@ -1124,6 +1280,7 @@ def main_task_panel_candidate_record(
         "selected": False,
         "accepted": False,
         **production_status,
+        **(transparency_status or {}),
         "variant_index": variant_index,
         "transparent_required": bool(MAIN_TASK_PANEL_SPEC["transparent_required"]),
         "text_allowed": bool(MAIN_TASK_PANEL_SPEC["text_allowed"]),
@@ -1189,6 +1346,7 @@ def create_main_task_panel_package(
     package_dir.mkdir(parents=True, exist_ok=True)
     candidates_dir = package_dir / "candidates"
     candidates_dir.mkdir(exist_ok=True)
+    raw_dir = package_dir / "raw"
 
     requested_generation_mode = generation_mode.strip().lower() or "mock"
     if requested_generation_mode not in MAIN_TASK_PANEL_GENERATION_MODES:
@@ -1198,19 +1356,27 @@ def create_main_task_panel_package(
     production_status = main_task_panel_production_status(requested_generation_mode=requested_generation_mode)
 
     if requested_generation_mode == "ai":
-        generated_items: list[tuple[str, str, int, dict[str, Any]]] = []
+        generated_items: list[tuple[str, str, int, dict[str, Any], dict[str, Any]]] = []
         try:
             if ai_candidate_generator is None:
                 raise RuntimeError("AI generation provider is not configured for main_task_panel")
+            raw_dir.mkdir(exist_ok=True)
             for index in range(1, 4):
                 candidate_id = f"main_task_panel_candidate_{index}"
+                raw_image_path = f"raw/{candidate_id}_raw.png"
                 image_path = f"candidates/{candidate_id}.png"
+                raw_target = package_dir / raw_image_path
                 target = package_dir / image_path
-                metadata = ai_candidate_generator(target, index, main_task_panel_ai_context(candidate_id, index)) or {}
-                if not target.exists():
-                    raise RuntimeError(f"AI generator did not create candidate image: {image_path}")
-                normalize_main_task_panel_candidate_image(target)
-                generated_items.append((candidate_id, image_path, index, metadata))
+                metadata = ai_candidate_generator(raw_target, index, main_task_panel_ai_context(candidate_id, index)) or {}
+                if not raw_target.exists():
+                    raise RuntimeError(f"AI generator did not create candidate image: {raw_image_path}")
+                normalize_main_task_panel_candidate_image(raw_target, target)
+                transparency_status = ensure_main_task_panel_candidate_transparency(
+                    target,
+                    raw_image_path=raw_image_path,
+                    processed_image_path=image_path,
+                )
+                generated_items.append((candidate_id, image_path, index, metadata, transparency_status))
 
             provider = next((str(item[3].get("generation_provider") or "") for item in generated_items if item[3].get("generation_provider")), "")
             job_ids = [str(item[3].get("generation_job_id") or "") for item in generated_items if item[3].get("generation_job_id")]
@@ -1221,8 +1387,16 @@ def create_main_task_panel_package(
                 generation_job_id=",".join(job_ids),
                 visual_quality_status="pending_review",
             )
-            for candidate_id, image_path, index, _metadata in generated_items:
-                candidates.append(main_task_panel_candidate_record(candidate_id, image_path, index, status=production_status))
+            for candidate_id, image_path, index, _metadata, transparency_status in generated_items:
+                candidates.append(
+                    main_task_panel_candidate_record(
+                        candidate_id,
+                        image_path,
+                        index,
+                        status=production_status,
+                        transparency_status=transparency_status,
+                    )
+                )
         except Exception as exc:
             production_status = main_task_panel_production_status(
                 generation_mode="mock",
@@ -1236,13 +1410,37 @@ def create_main_task_panel_package(
                 candidate_id = f"main_task_panel_candidate_{index}"
                 image_path = f"candidates/{candidate_id}.png"
                 draw_main_task_panel_placeholder(package_dir / image_path, index)
-                candidates.append(main_task_panel_candidate_record(candidate_id, image_path, index, status=production_status))
+                transparency_status = ensure_main_task_panel_candidate_transparency(
+                    package_dir / image_path,
+                    processed_image_path=image_path,
+                )
+                candidates.append(
+                    main_task_panel_candidate_record(
+                        candidate_id,
+                        image_path,
+                        index,
+                        status=production_status,
+                        transparency_status=transparency_status,
+                    )
+                )
     else:
         for index in range(1, 4):
             candidate_id = f"main_task_panel_candidate_{index}"
             image_path = f"candidates/{candidate_id}.png"
             draw_main_task_panel_placeholder(package_dir / image_path, index)
-            candidates.append(main_task_panel_candidate_record(candidate_id, image_path, index, status=production_status))
+            transparency_status = ensure_main_task_panel_candidate_transparency(
+                package_dir / image_path,
+                processed_image_path=image_path,
+            )
+            candidates.append(
+                main_task_panel_candidate_record(
+                    candidate_id,
+                    image_path,
+                    index,
+                    status=production_status,
+                    transparency_status=transparency_status,
+                )
+            )
 
     generated_at = utc_now()
     write_json(

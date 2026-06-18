@@ -20,6 +20,19 @@ def write_source(path: Path, *, mode: str = "RGB") -> None:
     image.save(path)
 
 
+def write_checkerboard_task_panel(path: Path, *, size: tuple[int, int] = (286, 330)) -> None:
+    image = Image.new("RGBA", size, (232, 232, 232, 255))
+    pixels = image.load()
+    for y in range(size[1]):
+        for x in range(size[0]):
+            shade = 226 if ((x // 12) + (y // 12)) % 2 == 0 else 248
+            pixels[x, y] = (shade, shade, shade, 255)
+    for y in range(32, size[1] - 32):
+        for x in range(24, size[0] - 24):
+            pixels[x, y] = (46, 34, 22, 255)
+    image.save(path, "PNG")
+
+
 def test_main_ui_package_generates_required_files(tmp_path: Path) -> None:
     source = tmp_path / "main.jpg"
     write_source(source)
@@ -135,6 +148,58 @@ def test_manual_confirmation_controls_export(tmp_path: Path) -> None:
     assert acceptance_by_id["skill_02"]["output_file"].endswith(".png")
 
 
+def test_main_task_panel_transparency_detection_flags_fully_opaque_rgba(tmp_path: Path) -> None:
+    image_path = tmp_path / "opaque.png"
+    Image.new("RGBA", (286, 330), (210, 210, 210, 255)).save(image_path, "PNG")
+
+    result = chain.inspect_main_task_panel_transparency(image_path)
+
+    assert result["is_png"] is True
+    assert result["alpha_channel_present"] is True
+    assert result["alpha_min"] == 255
+    assert result["alpha_max"] == 255
+    assert result["alpha_all_255"] is True
+    assert result["has_real_transparency"] is False
+    assert result["transparent_guaranteed"] is False
+
+
+def test_main_task_panel_transparency_detection_accepts_real_alpha(tmp_path: Path) -> None:
+    image_path = tmp_path / "transparent.png"
+    image = Image.new("RGBA", (286, 330), (50, 42, 32, 255))
+    image.putpixel((0, 0), (0, 0, 0, 0))
+    image.save(image_path, "PNG")
+
+    result = chain.inspect_main_task_panel_transparency(image_path)
+
+    assert result["alpha_channel_present"] is True
+    assert result["alpha_min"] == 0
+    assert result["has_real_transparency"] is True
+    assert result["transparent_guaranteed"] is True
+
+
+def test_main_task_panel_transparency_postprocess_removes_checkerboard_background(tmp_path: Path) -> None:
+    image_path = tmp_path / "candidate.png"
+    write_checkerboard_task_panel(image_path)
+
+    result = chain.ensure_main_task_panel_candidate_transparency(
+        image_path,
+        raw_image_path="raw/main_task_panel_candidate_1_raw.png",
+        processed_image_path="candidates/main_task_panel_candidate_1.png",
+    )
+
+    assert result["raw_image_path"] == "raw/main_task_panel_candidate_1_raw.png"
+    assert result["processed_image_path"] == "candidates/main_task_panel_candidate_1.png"
+    assert result["transparency_postprocess_applied"] is True
+    assert result["transparency_postprocess_status"] == "applied"
+    assert result["has_real_transparency"] is True
+    assert result["transparent_guaranteed"] is True
+    assert result["raw_alpha_min"] == 255
+    assert result["alpha_min"] == 0
+    with Image.open(image_path) as image:
+        assert image.getchannel("A").getextrema()[0] == 0
+        assert image.getpixel((143, 165))[3] == 255
+
+
 def test_main_task_panel_module_loop_generates_selects_previews_and_accepts(tmp_path: Path) -> None:
     result = chain.create_main_task_panel_package(tmp_path / "uploads", job_id="job-main-task-panel")
     package = Path(result["package_dir"])
@@ -235,6 +300,51 @@ def test_main_task_panel_ai_mode_uses_injected_generator(tmp_path: Path) -> None
         with Image.open(package / candidate["image_path"]) as image:
             assert image.size == (286, 330)
             assert image.mode == "RGBA"
+
+
+def test_main_task_panel_ai_mode_postprocesses_opaque_checkerboard_candidates(tmp_path: Path) -> None:
+    def fake_ai_generator(target: Path, index: int, context: dict[str, object]) -> dict[str, object]:
+        write_checkerboard_task_panel(target, size=(512, 512))
+        return {"generation_provider": "fake-provider", "generation_job_id": f"job-ai-{index}"}
+
+    result = chain.create_main_task_panel_package(
+        tmp_path / "uploads",
+        job_id="job-ai-opaque-main-task-panel",
+        generation_mode="ai",
+        ai_candidate_generator=fake_ai_generator,
+    )
+    package = Path(result["package_dir"])
+
+    assert result["requested_generation_mode"] == "ai"
+    assert result["generation_mode"] == "ai"
+    assert len(result["candidates"]) == 3
+    for index, candidate in enumerate(result["candidates"], 1):
+        assert candidate["raw_image_path"] == f"raw/main_task_panel_candidate_{index}_raw.png"
+        assert candidate["processed_image_path"] == f"candidates/main_task_panel_candidate_{index}.png"
+        assert candidate["transparency_postprocess_applied"] is True
+        assert candidate["transparency_postprocess_status"] == "applied"
+        assert candidate["has_real_transparency"] is True
+        assert candidate["transparent_guaranteed"] is True
+        assert candidate["alpha_min"] == 0
+        assert candidate["alpha_max"] == 255
+        assert (package / candidate["raw_image_path"]).exists()
+        with Image.open(package / candidate["image_path"]) as image:
+            assert image.size == (286, 330)
+            assert image.mode == "RGBA"
+            assert image.getchannel("A").getextrema()[0] == 0
+
+    chain.select_main_task_panel_candidate(package, "main_task_panel_candidate_2")
+    preview = chain.preview_main_task_panel_on_canvas(package)
+    assert (package / preview["canvas_preview_path"]).exists()
+    accepted = chain.accept_main_task_panel_candidate(package)
+    component_record = json.loads((package / "component_record.json").read_text(encoding="utf-8"))
+    assert accepted["accepted"] is True
+    assert component_record["raw_image_path"] == "raw/main_task_panel_candidate_2_raw.png"
+    assert component_record["processed_image_path"] == "candidates/main_task_panel_candidate_2.png"
+    assert component_record["transparency_postprocess_status"] == "applied"
+    assert component_record["has_real_transparency"] is True
+    with Image.open(package / "components" / "main_task_panel.png") as image:
+        assert image.getchannel("A").getextrema()[0] == 0
 
 
 def test_main_task_panel_ai_mode_falls_back_to_mock_when_generator_fails(tmp_path: Path) -> None:
