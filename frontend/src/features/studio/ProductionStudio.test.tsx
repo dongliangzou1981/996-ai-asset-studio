@@ -185,6 +185,10 @@ const mainTaskPanelResult = {
   package_dir: "assets/uploads/996-ready/HUD_MODULES/main_task_panel/job-main-task-panel",
   module_id: "main_task_panel",
   name: "主界面左上任务追踪模块",
+  generation_mode: "mock",
+  production_ready: false,
+  visual_quality_status: "not_started",
+  usage_note: "Engineering loop validation only; not a production-ready AI visual asset.",
   selected_candidate_id: "",
   accepted: false,
   canvas: { width: 1728, height: 972 },
@@ -193,6 +197,9 @@ const mainTaskPanelResult = {
     {
       candidate_id: "main_task_panel_candidate_1",
       module_id: "main_task_panel",
+      generation_mode: "mock",
+      production_ready: false,
+      visual_quality_status: "not_started",
       width: 286,
       height: 330,
       target_x: 24,
@@ -208,6 +215,9 @@ const mainTaskPanelResult = {
     {
       candidate_id: "main_task_panel_candidate_2",
       module_id: "main_task_panel",
+      generation_mode: "mock",
+      production_ready: false,
+      visual_quality_status: "not_started",
       width: 286,
       height: 330,
       target_x: 24,
@@ -223,6 +233,9 @@ const mainTaskPanelResult = {
     {
       candidate_id: "main_task_panel_candidate_3",
       module_id: "main_task_panel",
+      generation_mode: "mock",
+      production_ready: false,
+      visual_quality_status: "not_started",
       width: 286,
       height: 330,
       target_x: 24,
@@ -236,9 +249,15 @@ const mainTaskPanelResult = {
       selected: false,
     },
   ],
+  export_dir: "",
+  canvas_preview_path: "",
   canvas_preview_url: "",
+  component_file: "",
   component_url: "",
+  manifest_path: "",
   manifest_url: "",
+  component_record_path: "",
+  component_record_url: "",
 } as const;
 
 const layerPackageResult = {
@@ -387,6 +406,7 @@ beforeEach(() => {
   api.previewMainTaskPanelOnCanvas.mockResolvedValue({
     ...mainTaskPanelResult,
     selected_candidate_id: "main_task_panel_candidate_2",
+    canvas_preview_path: "canvas_preview.png",
     canvas_preview_url:
       "/production-studio/files/996-ready/HUD_MODULES/main_task_panel/job-main-task-panel/canvas_preview.png",
   });
@@ -394,11 +414,23 @@ beforeEach(() => {
     ...mainTaskPanelResult,
     selected_candidate_id: "main_task_panel_candidate_2",
     accepted: true,
+    export_dir: "assets/uploads/996-ready/HUD_MODULES/main_task_panel/job-main-task-panel/components",
+    canvas_preview_path: "canvas_preview.png",
     canvas_preview_url:
       "/production-studio/files/996-ready/HUD_MODULES/main_task_panel/job-main-task-panel/canvas_preview.png",
+    component_file: "components/main_task_panel.png",
+    component_path:
+      "assets/uploads/996-ready/HUD_MODULES/main_task_panel/job-main-task-panel/components/main_task_panel.png",
     component_url:
       "/production-studio/files/996-ready/HUD_MODULES/main_task_panel/job-main-task-panel/components/main_task_panel.png",
+    manifest_path: "manifest.json",
+    manifest_file_path: "assets/uploads/996-ready/HUD_MODULES/main_task_panel/job-main-task-panel/manifest.json",
     manifest_url: "/production-studio/files/996-ready/HUD_MODULES/main_task_panel/job-main-task-panel/manifest.json",
+    component_record_path: "component_record.json",
+    component_record_file_path:
+      "assets/uploads/996-ready/HUD_MODULES/main_task_panel/job-main-task-panel/component_record.json",
+    component_record_url:
+      "/production-studio/files/996-ready/HUD_MODULES/main_task_panel/job-main-task-panel/component_record.json",
   });
   api.generateProductionStudioPackage.mockResolvedValue({
     style_code: "STYLE_0003",
@@ -462,9 +494,24 @@ test("主界面任务模块可生成候选、选择、预览到主画布并验�
 
   expect(api.generateMainTaskPanelCandidates).toHaveBeenCalled();
   expect(await screen.findByText("主界面左上任务追踪模块")).toBeInTheDocument();
+  expect(
+    screen.getByText(
+      "当前任务模块候选为程序绘制 mock，仅用于验证生成、选择、预览和入库流程；不是最终 AI 视觉图，不能直接用于 996 生产。",
+    ),
+  ).toBeInTheDocument();
+  expect(screen.getByText("当前生成类型：程序绘制 mock / 占位图")).toBeInTheDocument();
+  expect(screen.getByText("当前用途：工程闭环验证")).toBeInTheDocument();
+  expect(screen.getByText("是否可用于真实生产：否")).toBeInTheDocument();
+  expect(screen.getByText("production_ready=false")).toBeInTheDocument();
+  expect(screen.getByText("下一步：接入真实 AI 视觉生成后再验收美术质量")).toBeInTheDocument();
   expect(screen.getByText("1728×972")).toBeInTheDocument();
   expect(screen.getByText("x=24 y=40 w=286 h=330")).toBeInTheDocument();
   expect(screen.getByText("main_task_panel_candidate_2")).toBeInTheDocument();
+  expect(screen.getAllByText("module_id=main_task_panel")).toHaveLength(3);
+  expect(screen.getAllByText("尺寸：286×330")).toHaveLength(3);
+  expect(screen.getAllByText("目标位置：x=24 y=40")).toHaveLength(3);
+  expect(screen.getAllByText("主画布：1728×972")).toHaveLength(3);
+  expect(screen.getAllByText("生成类型：mock")).toHaveLength(3);
 
   await user.click(screen.getByRole("button", { name: "选择候选 2" }));
   expect(api.selectMainTaskPanelCandidate).toHaveBeenCalledWith(
@@ -486,7 +533,14 @@ test("主界面任务模块可生成候选、选择、预览到主画布并验�
     "assets/uploads/996-ready/HUD_MODULES/main_task_panel/job-main-task-panel",
   );
   expect(await screen.findByText("main_task_panel.png")).toBeInTheDocument();
+  expect(screen.getByText("导出目录")).toBeInTheDocument();
+  expect(screen.getByText("assets/uploads/996-ready/HUD_MODULES/main_task_panel/job-main-task-panel/components")).toBeInTheDocument();
+  expect(screen.getByText("components/main_task_panel.png")).toBeInTheDocument();
+  expect(screen.getByText("manifest.json")).toBeInTheDocument();
+  expect(screen.getByText("component_record.json")).toBeInTheDocument();
+  expect(screen.getByText("canvas_preview.png")).toBeInTheDocument();
   expect(screen.getByText("查看 main_task_panel manifest")).toBeInTheDocument();
+  expect(screen.getByText("查看 component_record.json")).toBeInTheDocument();
 });
 
 test("UI素材生产流程可生成、标记、确认、切图并预览输出", async () => {

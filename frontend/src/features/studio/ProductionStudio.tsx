@@ -1469,6 +1469,18 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
               </button>
             </div>
             {mainTaskPanel ? (
+              <div className="grid gap-2 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950">
+                <p>当前任务模块候选为程序绘制 mock，仅用于验证生成、选择、预览和入库流程；不是最终 AI 视觉图，不能直接用于 996 生产。</p>
+                <div className="grid gap-1 text-xs text-amber-900 sm:grid-cols-2">
+                  <span>当前生成类型：程序绘制 mock / 占位图</span>
+                  <span>当前用途：工程闭环验证</span>
+                  <span>是否可用于真实生产：否</span>
+                  <span>{`production_ready=${String(mainTaskPanel.production_ready)}`}</span>
+                  <span className="sm:col-span-2">下一步：接入真实 AI 视觉生成后再验收美术质量</span>
+                </div>
+              </div>
+            ) : null}
+            {mainTaskPanel ? (
               <div className="grid gap-3">
                 <div className="grid gap-2 md:grid-cols-3">
                   {mainTaskPanel.candidates.map((candidate, index) => (
@@ -1486,6 +1498,13 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
                         />
                       ) : null}
                       <div className="break-all text-xs font-medium">{candidate.candidate_id}</div>
+                      <dl className="grid gap-1 text-xs text-studio-muted">
+                        <div>module_id={candidate.module_id}</div>
+                        <div>{`尺寸：${candidate.width}×${candidate.height}`}</div>
+                        <div>{`目标位置：x=${candidate.target_x} y=${candidate.target_y}`}</div>
+                        <div>{`主画布：${candidate.canvas_width}×${candidate.canvas_height}`}</div>
+                        <div>{`生成类型：${candidate.generation_mode || mainTaskPanel.generation_mode || "mock"}`}</div>
+                      </dl>
                       <button
                         className="rounded-md border border-studio-line px-2 py-1 text-xs disabled:opacity-60"
                         disabled={mainTaskPanelLoading}
@@ -1523,18 +1542,52 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
                   />
                 ) : null}
                 {mainTaskPanel.component_url || mainTaskPanel.manifest_url ? (
-                  <div className="flex flex-wrap items-center gap-2 text-xs">
-                    {mainTaskPanel.component_url ? <span className="rounded-md bg-white px-2 py-1">main_task_panel.png</span> : null}
-                    {mainTaskPanel.manifest_url ? (
-                      <a
-                        className="rounded-md border border-studio-line bg-white px-2 py-1"
-                        href={api.getProductionStudioFileUrl(mainTaskPanel.manifest_url)}
-                        rel="noreferrer"
-                        target="_blank"
-                      >
-                        查看 main_task_panel manifest
-                      </a>
+                  <div className="grid gap-2 rounded-md border border-studio-line bg-white p-3 text-xs">
+                    {mainTaskPanel.export_dir ? (
+                      <div className="grid gap-1">
+                        <span className="font-semibold">导出目录</span>
+                        <span className="break-all">{mainTaskPanel.export_dir}</span>
+                      </div>
                     ) : null}
+                    <div className="flex flex-wrap items-center gap-2">
+                      {mainTaskPanel.component_file ? (
+                        <span className="rounded-md bg-slate-50 px-2 py-1">{mainTaskPanel.component_file}</span>
+                      ) : null}
+                      {mainTaskPanel.component_url ? (
+                        <span className="rounded-md bg-slate-50 px-2 py-1">main_task_panel.png</span>
+                      ) : null}
+                      {mainTaskPanel.manifest_path ? (
+                        <span className="rounded-md bg-slate-50 px-2 py-1">{mainTaskPanel.manifest_path}</span>
+                      ) : null}
+                      {mainTaskPanel.component_record_path ? (
+                        <span className="rounded-md bg-slate-50 px-2 py-1">{mainTaskPanel.component_record_path}</span>
+                      ) : null}
+                      {mainTaskPanel.canvas_preview_path ? (
+                        <span className="rounded-md bg-slate-50 px-2 py-1">{mainTaskPanel.canvas_preview_path}</span>
+                      ) : null}
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {mainTaskPanel.manifest_url ? (
+                        <a
+                          className="rounded-md border border-studio-line bg-white px-2 py-1"
+                          href={api.getProductionStudioFileUrl(mainTaskPanel.manifest_url)}
+                          rel="noreferrer"
+                          target="_blank"
+                        >
+                          查看 main_task_panel manifest
+                        </a>
+                      ) : null}
+                      {mainTaskPanel.component_record_url ? (
+                        <a
+                          className="rounded-md border border-studio-line bg-white px-2 py-1"
+                          href={api.getProductionStudioFileUrl(mainTaskPanel.component_record_url)}
+                          rel="noreferrer"
+                          target="_blank"
+                        >
+                          查看 component_record.json
+                        </a>
+                      ) : null}
+                    </div>
                   </div>
                 ) : null}
               </div>

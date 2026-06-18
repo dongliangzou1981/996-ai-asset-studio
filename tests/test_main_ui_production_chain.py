@@ -140,12 +140,19 @@ def test_main_task_panel_module_loop_generates_selects_previews_and_accepts(tmp_
     package = Path(result["package_dir"])
 
     assert result["module_id"] == "main_task_panel"
+    assert result["generation_mode"] == "mock"
+    assert result["production_ready"] is False
+    assert result["visual_quality_status"] == "not_started"
+    assert result["usage_note"] == "Engineering loop validation only; not a production-ready AI visual asset."
     assert len(result["candidates"]) == 3
     assert result["selected_candidate_id"] == ""
     assert result["accepted"] is False
 
     for candidate in result["candidates"]:
         assert candidate["module_id"] == "main_task_panel"
+        assert candidate["generation_mode"] == "mock"
+        assert candidate["production_ready"] is False
+        assert candidate["visual_quality_status"] == "not_started"
         assert candidate["width"] == 286
         assert candidate["height"] == 330
         assert candidate["target_x"] == 24
@@ -175,6 +182,7 @@ def test_main_task_panel_module_loop_generates_selects_previews_and_accepts(tmp_
 
     assert accepted["accepted"] is True
     assert accepted["component_file"] == "components/main_task_panel.png"
+    assert accepted["export_dir"].endswith("components")
     assert component_path.exists()
     with Image.open(component_path) as image:
         assert image.size == (286, 330)
@@ -182,5 +190,11 @@ def test_main_task_panel_module_loop_generates_selects_previews_and_accepts(tmp_
     assert manifest["components"][0]["module_id"] == "main_task_panel"
     assert manifest["components"][0]["file"] == "components/main_task_panel.png"
     assert manifest["components"][0]["bounds"] == {"x": 24, "y": 40, "width": 286, "height": 330}
+    assert manifest["generation_mode"] == "mock"
+    assert manifest["production_ready"] is False
+    assert manifest["visual_quality_status"] == "not_started"
     assert component_record["module_id"] == "main_task_panel"
     assert component_record["selected_candidate_id"] == "main_task_panel_candidate_2"
+    assert component_record["generation_mode"] == "mock"
+    assert component_record["production_ready"] is False
+    assert component_record["usage_note"] == "Engineering loop validation only; not a production-ready AI visual asset."

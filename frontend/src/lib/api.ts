@@ -354,6 +354,10 @@ export type MainTaskPanelCandidate = {
   canvas_width: number;
   canvas_height: number;
   fixed_rect: { x: number; y: number; width: number; height: number };
+  generation_mode?: "mock" | string;
+  production_ready?: boolean;
+  visual_quality_status?: string;
+  usage_note?: string;
   prompt: string;
   image_path: string;
   preview_path: string;
@@ -376,17 +380,26 @@ export type MainTaskPanelResult = {
   max_width: number;
   transparent_required: boolean;
   text_allowed: boolean;
+  generation_mode?: "mock" | string;
+  production_ready?: boolean;
+  visual_quality_status?: string;
+  usage_note?: string;
   prompt: string;
   candidates: MainTaskPanelCandidate[];
   selected_candidate_id: string;
   accepted: boolean;
   canvas_preview_path?: string;
+  canvas_preview_file_path?: string;
   canvas_preview_url?: string;
   component_file?: string;
+  component_path?: string;
   component_url?: string;
+  export_dir?: string;
   manifest_path?: string;
+  manifest_file_path?: string;
   manifest_url?: string;
   component_record_path?: string;
+  component_record_file_path?: string;
   component_record_url?: string;
 };
 

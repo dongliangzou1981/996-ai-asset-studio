@@ -90,11 +90,17 @@ def test_main_task_panel_module_api_loop(tmp_path: Path) -> None:
     assert generated.status_code == 200
     body = generated.json()
     assert body["module_id"] == "main_task_panel"
+    assert body["generation_mode"] == "mock"
+    assert body["production_ready"] is False
+    assert body["visual_quality_status"] == "not_started"
+    assert body["usage_note"] == "Engineering loop validation only; not a production-ready AI visual asset."
     assert body["accepted"] is False
     assert len(body["candidates"]) == 3
     first = body["candidates"][0]
     assert first["candidate_id"] == "main_task_panel_candidate_1"
     assert first["module_id"] == "main_task_panel"
+    assert first["generation_mode"] == "mock"
+    assert first["production_ready"] is False
     assert first["width"] == 286
     assert first["height"] == 330
     assert first["target_x"] == 24
@@ -121,11 +127,18 @@ def test_main_task_panel_module_api_loop(tmp_path: Path) -> None:
     assert accepted.status_code == 200
     accepted_body = accepted.json()
     assert accepted_body["accepted"] is True
+    assert accepted_body["export_dir"].endswith("components")
+    assert accepted_body["component_path"].endswith("components/main_task_panel.png")
+    assert accepted_body["component_record_path"] == "component_record.json"
+    assert accepted_body["component_record_url"].endswith("/component_record.json")
+    assert accepted_body["canvas_preview_path"] == "canvas_preview.png"
     assert accepted_body["component_url"].endswith("/components/main_task_panel.png")
     assert accepted_body["manifest_url"].endswith("/manifest.json")
     manifest = json.loads((Path(package_dir) / "manifest.json").read_text(encoding="utf-8"))
     assert manifest["components"][0]["module_id"] == "main_task_panel"
     assert manifest["components"][0]["bounds"] == {"x": 24, "y": 40, "width": 286, "height": 330}
+    assert manifest["generation_mode"] == "mock"
+    assert manifest["production_ready"] is False
 
 
 def test_main_ui_endpoint_rejects_outside_package_path(tmp_path: Path) -> None:

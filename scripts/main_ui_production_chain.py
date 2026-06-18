@@ -87,6 +87,13 @@ MAIN_TASK_PANEL_PROMPT = """生成一个 996 传奇手游横屏主界面左上�
 风格：
 暗金、金属、复古传奇、手游 HUD、边界清晰、适合叠加在游戏画面上。"""
 
+MAIN_TASK_PANEL_PRODUCTION_STATUS: dict[str, Any] = {
+    "generation_mode": "mock",
+    "production_ready": False,
+    "visual_quality_status": "not_started",
+    "usage_note": "Engineering loop validation only; not a production-ready AI visual asset.",
+}
+
 
 def utc_now() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
@@ -940,6 +947,10 @@ def main_task_panel_canvas() -> dict[str, int]:
     return {"width": int(canvas["width"]), "height": int(canvas["height"])}
 
 
+def main_task_panel_production_status() -> dict[str, Any]:
+    return dict(MAIN_TASK_PANEL_PRODUCTION_STATUS)
+
+
 def draw_main_task_panel_placeholder(target: Path, variant_index: int) -> None:
     rect = main_task_panel_rect()
     width = rect["width"]
@@ -1027,6 +1038,7 @@ def main_task_panel_candidate_record(candidate_id: str, image_path: str, variant
         "preview_path": image_path,
         "selected": False,
         "accepted": False,
+        **main_task_panel_production_status(),
         "variant_index": variant_index,
         "transparent_required": bool(MAIN_TASK_PANEL_SPEC["transparent_required"]),
         "text_allowed": bool(MAIN_TASK_PANEL_SPEC["text_allowed"]),
@@ -1043,10 +1055,16 @@ def main_task_panel_package_response(package_dir: str | Path) -> dict[str, Any]:
     delivery = read_json(delivery_path) if delivery_path.exists() else {}
     candidates = [item for item in candidate_manifest.get("candidates", []) if isinstance(item, dict)]
     selected_candidate_id = str(delivery.get("selected_candidate_id") or "")
+    canvas_preview_path = str(delivery.get("canvas_preview_path") or "")
+    component_file = str(delivery.get("component_file") or "")
+    manifest_path = "manifest.json" if (package_path / "manifest.json").exists() else ""
+    component_record_path = "component_record.json" if (package_path / "component_record.json").exists() else ""
+    export_dir = package_path / "components"
     return {
         "package_dir": str(package_path),
         "module_id": MAIN_TASK_PANEL_SPEC["module_id"],
         "name": MAIN_TASK_PANEL_SPEC["name"],
+        **main_task_panel_production_status(),
         "canvas": main_task_panel_canvas(),
         "fixed_rect": main_task_panel_rect(),
         "max_width": MAIN_TASK_PANEL_SPEC["max_width"],
@@ -1058,10 +1076,17 @@ def main_task_panel_package_response(package_dir: str | Path) -> dict[str, Any]:
         "candidates": candidates,
         "selected_candidate_id": selected_candidate_id,
         "accepted": bool(delivery.get("accepted", False)),
-        "canvas_preview_path": str(delivery.get("canvas_preview_path") or ""),
-        "component_file": str(delivery.get("component_file") or ""),
-        "manifest_path": "manifest.json" if (package_path / "manifest.json").exists() else "",
-        "component_record_path": "component_record.json" if (package_path / "component_record.json").exists() else "",
+        "export_dir": export_dir.as_posix() if export_dir.exists() else "",
+        "canvas_preview_path": canvas_preview_path,
+        "canvas_preview_file_path": (package_path / canvas_preview_path).as_posix()
+        if canvas_preview_path and (package_path / canvas_preview_path).exists()
+        else "",
+        "component_file": component_file,
+        "component_path": (package_path / component_file).as_posix() if component_file and (package_path / component_file).exists() else "",
+        "manifest_path": manifest_path,
+        "manifest_file_path": (package_path / manifest_path).as_posix() if manifest_path else "",
+        "component_record_path": component_record_path,
+        "component_record_file_path": (package_path / component_record_path).as_posix() if component_record_path else "",
         "updated_at": str(delivery.get("updated_at") or ""),
     }
 
@@ -1091,6 +1116,7 @@ def create_main_task_panel_package(upload_root: str | Path, *, job_id: str | Non
             "canvas": main_task_panel_canvas(),
             "fixed_rect": main_task_panel_rect(),
             "prompt": MAIN_TASK_PANEL_PROMPT,
+            **main_task_panel_production_status(),
             "candidates": candidates,
             "created_at": generated_at,
             "updated_at": generated_at,
@@ -1102,6 +1128,7 @@ def create_main_task_panel_package(upload_root: str | Path, *, job_id: str | Non
             "schema_version": "1.0",
             "workflow": "main_task_panel_hud_module_loop",
             "module_id": MAIN_TASK_PANEL_SPEC["module_id"],
+            **main_task_panel_production_status(),
             "selected_candidate_id": "",
             "canvas_preview_path": "",
             "component_file": "",
@@ -1117,6 +1144,7 @@ def create_main_task_panel_package(upload_root: str | Path, *, job_id: str | Non
             "package_type": "996-hud-module",
             "module_id": MAIN_TASK_PANEL_SPEC["module_id"],
             "name": MAIN_TASK_PANEL_SPEC["name"],
+            **main_task_panel_production_status(),
             "canvas": main_task_panel_canvas(),
             "components": [],
             "created_at": generated_at,
@@ -1222,6 +1250,7 @@ def accept_main_task_panel_candidate(package_dir: str | Path) -> dict[str, Any]:
         "transparent_required": True,
         "prompt": MAIN_TASK_PANEL_PROMPT,
         "accepted": True,
+        **main_task_panel_production_status(),
         "updated_at": generated_at,
     }
     write_json(package_path / "component_record.json", component_record)
@@ -1232,6 +1261,7 @@ def accept_main_task_panel_candidate(package_dir: str | Path) -> dict[str, Any]:
             "package_type": "996-hud-module",
             "module_id": MAIN_TASK_PANEL_SPEC["module_id"],
             "name": MAIN_TASK_PANEL_SPEC["name"],
+            **main_task_panel_production_status(),
             "canvas": canvas,
             "fixed_rect": rect,
             "components": [
@@ -1248,6 +1278,7 @@ def accept_main_task_panel_candidate(package_dir: str | Path) -> dict[str, Any]:
                     "canvas_width": canvas["width"],
                     "canvas_height": canvas["height"],
                     "transparent_png_required": True,
+                    **main_task_panel_production_status(),
                     "source_candidate_id": candidate["candidate_id"],
                 }
             ],
