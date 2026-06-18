@@ -90,7 +90,10 @@ def test_main_task_panel_module_api_loop(tmp_path: Path) -> None:
     assert generated.status_code == 200
     body = generated.json()
     assert body["module_id"] == "main_task_panel"
+    assert body["requested_generation_mode"] == "mock"
     assert body["generation_mode"] == "mock"
+    assert body["fallback_used"] is False
+    assert body["fallback_reason"] == ""
     assert body["production_ready"] is False
     assert body["visual_quality_status"] == "not_started"
     assert body["usage_note"] == "Engineering loop validation only; not a production-ready AI visual asset."
@@ -139,6 +142,46 @@ def test_main_task_panel_module_api_loop(tmp_path: Path) -> None:
     assert manifest["components"][0]["bounds"] == {"x": 24, "y": 40, "width": 286, "height": 330}
     assert manifest["generation_mode"] == "mock"
     assert manifest["production_ready"] is False
+
+
+def test_main_task_panel_api_accepts_ai_generation_mode(tmp_path: Path, monkeypatch) -> None:
+    def fake_ai_generator(target: Path, index: int, context: dict) -> dict:  # type: ignore[type-arg]
+        Image.new("RGBA", (512, 512), (index * 50, 20, 90, 180)).save(target)
+        return {"generation_provider": "fake-provider", "generation_job_id": f"job-ai-{index}"}
+
+    monkeypatch.setattr(main_module, "main_task_panel_ai_candidate_generator", fake_ai_generator)
+    client = make_client(tmp_path)
+
+    response = client.post("/production-studio/hud-modules/main-task-panel/generate", json={"generation_mode": "ai"})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["requested_generation_mode"] == "ai"
+    assert body["generation_mode"] == "ai"
+    assert body["generation_provider"] == "fake-provider"
+    assert body["fallback_used"] is False
+    assert body["visual_quality_status"] == "pending_review"
+    assert len(body["candidates"]) == 3
+    assert all(candidate["generation_mode"] == "ai" for candidate in body["candidates"])
+
+
+def test_main_task_panel_api_falls_back_to_mock_when_ai_generation_fails(tmp_path: Path, monkeypatch) -> None:
+    def failing_ai_generator(target: Path, index: int, context: dict) -> dict:  # type: ignore[type-arg]
+        raise RuntimeError("provider unavailable")
+
+    monkeypatch.setattr(main_module, "main_task_panel_ai_candidate_generator", failing_ai_generator)
+    client = make_client(tmp_path)
+
+    response = client.post("/production-studio/hud-modules/main-task-panel/generate", json={"generation_mode": "ai"})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["requested_generation_mode"] == "ai"
+    assert body["generation_mode"] == "mock"
+    assert body["fallback_used"] is True
+    assert "provider unavailable" in body["fallback_reason"]
+    assert len(body["candidates"]) == 3
+    assert all(candidate["generation_mode"] == "mock" for candidate in body["candidates"])
 
 
 def test_main_ui_endpoint_rejects_outside_package_path(tmp_path: Path) -> None:

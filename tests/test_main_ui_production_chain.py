@@ -140,7 +140,10 @@ def test_main_task_panel_module_loop_generates_selects_previews_and_accepts(tmp_
     package = Path(result["package_dir"])
 
     assert result["module_id"] == "main_task_panel"
+    assert result["requested_generation_mode"] == "mock"
     assert result["generation_mode"] == "mock"
+    assert result["fallback_used"] is False
+    assert result["fallback_reason"] == ""
     assert result["production_ready"] is False
     assert result["visual_quality_status"] == "not_started"
     assert result["usage_note"] == "Engineering loop validation only; not a production-ready AI visual asset."
@@ -198,3 +201,59 @@ def test_main_task_panel_module_loop_generates_selects_previews_and_accepts(tmp_
     assert component_record["generation_mode"] == "mock"
     assert component_record["production_ready"] is False
     assert component_record["usage_note"] == "Engineering loop validation only; not a production-ready AI visual asset."
+
+
+def test_main_task_panel_ai_mode_uses_injected_generator(tmp_path: Path) -> None:
+    calls: list[dict[str, object]] = []
+
+    def fake_ai_generator(target: Path, index: int, context: dict[str, object]) -> dict[str, object]:
+        calls.append({"target": target, "index": index, "context": context})
+        Image.new("RGBA", (512, 512), (index * 40, 30, 80, 180)).save(target)
+        return {"generation_provider": "fake-provider", "generation_job_id": f"job-ai-{index}"}
+
+    result = chain.create_main_task_panel_package(
+        tmp_path / "uploads",
+        job_id="job-ai-main-task-panel",
+        generation_mode="ai",
+        ai_candidate_generator=fake_ai_generator,
+    )
+    package = Path(result["package_dir"])
+
+    assert len(calls) == 3
+    assert result["requested_generation_mode"] == "ai"
+    assert result["generation_mode"] == "ai"
+    assert result["generation_provider"] == "fake-provider"
+    assert result["production_ready"] is False
+    assert result["visual_quality_status"] == "pending_review"
+    assert result["fallback_used"] is False
+    assert result["fallback_reason"] == ""
+    for candidate in result["candidates"]:
+        assert candidate["generation_mode"] == "ai"
+        assert candidate["requested_generation_mode"] == "ai"
+        assert candidate["generation_provider"] == "fake-provider"
+        assert candidate["fallback_used"] is False
+        with Image.open(package / candidate["image_path"]) as image:
+            assert image.size == (286, 330)
+            assert image.mode == "RGBA"
+
+
+def test_main_task_panel_ai_mode_falls_back_to_mock_when_generator_fails(tmp_path: Path) -> None:
+    def failing_ai_generator(target: Path, index: int, context: dict[str, object]) -> dict[str, object]:
+        raise RuntimeError("provider unavailable")
+
+    result = chain.create_main_task_panel_package(
+        tmp_path / "uploads",
+        job_id="job-ai-fallback-main-task-panel",
+        generation_mode="ai",
+        ai_candidate_generator=failing_ai_generator,
+    )
+
+    assert result["requested_generation_mode"] == "ai"
+    assert result["generation_mode"] == "mock"
+    assert result["fallback_used"] is True
+    assert "provider unavailable" in result["fallback_reason"]
+    assert result["visual_quality_status"] == "not_started"
+    assert len(result["candidates"]) == 3
+    assert all(candidate["generation_mode"] == "mock" for candidate in result["candidates"])
+    assert all(candidate["requested_generation_mode"] == "ai" for candidate in result["candidates"])
+    assert all(candidate["fallback_used"] is True for candidate in result["candidates"])

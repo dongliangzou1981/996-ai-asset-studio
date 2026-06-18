@@ -3,12 +3,14 @@ import json
 import os
 import re
 import shutil
+from typing import Any
 
 from fastapi import FastAPI, File, Form, HTTPException, Response, UploadFile, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
+from PIL import Image
 
 from app.component_processing import process_ui_preview_components
 from app.db import StudioDatabase
@@ -60,6 +62,13 @@ from scripts.main_ui_production_chain import select_candidate_option
 from scripts.main_ui_production_chain import select_main_task_panel_candidate
 from scripts.main_ui_production_chain import update_candidate_confirmation
 from scripts.opencv_ui_slicer import slice_ui_image as run_opencv_ui_slicer
+
+
+def main_task_panel_ai_candidate_generator(target: Path, index: int, context: dict[str, Any]) -> dict[str, Any]:
+    raise RuntimeError("AI generation provider is not configured for main_task_panel")
+
+
+DEFAULT_MAIN_TASK_PANEL_AI_CANDIDATE_GENERATOR = main_task_panel_ai_candidate_generator
 
 
 def default_database_path() -> Path:
@@ -839,6 +848,65 @@ def create_app(database_path: str | Path | None = None, upload_dir: str | Path |
             else "",
         }
 
+    def app_main_task_panel_ai_candidate_generator(target: Path, index: int, context: dict[str, Any]) -> dict[str, Any]:
+        providers = [
+            provider
+            for provider in database.list_ai_providers()
+            if provider.enabled and provider.type in {"openai", "ofox"}
+        ]
+        if not providers:
+            raise RuntimeError("No enabled AI image provider is configured for main_task_panel")
+        provider = providers[0]
+        target.parent.mkdir(parents=True, exist_ok=True)
+        prompt = str(context.get("prompt") or "")
+        width = int(context.get("width") or 286)
+        height = int(context.get("height") or 330)
+        job = database.create_generation_job(
+            GenerationJobCreate(
+                project_id=None,
+                provider_id=provider.id,
+                job_type="real_ui_generation",
+                status="pending",
+                progress=0,
+                input_json=json.dumps(
+                    {
+                        "prompt": prompt,
+                        "width": width,
+                        "height": height,
+                        "device_type": "mobile_landscape",
+                        "asset_mode": "resource_production",
+                        "screen_type": "main_task_panel",
+                        "module_id": "main_task_panel",
+                        "candidate_id": str(context.get("candidate_id") or f"main_task_panel_candidate_{index}"),
+                        "transparent_requested": True,
+                        "forbidden_elements": context.get("forbidden_elements") or [],
+                        "negative_prompt": context.get("negative_prompt") or "",
+                    },
+                    ensure_ascii=False,
+                ),
+                output_json="",
+                output_preview_path="",
+                error_message="",
+                logs="main_task_panel AI candidate queued",
+                auto_run=False,
+            )
+        )
+        completed = JobRunnerService(database, upload_root).run(job.id)
+        if completed is None:
+            raise RuntimeError("AI generation job could not be loaded")
+        if completed.status != "completed":
+            raise RuntimeError(completed.error_message or "AI generation job failed")
+        output_preview_path = Path(completed.output_preview_path)
+        if not output_preview_path.exists():
+            raise RuntimeError("AI generation job did not produce an output preview")
+        with Image.open(output_preview_path) as image:
+            image.convert("RGBA").save(target, "PNG")
+        return {
+            "generation_provider": provider.name,
+            "generation_provider_type": provider.type,
+            "generation_job_id": completed.id,
+        }
+
     def opencv_source_image(package_dir: Path) -> Path:
         for filename in ["main_ui.jpg", "main_ui.png", "ui_preview.png", "original.jpg", "original.png", "candidate_preview.jpg"]:
             candidate = package_dir / filename
@@ -964,9 +1032,19 @@ def create_app(database_path: str | Path | None = None, upload_dir: str | Path |
         return response
 
     @app.post("/production-studio/hud-modules/main-task-panel/generate")
-    def generate_main_task_panel_candidates() -> dict:
+    def generate_main_task_panel_candidates(payload: dict[str, Any] | None = None) -> dict:
+        generation_mode = str((payload or {}).get("generation_mode") or "mock")
+        ai_generator = (
+            main_task_panel_ai_candidate_generator
+            if main_task_panel_ai_candidate_generator is not DEFAULT_MAIN_TASK_PANEL_AI_CANDIDATE_GENERATOR
+            else app_main_task_panel_ai_candidate_generator
+        )
         try:
-            result = create_main_task_panel_package(upload_root=upload_root)
+            result = create_main_task_panel_package(
+                upload_root=upload_root,
+                generation_mode=generation_mode,
+                ai_candidate_generator=ai_generator if generation_mode.strip().lower() == "ai" else None,
+            )
         except (FileNotFoundError, RuntimeError, ValueError, OSError) as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         package_path = resolve_production_package_dir(str(result["package_dir"]))

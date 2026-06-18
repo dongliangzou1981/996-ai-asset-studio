@@ -185,9 +185,13 @@ const mainTaskPanelResult = {
   package_dir: "assets/uploads/996-ready/HUD_MODULES/main_task_panel/job-main-task-panel",
   module_id: "main_task_panel",
   name: "主界面左上任务追踪模块",
+  requested_generation_mode: "mock",
   generation_mode: "mock",
+  generation_provider: "",
   production_ready: false,
   visual_quality_status: "not_started",
+  fallback_used: false,
+  fallback_reason: "",
   usage_note: "Engineering loop validation only; not a production-ready AI visual asset.",
   selected_candidate_id: "",
   accepted: false,
@@ -197,9 +201,12 @@ const mainTaskPanelResult = {
     {
       candidate_id: "main_task_panel_candidate_1",
       module_id: "main_task_panel",
+      requested_generation_mode: "mock",
       generation_mode: "mock",
+      generation_provider: "",
       production_ready: false,
       visual_quality_status: "not_started",
+      fallback_used: false,
       width: 286,
       height: 330,
       target_x: 24,
@@ -215,9 +222,12 @@ const mainTaskPanelResult = {
     {
       candidate_id: "main_task_panel_candidate_2",
       module_id: "main_task_panel",
+      requested_generation_mode: "mock",
       generation_mode: "mock",
+      generation_provider: "",
       production_ready: false,
       visual_quality_status: "not_started",
+      fallback_used: false,
       width: 286,
       height: 330,
       target_x: 24,
@@ -233,9 +243,12 @@ const mainTaskPanelResult = {
     {
       candidate_id: "main_task_panel_candidate_3",
       module_id: "main_task_panel",
+      requested_generation_mode: "mock",
       generation_mode: "mock",
+      generation_provider: "",
       production_ready: false,
       visual_quality_status: "not_started",
+      fallback_used: false,
       width: 286,
       height: 330,
       target_x: 24,
@@ -490,9 +503,9 @@ test("主界面任务模块可生成候选、选择、预览到主画布并验�
   render(<ProductionStudio api={api} />);
 
   expect(await screen.findByText("UI素材生产")).toBeInTheDocument();
-  await user.click(screen.getByRole("button", { name: "生成任务模块候选" }));
+  await user.click(screen.getByRole("button", { name: "生成 mock 候选" }));
 
-  expect(api.generateMainTaskPanelCandidates).toHaveBeenCalled();
+  expect(api.generateMainTaskPanelCandidates).toHaveBeenCalledWith("mock");
   expect(await screen.findByText("主界面左上任务追踪模块")).toBeInTheDocument();
   expect(
     screen.getByText(
@@ -502,6 +515,10 @@ test("主界面任务模块可生成候选、选择、预览到主画布并验�
   expect(screen.getByText("当前生成类型：程序绘制 mock / 占位图")).toBeInTheDocument();
   expect(screen.getByText("当前用途：工程闭环验证")).toBeInTheDocument();
   expect(screen.getByText("是否可用于真实生产：否")).toBeInTheDocument();
+  expect(screen.getByText("requested_generation_mode=mock")).toBeInTheDocument();
+  expect(screen.getByText("generation_mode=mock")).toBeInTheDocument();
+  expect(screen.getByText("fallback_used=false")).toBeInTheDocument();
+  expect(screen.getByText("visual_quality_status=not_started")).toBeInTheDocument();
   expect(screen.getByText("production_ready=false")).toBeInTheDocument();
   expect(screen.getByText("下一步：接入真实 AI 视觉生成后再验收美术质量")).toBeInTheDocument();
   expect(screen.getByText("1728×972")).toBeInTheDocument();
@@ -541,6 +558,71 @@ test("主界面任务模块可生成候选、选择、预览到主画布并验�
   expect(screen.getByText("canvas_preview.png")).toBeInTheDocument();
   expect(screen.getByText("查看 main_task_panel manifest")).toBeInTheDocument();
   expect(screen.getByText("查看 component_record.json")).toBeInTheDocument();
+});
+
+test("主界面任务模块可请求 AI 候选并显示待验收状态", async () => {
+  const user = userEvent.setup();
+  api.generateMainTaskPanelCandidates.mockResolvedValueOnce({
+    ...mainTaskPanelResult,
+    requested_generation_mode: "ai",
+    generation_mode: "ai",
+    generation_provider: "Ofox UI Default",
+    visual_quality_status: "pending_review",
+    fallback_used: false,
+    candidates: mainTaskPanelResult.candidates.map((candidate) => ({
+      ...candidate,
+      requested_generation_mode: "ai",
+      generation_mode: "ai",
+      generation_provider: "Ofox UI Default",
+      visual_quality_status: "pending_review",
+      fallback_used: false,
+    })),
+  });
+  render(<ProductionStudio api={api} />);
+
+  expect(await screen.findByText("UI素材生产")).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "生成 AI 候选" }));
+
+  expect(api.generateMainTaskPanelCandidates).toHaveBeenCalledWith("ai");
+  expect(await screen.findByText("AI 候选需人工验收美术质量；当前仅表示生成链路可用，不代表可直接生产。")).toBeInTheDocument();
+  expect(screen.getByText("当前为 AI 候选，需人工确认美术质量（production_ready=false）。")).toBeInTheDocument();
+  expect(screen.getByText("requested_generation_mode=ai")).toBeInTheDocument();
+  expect(screen.getByText("generation_mode=ai")).toBeInTheDocument();
+  expect(screen.getByText("generation_provider=Ofox UI Default")).toBeInTheDocument();
+  expect(screen.getByText("fallback_used=false")).toBeInTheDocument();
+  expect(screen.getByText("visual_quality_status=pending_review")).toBeInTheDocument();
+  expect(screen.getAllByText("生成类型：ai")).toHaveLength(3);
+});
+
+test("主界面任务模块 AI 生成失败时显示 fallback 状态", async () => {
+  const user = userEvent.setup();
+  api.generateMainTaskPanelCandidates.mockResolvedValueOnce({
+    ...mainTaskPanelResult,
+    requested_generation_mode: "ai",
+    generation_mode: "mock",
+    generation_provider: "Ofox UI Default",
+    fallback_used: true,
+    fallback_reason: "AI generation failed: provider unavailable",
+    candidates: mainTaskPanelResult.candidates.map((candidate) => ({
+      ...candidate,
+      requested_generation_mode: "ai",
+      generation_mode: "mock",
+      generation_provider: "Ofox UI Default",
+      fallback_used: true,
+      fallback_reason: "AI generation failed: provider unavailable",
+    })),
+  });
+  render(<ProductionStudio api={api} />);
+
+  expect(await screen.findByText("UI素材生产")).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "生成 AI 候选" }));
+
+  expect(api.generateMainTaskPanelCandidates).toHaveBeenCalledWith("ai");
+  expect(await screen.findByText("AI 生成失败，已回退到 mock 候选。")).toBeInTheDocument();
+  expect(screen.getByText("fallback_used=true")).toBeInTheDocument();
+  expect(screen.getByText("fallback_reason=AI generation failed: provider unavailable")).toBeInTheDocument();
+  expect(screen.getByText("requested_generation_mode=ai")).toBeInTheDocument();
+  expect(screen.getByText("generation_mode=mock")).toBeInTheDocument();
 });
 
 test("UI素材生产流程可生成、标记、确认、切图并预览输出", async () => {

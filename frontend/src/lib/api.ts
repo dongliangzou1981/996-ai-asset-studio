@@ -354,10 +354,17 @@ export type MainTaskPanelCandidate = {
   canvas_width: number;
   canvas_height: number;
   fixed_rect: { x: number; y: number; width: number; height: number };
+  requested_generation_mode?: "mock" | "ai" | string;
   generation_mode?: "mock" | string;
+  generation_provider?: string;
+  generation_job_id?: string;
   production_ready?: boolean;
   visual_quality_status?: string;
+  fallback_used?: boolean;
+  fallback_reason?: string;
   usage_note?: string;
+  transparent_requested?: boolean;
+  transparent_guaranteed?: boolean;
   prompt: string;
   image_path: string;
   preview_path: string;
@@ -380,10 +387,17 @@ export type MainTaskPanelResult = {
   max_width: number;
   transparent_required: boolean;
   text_allowed: boolean;
+  requested_generation_mode?: "mock" | "ai" | string;
   generation_mode?: "mock" | string;
+  generation_provider?: string;
+  generation_job_id?: string;
   production_ready?: boolean;
   visual_quality_status?: string;
+  fallback_used?: boolean;
+  fallback_reason?: string;
   usage_note?: string;
+  transparent_requested?: boolean;
+  transparent_guaranteed?: boolean;
   prompt: string;
   candidates: MainTaskPanelCandidate[];
   selected_candidate_id: string;
@@ -660,8 +674,11 @@ export const studioApi = {
   runMainUiProduction() {
     return request<MainUiProductionResult>("/production-studio/main-ui-production/run", { method: "POST" });
   },
-  generateMainTaskPanelCandidates() {
-    return request<MainTaskPanelResult>("/production-studio/hud-modules/main-task-panel/generate", { method: "POST" });
+  generateMainTaskPanelCandidates(generationMode: "mock" | "ai" = "mock") {
+    return request<MainTaskPanelResult>("/production-studio/hud-modules/main-task-panel/generate", {
+      method: "POST",
+      body: JSON.stringify({ generation_mode: generationMode }),
+    });
   },
   selectMainTaskPanelCandidate(packageDir: string, candidateId: string) {
     return request<MainTaskPanelResult>(

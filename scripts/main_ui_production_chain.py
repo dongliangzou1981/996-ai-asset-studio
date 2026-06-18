@@ -6,9 +6,9 @@ import shutil
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
-from PIL import Image, ImageDraw, ImageEnhance, ImageFont
+from PIL import Image, ImageDraw, ImageEnhance, ImageFont, ImageOps
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
@@ -88,11 +88,22 @@ MAIN_TASK_PANEL_PROMPT = """生成一个 996 传奇手游横屏主界面左上�
 暗金、金属、复古传奇、手游 HUD、边界清晰、适合叠加在游戏画面上。"""
 
 MAIN_TASK_PANEL_PRODUCTION_STATUS: dict[str, Any] = {
+    "requested_generation_mode": "mock",
     "generation_mode": "mock",
+    "generation_provider": "",
+    "generation_job_id": "",
     "production_ready": False,
     "visual_quality_status": "not_started",
+    "fallback_used": False,
+    "fallback_reason": "",
     "usage_note": "Engineering loop validation only; not a production-ready AI visual asset.",
+    "transparent_requested": True,
+    "transparent_guaranteed": False,
 }
+
+MAIN_TASK_PANEL_STATUS_KEYS = tuple(MAIN_TASK_PANEL_PRODUCTION_STATUS.keys())
+MAIN_TASK_PANEL_GENERATION_MODES = {"mock", "ai"}
+MainTaskPanelAiCandidateGenerator = Callable[[Path, int, dict[str, Any]], dict[str, Any] | None]
 
 
 def utc_now() -> str:
@@ -947,8 +958,75 @@ def main_task_panel_canvas() -> dict[str, int]:
     return {"width": int(canvas["width"]), "height": int(canvas["height"])}
 
 
-def main_task_panel_production_status() -> dict[str, Any]:
-    return dict(MAIN_TASK_PANEL_PRODUCTION_STATUS)
+def main_task_panel_production_status(
+    *,
+    generation_mode: str = "mock",
+    requested_generation_mode: str | None = None,
+    generation_provider: str = "",
+    generation_job_id: str = "",
+    production_ready: bool = False,
+    visual_quality_status: str | None = None,
+    fallback_used: bool = False,
+    fallback_reason: str = "",
+) -> dict[str, Any]:
+    mode = generation_mode.strip().lower() or "mock"
+    requested_mode = (requested_generation_mode or mode).strip().lower() or mode
+    return {
+        **MAIN_TASK_PANEL_PRODUCTION_STATUS,
+        "requested_generation_mode": requested_mode,
+        "generation_mode": mode,
+        "generation_provider": generation_provider,
+        "generation_job_id": generation_job_id,
+        "production_ready": production_ready,
+        "visual_quality_status": visual_quality_status or ("pending_review" if mode == "ai" and not fallback_used else "not_started"),
+        "fallback_used": fallback_used,
+        "fallback_reason": fallback_reason,
+    }
+
+
+def main_task_panel_status_from_sources(*sources: dict[str, Any]) -> dict[str, Any]:
+    status = main_task_panel_production_status()
+    for source in sources:
+        for key in MAIN_TASK_PANEL_STATUS_KEYS:
+            if key in source:
+                status[key] = source[key]
+    return status
+
+
+def main_task_panel_ai_context(candidate_id: str, variant_index: int) -> dict[str, Any]:
+    rect = main_task_panel_rect()
+    canvas = main_task_panel_canvas()
+    return {
+        "candidate_id": candidate_id,
+        "variant_index": variant_index,
+        "module_id": MAIN_TASK_PANEL_SPEC["module_id"],
+        "name": MAIN_TASK_PANEL_SPEC["name"],
+        "prompt": MAIN_TASK_PANEL_PROMPT,
+        "prompt_template": MAIN_TASK_PANEL_PROMPT,
+        "width": rect["width"],
+        "height": rect["height"],
+        "canvas_width": canvas["width"],
+        "canvas_height": canvas["height"],
+        "fixed_rect": rect,
+        "transparent_required": bool(MAIN_TASK_PANEL_SPEC["transparent_required"]),
+        "transparent_requested": True,
+        "text_allowed": bool(MAIN_TASK_PANEL_SPEC["text_allowed"]),
+        "forbidden_elements": list(MAIN_TASK_PANEL_SPEC["forbidden_elements"]),
+        "negative_prompt": ", ".join(MAIN_TASK_PANEL_SPEC["forbidden_elements"]),
+        "internal_structure": list(MAIN_TASK_PANEL_SPEC["internal_structure"]),
+    }
+
+
+def normalize_main_task_panel_candidate_image(path: Path) -> None:
+    rect = main_task_panel_rect()
+    with Image.open(path) as image:
+        normalized = ImageOps.fit(
+            image.convert("RGBA"),
+            (rect["width"], rect["height"]),
+            method=Image.Resampling.LANCZOS,
+            centering=(0.5, 0.5),
+        )
+        normalized.save(path, "PNG")
 
 
 def draw_main_task_panel_placeholder(target: Path, variant_index: int) -> None:
@@ -1019,9 +1097,16 @@ def draw_main_task_panel_placeholder(target: Path, variant_index: int) -> None:
     image.save(target, "PNG")
 
 
-def main_task_panel_candidate_record(candidate_id: str, image_path: str, variant_index: int) -> dict[str, Any]:
+def main_task_panel_candidate_record(
+    candidate_id: str,
+    image_path: str,
+    variant_index: int,
+    *,
+    status: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     rect = main_task_panel_rect()
     canvas = main_task_panel_canvas()
+    production_status = status or main_task_panel_production_status()
     return {
         "candidate_id": candidate_id,
         "module_id": MAIN_TASK_PANEL_SPEC["module_id"],
@@ -1038,7 +1123,7 @@ def main_task_panel_candidate_record(candidate_id: str, image_path: str, variant
         "preview_path": image_path,
         "selected": False,
         "accepted": False,
-        **main_task_panel_production_status(),
+        **production_status,
         "variant_index": variant_index,
         "transparent_required": bool(MAIN_TASK_PANEL_SPEC["transparent_required"]),
         "text_allowed": bool(MAIN_TASK_PANEL_SPEC["text_allowed"]),
@@ -1057,6 +1142,7 @@ def main_task_panel_package_response(package_dir: str | Path) -> dict[str, Any]:
     selected_candidate_id = str(delivery.get("selected_candidate_id") or "")
     canvas_preview_path = str(delivery.get("canvas_preview_path") or "")
     component_file = str(delivery.get("component_file") or "")
+    production_status = main_task_panel_status_from_sources(candidate_manifest, delivery)
     manifest_path = "manifest.json" if (package_path / "manifest.json").exists() else ""
     component_record_path = "component_record.json" if (package_path / "component_record.json").exists() else ""
     export_dir = package_path / "components"
@@ -1064,7 +1150,7 @@ def main_task_panel_package_response(package_dir: str | Path) -> dict[str, Any]:
         "package_dir": str(package_path),
         "module_id": MAIN_TASK_PANEL_SPEC["module_id"],
         "name": MAIN_TASK_PANEL_SPEC["name"],
-        **main_task_panel_production_status(),
+        **production_status,
         "canvas": main_task_panel_canvas(),
         "fixed_rect": main_task_panel_rect(),
         "max_width": MAIN_TASK_PANEL_SPEC["max_width"],
@@ -1091,19 +1177,72 @@ def main_task_panel_package_response(package_dir: str | Path) -> dict[str, Any]:
     }
 
 
-def create_main_task_panel_package(upload_root: str | Path, *, job_id: str | None = None) -> dict[str, Any]:
+def create_main_task_panel_package(
+    upload_root: str | Path,
+    *,
+    job_id: str | None = None,
+    generation_mode: str = "mock",
+    ai_candidate_generator: MainTaskPanelAiCandidateGenerator | None = None,
+) -> dict[str, Any]:
     upload_path = Path(upload_root)
     package_dir = upload_path / "996-ready" / "HUD_MODULES" / "main_task_panel" / (job_id or safe_job_id("main-task-panel"))
     package_dir.mkdir(parents=True, exist_ok=True)
     candidates_dir = package_dir / "candidates"
     candidates_dir.mkdir(exist_ok=True)
 
+    requested_generation_mode = generation_mode.strip().lower() or "mock"
+    if requested_generation_mode not in MAIN_TASK_PANEL_GENERATION_MODES:
+        raise ValueError("generation_mode must be mock or ai")
+
     candidates: list[dict[str, Any]] = []
-    for index in range(1, 4):
-        candidate_id = f"main_task_panel_candidate_{index}"
-        image_path = f"candidates/{candidate_id}.png"
-        draw_main_task_panel_placeholder(package_dir / image_path, index)
-        candidates.append(main_task_panel_candidate_record(candidate_id, image_path, index))
+    production_status = main_task_panel_production_status(requested_generation_mode=requested_generation_mode)
+
+    if requested_generation_mode == "ai":
+        generated_items: list[tuple[str, str, int, dict[str, Any]]] = []
+        try:
+            if ai_candidate_generator is None:
+                raise RuntimeError("AI generation provider is not configured for main_task_panel")
+            for index in range(1, 4):
+                candidate_id = f"main_task_panel_candidate_{index}"
+                image_path = f"candidates/{candidate_id}.png"
+                target = package_dir / image_path
+                metadata = ai_candidate_generator(target, index, main_task_panel_ai_context(candidate_id, index)) or {}
+                if not target.exists():
+                    raise RuntimeError(f"AI generator did not create candidate image: {image_path}")
+                normalize_main_task_panel_candidate_image(target)
+                generated_items.append((candidate_id, image_path, index, metadata))
+
+            provider = next((str(item[3].get("generation_provider") or "") for item in generated_items if item[3].get("generation_provider")), "")
+            job_ids = [str(item[3].get("generation_job_id") or "") for item in generated_items if item[3].get("generation_job_id")]
+            production_status = main_task_panel_production_status(
+                generation_mode="ai",
+                requested_generation_mode="ai",
+                generation_provider=provider or "existing_project_provider_name",
+                generation_job_id=",".join(job_ids),
+                visual_quality_status="pending_review",
+            )
+            for candidate_id, image_path, index, _metadata in generated_items:
+                candidates.append(main_task_panel_candidate_record(candidate_id, image_path, index, status=production_status))
+        except Exception as exc:
+            production_status = main_task_panel_production_status(
+                generation_mode="mock",
+                requested_generation_mode="ai",
+                fallback_used=True,
+                fallback_reason=f"AI generation failed: {exc}",
+                visual_quality_status="not_started",
+            )
+            candidates = []
+            for index in range(1, 4):
+                candidate_id = f"main_task_panel_candidate_{index}"
+                image_path = f"candidates/{candidate_id}.png"
+                draw_main_task_panel_placeholder(package_dir / image_path, index)
+                candidates.append(main_task_panel_candidate_record(candidate_id, image_path, index, status=production_status))
+    else:
+        for index in range(1, 4):
+            candidate_id = f"main_task_panel_candidate_{index}"
+            image_path = f"candidates/{candidate_id}.png"
+            draw_main_task_panel_placeholder(package_dir / image_path, index)
+            candidates.append(main_task_panel_candidate_record(candidate_id, image_path, index, status=production_status))
 
     generated_at = utc_now()
     write_json(
@@ -1116,7 +1255,7 @@ def create_main_task_panel_package(upload_root: str | Path, *, job_id: str | Non
             "canvas": main_task_panel_canvas(),
             "fixed_rect": main_task_panel_rect(),
             "prompt": MAIN_TASK_PANEL_PROMPT,
-            **main_task_panel_production_status(),
+            **production_status,
             "candidates": candidates,
             "created_at": generated_at,
             "updated_at": generated_at,
@@ -1128,7 +1267,7 @@ def create_main_task_panel_package(upload_root: str | Path, *, job_id: str | Non
             "schema_version": "1.0",
             "workflow": "main_task_panel_hud_module_loop",
             "module_id": MAIN_TASK_PANEL_SPEC["module_id"],
-            **main_task_panel_production_status(),
+            **production_status,
             "selected_candidate_id": "",
             "canvas_preview_path": "",
             "component_file": "",
@@ -1144,7 +1283,7 @@ def create_main_task_panel_package(upload_root: str | Path, *, job_id: str | Non
             "package_type": "996-hud-module",
             "module_id": MAIN_TASK_PANEL_SPEC["module_id"],
             "name": MAIN_TASK_PANEL_SPEC["name"],
-            **main_task_panel_production_status(),
+            **production_status,
             "canvas": main_task_panel_canvas(),
             "components": [],
             "created_at": generated_at,
@@ -1222,6 +1361,9 @@ def accept_main_task_panel_candidate(package_dir: str | Path) -> dict[str, Any]:
     package_path = Path(package_dir)
     candidate = selected_main_task_panel_candidate(package_path)
     preview_main_task_panel_on_canvas(package_path)
+    candidate_manifest = read_json(package_path / "candidate_manifest.json")
+    delivery_report = read_json(package_path / "delivery_report.json")
+    production_status = main_task_panel_status_from_sources(candidate_manifest, delivery_report, candidate)
 
     components_dir = package_path / "components"
     components_dir.mkdir(exist_ok=True)
@@ -1250,7 +1392,7 @@ def accept_main_task_panel_candidate(package_dir: str | Path) -> dict[str, Any]:
         "transparent_required": True,
         "prompt": MAIN_TASK_PANEL_PROMPT,
         "accepted": True,
-        **main_task_panel_production_status(),
+        **production_status,
         "updated_at": generated_at,
     }
     write_json(package_path / "component_record.json", component_record)
@@ -1261,7 +1403,7 @@ def accept_main_task_panel_candidate(package_dir: str | Path) -> dict[str, Any]:
             "package_type": "996-hud-module",
             "module_id": MAIN_TASK_PANEL_SPEC["module_id"],
             "name": MAIN_TASK_PANEL_SPEC["name"],
-            **main_task_panel_production_status(),
+            **production_status,
             "canvas": canvas,
             "fixed_rect": rect,
             "components": [
@@ -1278,7 +1420,7 @@ def accept_main_task_panel_candidate(package_dir: str | Path) -> dict[str, Any]:
                     "canvas_width": canvas["width"],
                     "canvas_height": canvas["height"],
                     "transparent_png_required": True,
-                    **main_task_panel_production_status(),
+                    **production_status,
                     "source_candidate_id": candidate["candidate_id"],
                 }
             ],
@@ -1286,14 +1428,14 @@ def accept_main_task_panel_candidate(package_dir: str | Path) -> dict[str, Any]:
         },
     )
 
-    manifest = read_json(package_path / "candidate_manifest.json")
+    manifest = candidate_manifest
     for item in manifest.get("candidates", []):
         if isinstance(item, dict):
             item["accepted"] = item.get("candidate_id") == candidate["candidate_id"]
     write_json(package_path / "candidate_manifest.json", {**manifest, "updated_at": generated_at})
 
-    delivery = read_json(package_path / "delivery_report.json")
-    delivery.update({"component_file": component_file, "accepted": True, "updated_at": generated_at})
+    delivery = delivery_report
+    delivery.update({**production_status, "component_file": component_file, "accepted": True, "updated_at": generated_at})
     write_json(package_path / "delivery_report.json", delivery)
     return {**main_task_panel_package_response(package_path), "component_file": component_file}
 

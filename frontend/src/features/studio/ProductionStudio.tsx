@@ -106,6 +106,7 @@ type ProductionStudioApi = Pick<
 
 type UiProductionScreenType = "main_ui" | "bag_ui" | "role_ui" | "shop_ui" | "activity_ui";
 type UiProductionGenerationMode = "plain" | "reference" | "reference_ratio";
+type MainTaskPanelGenerationMode = "mock" | "ai";
 
 const UI_PRODUCTION_SCREEN_OPTIONS: { value: UiProductionScreenType; label: string; enabled: boolean }[] = [
   { value: "main_ui", label: "主界面", enabled: true },
@@ -803,14 +804,14 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
     }
   }
 
-  async function generateMainTaskPanelCandidates() {
+  async function generateMainTaskPanelCandidates(generationMode: MainTaskPanelGenerationMode = "mock") {
     setMainTaskPanelLoading(true);
     setError("");
     setMainTaskPanelMessage("");
     try {
-      const response = await api.generateMainTaskPanelCandidates();
+      const response = await api.generateMainTaskPanelCandidates(generationMode);
       setMainTaskPanel(response);
-      setMainTaskPanelMessage("已生成 3 张 main_task_panel 候选。");
+      setMainTaskPanelMessage(`已生成 3 张 main_task_panel ${generationMode} 候选。`);
     } catch (exc) {
       setError(`生成任务模块候选失败：${exc instanceof Error ? exc.message : "unknown"}`);
     } finally {
@@ -1015,6 +1016,10 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
 
   const projectContext = mainUiProduction?.project_context;
   const canPreviewPackageFile = (file: string) => /\.(png|jpe?g|webp)$/i.test(file);
+  const mainTaskPanelRequestedMode = mainTaskPanel?.requested_generation_mode || mainTaskPanel?.generation_mode || "mock";
+  const mainTaskPanelGenerationMode = mainTaskPanel?.generation_mode || "mock";
+  const mainTaskPanelFallbackUsed = Boolean(mainTaskPanel?.fallback_used);
+  const mainTaskPanelVisualQualityStatus = mainTaskPanel?.visual_quality_status || "not_started";
 
   return (
     <section className="grid min-w-0 gap-4 xl:grid-cols-[260px_320px_minmax(0,1fr)]">
@@ -1459,22 +1464,47 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
                   <span>x=24 y=40 w=286 h=330</span>
                 </div>
               </div>
-              <button
-                className="rounded-md bg-studio-action px-3 py-2 text-sm font-semibold text-white disabled:opacity-60"
-                disabled={mainTaskPanelLoading}
-                onClick={generateMainTaskPanelCandidates}
-                type="button"
-              >
-                生成任务模块候选
-              </button>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  className="rounded-md bg-studio-action px-3 py-2 text-sm font-semibold text-white disabled:opacity-60"
+                  disabled={mainTaskPanelLoading}
+                  onClick={() => generateMainTaskPanelCandidates("mock")}
+                  type="button"
+                >
+                  生成 mock 候选
+                </button>
+                <button
+                  className="rounded-md border border-studio-line bg-white px-3 py-2 text-sm font-semibold disabled:opacity-60"
+                  disabled={mainTaskPanelLoading}
+                  onClick={() => generateMainTaskPanelCandidates("ai")}
+                  type="button"
+                >
+                  生成 AI 候选
+                </button>
+              </div>
             </div>
             {mainTaskPanel ? (
               <div className="grid gap-2 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950">
-                <p>当前任务模块候选为程序绘制 mock，仅用于验证生成、选择、预览和入库流程；不是最终 AI 视觉图，不能直接用于 996 生产。</p>
+                {mainTaskPanelFallbackUsed ? (
+                  <p>AI 生成失败，已回退到 mock 候选。</p>
+                ) : mainTaskPanelGenerationMode === "ai" ? (
+                  <>
+                    <p>AI 候选需人工验收美术质量；当前仅表示生成链路可用，不代表可直接生产。</p>
+                    <p>当前为 AI 候选，需人工确认美术质量（production_ready=false）。</p>
+                  </>
+                ) : (
+                  <p>当前任务模块候选为程序绘制 mock，仅用于验证生成、选择、预览和入库流程；不是最终 AI 视觉图，不能直接用于 996 生产。</p>
+                )}
                 <div className="grid gap-1 text-xs text-amber-900 sm:grid-cols-2">
-                  <span>当前生成类型：程序绘制 mock / 占位图</span>
+                  <span>{mainTaskPanelGenerationMode === "ai" ? "当前生成类型：AI 候选" : "当前生成类型：程序绘制 mock / 占位图"}</span>
                   <span>当前用途：工程闭环验证</span>
                   <span>是否可用于真实生产：否</span>
+                  <span>{`requested_generation_mode=${mainTaskPanelRequestedMode}`}</span>
+                  <span>{`generation_mode=${mainTaskPanelGenerationMode}`}</span>
+                  <span>{`generation_provider=${mainTaskPanel.generation_provider || "-"}`}</span>
+                  <span>{`fallback_used=${String(mainTaskPanelFallbackUsed)}`}</span>
+                  {mainTaskPanel.fallback_reason ? <span className="sm:col-span-2">{`fallback_reason=${mainTaskPanel.fallback_reason}`}</span> : null}
+                  <span>{`visual_quality_status=${mainTaskPanelVisualQualityStatus}`}</span>
                   <span>{`production_ready=${String(mainTaskPanel.production_ready)}`}</span>
                   <span className="sm:col-span-2">下一步：接入真实 AI 视觉生成后再验收美术质量</span>
                 </div>
