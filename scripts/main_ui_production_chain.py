@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
+import re
 import shutil
 import sys
 from collections import deque
@@ -119,6 +121,12 @@ MAIN_TASK_PANEL_PRODUCTION_STATUS: dict[str, Any] = {
     "transparency_postprocess_status": "not_checked",
     "raw_image_path": "",
     "processed_image_path": "",
+    "ai_error_stage": "",
+    "ai_error_provider": "",
+    "ai_error_candidate_id": "",
+    "ai_error_status_code": None,
+    "ai_error_summary": "",
+    "partial_raw_saved": False,
 }
 
 MAIN_TASK_PANEL_STATUS_KEYS = tuple(MAIN_TASK_PANEL_PRODUCTION_STATUS.keys())
@@ -1111,6 +1119,42 @@ def main_task_panel_canvas() -> dict[str, int]:
     return {"width": int(canvas["width"]), "height": int(canvas["height"])}
 
 
+def sanitize_main_task_panel_ai_error(message: str, *, limit: int = 500) -> str:
+    sanitized = str(message or "")
+    for key, value in os.environ.items():
+        if key.endswith("_API_KEY") and value:
+            sanitized = sanitized.replace(value, "[redacted]")
+    sanitized = re.sub(r"Bearer\s+[A-Za-z0-9._-]+", "Bearer [redacted]", sanitized, flags=re.IGNORECASE)
+    sanitized = re.sub(r"sk-[A-Za-z0-9_-]+", "[redacted]", sanitized)
+    sanitized = re.sub(r"([?&](?:api[_-]?key|key|token|access_token)=)[^&\s]+", r"\1[redacted]", sanitized, flags=re.IGNORECASE)
+    return sanitized.replace("\r", " ").replace("\n", " ")[:limit]
+
+
+def main_task_panel_ai_error_status(exc: Exception, package_dir: Path) -> dict[str, Any]:
+    raw_diagnostics = getattr(exc, "ai_diagnostics", None)
+    diagnostics = raw_diagnostics if isinstance(raw_diagnostics, dict) else {}
+    candidate_id = str(diagnostics.get("ai_error_candidate_id") or "")
+    partial_raw_saved = bool(diagnostics.get("partial_raw_saved"))
+    if candidate_id:
+        partial_raw_saved = partial_raw_saved or (package_dir / "raw" / f"{candidate_id}_raw.png").exists()
+    status_code = diagnostics.get("ai_error_status_code")
+    if status_code is not None:
+        try:
+            status_code = int(status_code)
+        except (TypeError, ValueError):
+            status_code = None
+    return {
+        "ai_error_stage": str(diagnostics.get("ai_error_stage") or ""),
+        "ai_error_provider": str(diagnostics.get("ai_error_provider") or diagnostics.get("generation_provider") or ""),
+        "ai_error_candidate_id": candidate_id,
+        "ai_error_status_code": status_code,
+        "ai_error_summary": sanitize_main_task_panel_ai_error(
+            str(diagnostics.get("ai_error_summary") or exc),
+        ),
+        "partial_raw_saved": partial_raw_saved,
+    }
+
+
 def main_task_panel_production_status(
     *,
     generation_mode: str = "mock",
@@ -1121,9 +1165,11 @@ def main_task_panel_production_status(
     visual_quality_status: str | None = None,
     fallback_used: bool = False,
     fallback_reason: str = "",
+    ai_diagnostics: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     mode = generation_mode.strip().lower() or "mock"
     requested_mode = (requested_generation_mode or mode).strip().lower() or mode
+    diagnostics = ai_diagnostics or {}
     return {
         **MAIN_TASK_PANEL_PRODUCTION_STATUS,
         "requested_generation_mode": requested_mode,
@@ -1134,6 +1180,7 @@ def main_task_panel_production_status(
         "visual_quality_status": visual_quality_status or ("pending_review" if mode == "ai" and not fallback_used else "not_started"),
         "fallback_used": fallback_used,
         "fallback_reason": fallback_reason,
+        **diagnostics,
     }
 
 
@@ -1398,12 +1445,14 @@ def create_main_task_panel_package(
                     )
                 )
         except Exception as exc:
+            ai_diagnostics = main_task_panel_ai_error_status(exc, package_dir)
             production_status = main_task_panel_production_status(
                 generation_mode="mock",
                 requested_generation_mode="ai",
                 fallback_used=True,
-                fallback_reason=f"AI generation failed: {exc}",
+                fallback_reason=f"AI generation failed: {sanitize_main_task_panel_ai_error(str(exc))}",
                 visual_quality_status="not_started",
+                ai_diagnostics=ai_diagnostics,
             )
             candidates = []
             for index in range(1, 4):

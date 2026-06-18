@@ -224,6 +224,45 @@ def test_main_task_panel_api_falls_back_to_mock_when_ai_generation_fails(tmp_pat
     assert all(candidate["generation_mode"] == "mock" for candidate in body["candidates"])
 
 
+def test_main_task_panel_api_returns_sanitized_ai_failure_diagnostics(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("OFOX_API_KEY", "sk-ofox-test-secret")
+
+    def failing_ai_generator(target: Path, index: int, context: dict) -> dict:  # type: ignore[type-arg]
+        if index == 1:
+            Image.new("RGBA", (286, 330), (40, 30, 20, 255)).save(target)
+            return {"generation_provider": "Ofox UI Default", "generation_job_id": "job-ai-1"}
+        error = RuntimeError("Ofox API request failed: sk-ofox-test-secret")
+        setattr(
+            error,
+            "ai_diagnostics",
+            {
+                "ai_error_stage": "request",
+                "ai_error_provider": "Ofox UI Default",
+                "ai_error_candidate_id": "main_task_panel_candidate_2",
+                "ai_error_status_code": 429,
+                "ai_error_summary": "rate limited sk-ofox-test-secret",
+            },
+        )
+        raise error
+
+    monkeypatch.setattr(main_module, "main_task_panel_ai_candidate_generator", failing_ai_generator)
+    client = make_client(tmp_path)
+
+    response = client.post("/production-studio/hud-modules/main-task-panel/generate", json={"generation_mode": "ai"})
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["generation_mode"] == "mock"
+    assert body["fallback_used"] is True
+    assert body["ai_error_stage"] == "request"
+    assert body["ai_error_provider"] == "Ofox UI Default"
+    assert body["ai_error_candidate_id"] == "main_task_panel_candidate_2"
+    assert body["ai_error_status_code"] == 429
+    assert body["ai_error_summary"] == "rate limited [redacted]"
+    assert "sk-ofox-test-secret" not in json.dumps(body)
+    assert all(candidate["ai_error_candidate_id"] == "main_task_panel_candidate_2" for candidate in body["candidates"])
+
+
 def create_ofox_provider(client: TestClient) -> None:
     response = client.post(
         "/ai_providers",

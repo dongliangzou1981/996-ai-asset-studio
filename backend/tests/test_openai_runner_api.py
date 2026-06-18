@@ -297,6 +297,43 @@ def test_ofox_provider_openai_compatible_generation_runs_component_processing(tm
     assert all(asset["generation_job_id"] == job_id for asset in component_assets)
 
 
+def test_ofox_provider_failure_records_sanitized_diagnostics(tmp_path: Path, monkeypatch) -> None:
+    client = make_client(tmp_path)
+    project = client.post(
+        "/projects",
+        json={"name": "Ofox Diagnostics", "description": "Ofox failure diagnostics", "status": "active"},
+    ).json()
+    monkeypatch.setenv("OFOX_API_KEY", "sk-ofox-test-secret")
+    provider_id = create_ofox_provider(client)
+    job_id = create_real_openai_job(client, provider_id, project["id"])
+
+    def fake_post(url: str, **kwargs):  # type: ignore[no-untyped-def]
+        assert kwargs["headers"]["Authorization"] == "Bearer sk-ofox-test-secret"
+        request = httpx.Request("POST", url)
+        return httpx.Response(
+            429,
+            request=request,
+            text='{"error":"rate limited sk-ofox-test-secret"}',
+        )
+
+    monkeypatch.setattr("app.job_runner.httpx.post", fake_post)
+
+    run = client.post(f"/generation_jobs/{job_id}/run")
+
+    assert run.status_code == 200
+    failed = run.json()
+    assert failed["status"] == "failed"
+    assert failed["error_message"] == "Ofox API request failed: 429"
+    assert "sk-ofox-test-secret" not in json.dumps(failed)
+    diagnostics = json.loads(failed["output_json"])["ai_diagnostics"]
+    assert diagnostics["ai_error_stage"] == "request"
+    assert diagnostics["ai_error_provider"] == "Ofox UI"
+    assert diagnostics["ai_error_target_host"] == "api.ofox.ai"
+    assert diagnostics["ai_error_status_code"] == 429
+    assert "rate limited" in diagnostics["ai_error_summary"]
+    assert "sk-ofox-test-secret" not in diagnostics["ai_error_summary"]
+
+
 def test_openai_runner_missing_config_and_env_fail_jobs(tmp_path: Path, monkeypatch) -> None:
     client = make_client(tmp_path)
     missing_config_provider_id = create_openai_provider(client, "{}")

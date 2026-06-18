@@ -8,6 +8,7 @@ import os
 import re
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
 import httpx
 from PIL import Image, ImageDraw, ImageFont, ImageOps
@@ -42,7 +43,27 @@ def sanitize_error(message: str) -> str:
     for key, value in os.environ.items():
         if key.endswith("_API_KEY") and value:
             sanitized = sanitized.replace(value, "[redacted]")
-    return re.sub(r"sk-[A-Za-z0-9_-]+", "[redacted]", sanitized)
+    sanitized = re.sub(r"Bearer\s+[A-Za-z0-9._-]+", "Bearer [redacted]", sanitized, flags=re.IGNORECASE)
+    sanitized = re.sub(r"sk-[A-Za-z0-9_-]+", "[redacted]", sanitized)
+    return re.sub(r"([?&](?:api[_-]?key|key|token|access_token)=)[^&\s]+", r"\1[redacted]", sanitized, flags=re.IGNORECASE)
+
+
+def response_body_summary(response: httpx.Response | None, *, limit: int = 500) -> str:
+    if response is None:
+        return ""
+    text = str(getattr(response, "text", "") or "")
+    return sanitize_error(text.replace("\r", " ").replace("\n", " "))[:limit]
+
+
+def request_target_host(url: str) -> str:
+    parsed = urlparse(url)
+    return parsed.netloc or parsed.path.split("/")[0]
+
+
+class AiProviderDiagnosticError(RuntimeError):
+    def __init__(self, message: str, diagnostics: dict[str, Any]) -> None:
+        super().__init__(message)
+        self.ai_diagnostics = diagnostics
 
 
 def openai_image_size(input_data: dict[str, Any]) -> str:
@@ -287,12 +308,19 @@ class BaseJobRunner(ABC):
             error_message = sanitize_error(str(exc))
             if isinstance(self, MockJobRunner) and error_message.startswith("Invalid input_json"):
                 error_message = error_message.replace("Invalid input_json", "Invalid mock input_json", 1)
+            diagnostics = getattr(exc, "ai_diagnostics", None)
+            output_json = (
+                json.dumps({"ai_diagnostics": diagnostics}, ensure_ascii=False)
+                if isinstance(diagnostics, dict) and diagnostics
+                else None
+            )
             return self.database.update_generation_job(
                 running.id,
                 GenerationJobPatch(
                     status="failed",
                     progress=100,
                     error_message=error_message,
+                    output_json=output_json,
                     logs=failed_logs,
                 ),
             )
@@ -484,12 +512,19 @@ class RealJobRunner(BaseJobRunner):
             )
         except Exception as exc:
             failed_logs = append_log(running.logs, "Real UI generation failed")
+            diagnostics = getattr(exc, "ai_diagnostics", None)
+            output_json = (
+                json.dumps({"ai_diagnostics": diagnostics}, ensure_ascii=False)
+                if isinstance(diagnostics, dict) and diagnostics
+                else None
+            )
             return self.database.update_generation_job(
                 running.id,
                 GenerationJobPatch(
                     status="failed",
                     progress=100,
                     error_message=sanitize_error(str(exc)),
+                    output_json=output_json,
                     logs=failed_logs,
                 ),
             )
@@ -540,10 +575,18 @@ class OpenAIJobRunner(BaseJobRunner):
             input_data.get("prompt")
             or f"Create a polished game UI preview for {project_name}."
         )
+        generation_url = self.image_generation_url(config)
+        provider_diagnostics = {
+            "ai_error_stage": "request",
+            "ai_error_provider": self.provider.name,
+            "ai_error_provider_type": self.provider.type,
+            "ai_error_target_host": request_target_host(generation_url),
+            "ai_error_candidate_id": str(input_data.get("candidate_id") or ""),
+        }
 
         try:
             response = httpx.post(
-                self.image_generation_url(config),
+                generation_url,
                 headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
                 json={
                     "model": model,
@@ -556,37 +599,132 @@ class OpenAIJobRunner(BaseJobRunner):
             )
             response.raise_for_status()
         except httpx.HTTPStatusError as exc:
-            raise RuntimeError(f"{self.provider_label} API request failed: {exc.response.status_code}") from exc
+            diagnostics = {
+                **provider_diagnostics,
+                "ai_error_status_code": exc.response.status_code,
+                "ai_error_summary": response_body_summary(exc.response),
+            }
+            raise AiProviderDiagnosticError(f"{self.provider_label} API request failed: {exc.response.status_code}", diagnostics) from exc
         except httpx.HTTPError as exc:
-            raise RuntimeError(f"{self.provider_label} API request failed") from exc
+            diagnostics = {
+                **provider_diagnostics,
+                "ai_error_status_code": None,
+                "ai_error_summary": sanitize_error(f"{type(exc).__name__}: {exc}")[:500],
+            }
+            raise AiProviderDiagnosticError(f"{self.provider_label} API request failed", diagnostics) from exc
 
         try:
             payload = response.json()
         except ValueError as exc:
-            raise RuntimeError(f"{self.provider_label} API response was not valid JSON") from exc
+            diagnostics = {
+                **provider_diagnostics,
+                "ai_error_stage": "response_parse",
+                "ai_error_status_code": response.status_code,
+                "ai_error_summary": response_body_summary(response),
+            }
+            raise AiProviderDiagnosticError(f"{self.provider_label} API response was not valid JSON", diagnostics) from exc
 
         data = payload.get("data")
         if not isinstance(data, list) or not data:
-            raise RuntimeError(f"{self.provider_label} response did not include image data")
+            raise AiProviderDiagnosticError(
+                f"{self.provider_label} response did not include image data",
+                {
+                    **provider_diagnostics,
+                    "ai_error_stage": "response_parse",
+                    "ai_error_status_code": response.status_code,
+                    "ai_error_summary": response_body_summary(response),
+                },
+            )
         image_data = data[0]
         if not isinstance(image_data, dict):
-            raise RuntimeError(f"{self.provider_label} response did not include image data")
+            raise AiProviderDiagnosticError(
+                f"{self.provider_label} response did not include image data",
+                {
+                    **provider_diagnostics,
+                    "ai_error_stage": "response_parse",
+                    "ai_error_status_code": response.status_code,
+                    "ai_error_summary": response_body_summary(response),
+                },
+            )
 
         preview_path = ready_dir / "previews" / f"ui_preview.{output_format}"
         try:
             if image_data.get("b64_json"):
-                preview_path.write_bytes(base64.b64decode(image_data["b64_json"]))
+                try:
+                    decoded_image = base64.b64decode(image_data["b64_json"])
+                except Exception as exc:
+                    raise AiProviderDiagnosticError(
+                        f"{self.provider_label} response image could not be decoded",
+                        {
+                            **provider_diagnostics,
+                            "ai_error_stage": "image_decode",
+                            "ai_error_status_code": response.status_code,
+                            "ai_error_summary": sanitize_error(f"{type(exc).__name__}: {exc}")[:500],
+                        },
+                    ) from exc
+                preview_path.write_bytes(decoded_image)
             elif image_data.get("url"):
-                image_response = httpx.get(image_data["url"], timeout=180)
-                image_response.raise_for_status()
+                image_url = str(image_data["url"])
+                try:
+                    image_response = httpx.get(image_url, timeout=180)
+                    image_response.raise_for_status()
+                except httpx.HTTPStatusError as exc:
+                    raise AiProviderDiagnosticError(
+                        f"{self.provider_label} image download failed: {exc.response.status_code}",
+                        {
+                            **provider_diagnostics,
+                            "ai_error_stage": "image_download",
+                            "ai_error_target_host": request_target_host(image_url),
+                            "ai_error_status_code": exc.response.status_code,
+                            "ai_error_summary": response_body_summary(exc.response),
+                        },
+                    ) from exc
+                except httpx.HTTPError as exc:
+                    raise AiProviderDiagnosticError(
+                        f"{self.provider_label} image download failed",
+                        {
+                            **provider_diagnostics,
+                            "ai_error_stage": "image_download",
+                            "ai_error_target_host": request_target_host(image_url),
+                            "ai_error_status_code": None,
+                            "ai_error_summary": sanitize_error(f"{type(exc).__name__}: {exc}")[:500],
+                        },
+                    ) from exc
                 preview_path.write_bytes(image_response.content)
             else:
-                raise RuntimeError(f"{self.provider_label} response did not include image data")
-        except RuntimeError:
+                raise AiProviderDiagnosticError(
+                    f"{self.provider_label} response did not include image data",
+                    {
+                        **provider_diagnostics,
+                        "ai_error_stage": "response_parse",
+                        "ai_error_status_code": response.status_code,
+                        "ai_error_summary": response_body_summary(response),
+                    },
+                )
+        except AiProviderDiagnosticError:
             raise
         except Exception as exc:
-            raise RuntimeError(f"Failed to save {self.provider_label} image: {exc}") from exc
-        normalize_preview_dimensions(preview_path, input_data)
+            raise AiProviderDiagnosticError(
+                f"Failed to save {self.provider_label} image: {exc}",
+                {
+                    **provider_diagnostics,
+                    "ai_error_stage": "save",
+                    "ai_error_status_code": response.status_code,
+                    "ai_error_summary": sanitize_error(f"{type(exc).__name__}: {exc}")[:500],
+                },
+            ) from exc
+        try:
+            normalize_preview_dimensions(preview_path, input_data)
+        except Exception as exc:
+            raise AiProviderDiagnosticError(
+                f"Failed to normalize {self.provider_label} image: {exc}",
+                {
+                    **provider_diagnostics,
+                    "ai_error_stage": "normalize",
+                    "ai_error_status_code": response.status_code,
+                    "ai_error_summary": sanitize_error(f"{type(exc).__name__}: {exc}")[:500],
+                },
+            ) from exc
         return preview_path
 
     def image_generation_url(self, config: dict[str, Any]) -> str:

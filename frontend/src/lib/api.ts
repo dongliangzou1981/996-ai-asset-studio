@@ -362,6 +362,12 @@ export type MainTaskPanelCandidate = {
   visual_quality_status?: string;
   fallback_used?: boolean;
   fallback_reason?: string;
+  ai_error_stage?: string;
+  ai_error_provider?: string;
+  ai_error_candidate_id?: string;
+  ai_error_status_code?: number | null;
+  ai_error_summary?: string;
+  partial_raw_saved?: boolean;
   usage_note?: string;
   transparent_requested?: boolean;
   transparent_guaranteed?: boolean;
@@ -406,6 +412,12 @@ export type MainTaskPanelResult = {
   visual_quality_status?: string;
   fallback_used?: boolean;
   fallback_reason?: string;
+  ai_error_stage?: string;
+  ai_error_provider?: string;
+  ai_error_candidate_id?: string;
+  ai_error_status_code?: number | null;
+  ai_error_summary?: string;
+  partial_raw_saved?: boolean;
   usage_note?: string;
   transparent_requested?: boolean;
   transparent_guaranteed?: boolean;

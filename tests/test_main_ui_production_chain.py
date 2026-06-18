@@ -367,3 +367,45 @@ def test_main_task_panel_ai_mode_falls_back_to_mock_when_generator_fails(tmp_pat
     assert all(candidate["generation_mode"] == "mock" for candidate in result["candidates"])
     assert all(candidate["requested_generation_mode"] == "ai" for candidate in result["candidates"])
     assert all(candidate["fallback_used"] is True for candidate in result["candidates"])
+
+
+def test_main_task_panel_ai_fallback_records_sanitized_diagnostics(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("OFOX_API_KEY", "sk-ofox-test-secret")
+
+    def failing_ai_generator(target: Path, index: int, context: dict[str, object]) -> dict[str, object]:
+        if index == 1:
+            Image.new("RGBA", (286, 330), (40, 30, 20, 255)).save(target)
+            return {"generation_provider": "Ofox UI Default", "generation_job_id": "job-ai-1"}
+        error = RuntimeError("Ofox API request failed: sk-ofox-test-secret")
+        setattr(
+            error,
+            "ai_diagnostics",
+            {
+                "ai_error_stage": "request",
+                "ai_error_provider": "Ofox UI Default",
+                "ai_error_candidate_id": "main_task_panel_candidate_2",
+                "ai_error_status_code": 429,
+                "ai_error_summary": "rate limited sk-ofox-test-secret",
+            },
+        )
+        raise error
+
+    result = chain.create_main_task_panel_package(
+        tmp_path / "uploads",
+        job_id="job-ai-diagnostics-main-task-panel",
+        generation_mode="ai",
+        ai_candidate_generator=failing_ai_generator,
+    )
+    package = Path(result["package_dir"])
+
+    assert result["generation_mode"] == "mock"
+    assert result["fallback_used"] is True
+    assert result["ai_error_stage"] == "request"
+    assert result["ai_error_provider"] == "Ofox UI Default"
+    assert result["ai_error_candidate_id"] == "main_task_panel_candidate_2"
+    assert result["ai_error_status_code"] == 429
+    assert result["ai_error_summary"] == "rate limited [redacted]"
+    assert result["partial_raw_saved"] is False
+    assert "sk-ofox-test-secret" not in json.dumps(result)
+    assert (package / "raw" / "main_task_panel_candidate_1_raw.png").exists()
+    assert all(candidate["ai_error_candidate_id"] == "main_task_panel_candidate_2" for candidate in result["candidates"])

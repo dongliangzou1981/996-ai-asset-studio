@@ -895,12 +895,45 @@ def create_app(database_path: str | Path | None = None, upload_dir: str | Path |
         if completed is None:
             raise RuntimeError("AI generation job could not be loaded")
         if completed.status != "completed":
-            raise RuntimeError(completed.error_message or "AI generation job failed")
+            diagnostics: dict[str, Any] = {}
+            try:
+                output_data = json.loads(completed.output_json or "{}")
+            except json.JSONDecodeError:
+                output_data = {}
+            if isinstance(output_data, dict) and isinstance(output_data.get("ai_diagnostics"), dict):
+                diagnostics = dict(output_data["ai_diagnostics"])
+            diagnostics.setdefault("ai_error_provider", provider.name)
+            diagnostics.setdefault("ai_error_candidate_id", str(context.get("candidate_id") or f"main_task_panel_candidate_{index}"))
+            diagnostics["partial_raw_saved"] = target.exists()
+            error = RuntimeError(completed.error_message or "AI generation job failed")
+            setattr(error, "ai_diagnostics", diagnostics)
+            raise error
         output_preview_path = Path(completed.output_preview_path)
         if not output_preview_path.exists():
-            raise RuntimeError("AI generation job did not produce an output preview")
-        with Image.open(output_preview_path) as image:
-            image.convert("RGBA").save(target, "PNG")
+            diagnostics = {
+                "ai_error_stage": "save",
+                "ai_error_provider": provider.name,
+                "ai_error_candidate_id": str(context.get("candidate_id") or f"main_task_panel_candidate_{index}"),
+                "ai_error_summary": "AI generation job did not produce an output preview",
+                "partial_raw_saved": target.exists(),
+            }
+            error = RuntimeError("AI generation job did not produce an output preview")
+            setattr(error, "ai_diagnostics", diagnostics)
+            raise error
+        try:
+            with Image.open(output_preview_path) as image:
+                image.convert("RGBA").save(target, "PNG")
+        except Exception as exc:
+            diagnostics = {
+                "ai_error_stage": "image_decode",
+                "ai_error_provider": provider.name,
+                "ai_error_candidate_id": str(context.get("candidate_id") or f"main_task_panel_candidate_{index}"),
+                "ai_error_summary": f"{type(exc).__name__}: {exc}",
+                "partial_raw_saved": target.exists(),
+            }
+            error = RuntimeError(f"AI generation output image could not be saved: {exc}")
+            setattr(error, "ai_diagnostics", diagnostics)
+            raise error from exc
         return {
             "generation_provider": provider.name,
             "generation_provider_type": provider.type,
