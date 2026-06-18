@@ -343,6 +343,53 @@ export type MainUiProductionResult = {
   opencv_layer_count?: number;
 };
 
+export type MainTaskPanelCandidate = {
+  candidate_id: string;
+  module_id: "main_task_panel";
+  name: string;
+  width: number;
+  height: number;
+  target_x: number;
+  target_y: number;
+  canvas_width: number;
+  canvas_height: number;
+  fixed_rect: { x: number; y: number; width: number; height: number };
+  prompt: string;
+  image_path: string;
+  preview_path: string;
+  image_url?: string;
+  preview_url?: string;
+  selected: boolean;
+  accepted: boolean;
+  transparent_required: boolean;
+  text_allowed: boolean;
+  forbidden_elements: string[];
+  internal_structure: string[];
+};
+
+export type MainTaskPanelResult = {
+  package_dir: string;
+  module_id: "main_task_panel";
+  name: string;
+  canvas: { width: number; height: number };
+  fixed_rect: { x: number; y: number; width: number; height: number };
+  max_width: number;
+  transparent_required: boolean;
+  text_allowed: boolean;
+  prompt: string;
+  candidates: MainTaskPanelCandidate[];
+  selected_candidate_id: string;
+  accepted: boolean;
+  canvas_preview_path?: string;
+  canvas_preview_url?: string;
+  component_file?: string;
+  component_url?: string;
+  manifest_path?: string;
+  manifest_url?: string;
+  component_record_path?: string;
+  component_record_url?: string;
+};
+
 export type MarkingAcceptanceResult = {
   project_code: "MARKING_TEST";
   candidate_id: string;
@@ -599,6 +646,27 @@ export const studioApi = {
   },
   runMainUiProduction() {
     return request<MainUiProductionResult>("/production-studio/main-ui-production/run", { method: "POST" });
+  },
+  generateMainTaskPanelCandidates() {
+    return request<MainTaskPanelResult>("/production-studio/hud-modules/main-task-panel/generate", { method: "POST" });
+  },
+  selectMainTaskPanelCandidate(packageDir: string, candidateId: string) {
+    return request<MainTaskPanelResult>(
+      `/production-studio/hud-modules/main-task-panel/select?package_dir=${encodeURIComponent(packageDir)}&candidate_id=${encodeURIComponent(candidateId)}`,
+      { method: "POST" },
+    );
+  },
+  previewMainTaskPanelOnCanvas(packageDir: string) {
+    return request<MainTaskPanelResult>(
+      `/production-studio/hud-modules/main-task-panel/preview?package_dir=${encodeURIComponent(packageDir)}`,
+      { method: "POST" },
+    );
+  },
+  acceptMainTaskPanel(packageDir: string) {
+    return request<MainTaskPanelResult>(
+      `/production-studio/hud-modules/main-task-panel/accept?package_dir=${encodeURIComponent(packageDir)}`,
+      { method: "POST" },
+    );
   },
   generateUiProductionPackage(payload: {
     screen_type: string;

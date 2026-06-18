@@ -16,6 +16,10 @@ const api = {
   getMainUiProduction: jest.fn(),
   updateMainUiCandidate: jest.fn(),
   exportMainUiProduction: jest.fn(),
+  generateMainTaskPanelCandidates: jest.fn(),
+  selectMainTaskPanelCandidate: jest.fn(),
+  previewMainTaskPanelOnCanvas: jest.fn(),
+  acceptMainTaskPanel: jest.fn(),
   getProductionStudioFileUrl: jest.fn((path: string) => `http://127.0.0.1:8000${path}`),
   listProjects: jest.fn(),
   createProject: jest.fn(),
@@ -177,6 +181,66 @@ const markingAcceptanceResult = {
   production: mainUiProductionResult,
 } as const;
 
+const mainTaskPanelResult = {
+  package_dir: "assets/uploads/996-ready/HUD_MODULES/main_task_panel/job-main-task-panel",
+  module_id: "main_task_panel",
+  name: "主界面左上任务追踪模块",
+  selected_candidate_id: "",
+  accepted: false,
+  canvas: { width: 1728, height: 972 },
+  fixed_rect: { x: 24, y: 40, width: 286, height: 330 },
+  candidates: [
+    {
+      candidate_id: "main_task_panel_candidate_1",
+      module_id: "main_task_panel",
+      width: 286,
+      height: 330,
+      target_x: 24,
+      target_y: 40,
+      canvas_width: 1728,
+      canvas_height: 972,
+      prompt: "生成一个 996 传奇手游横屏主界面左上任务追踪 HUD 模块皮肤。",
+      image_path: "candidates/main_task_panel_candidate_1.png",
+      image_url:
+        "/production-studio/files/996-ready/HUD_MODULES/main_task_panel/job-main-task-panel/candidates/main_task_panel_candidate_1.png",
+      selected: false,
+    },
+    {
+      candidate_id: "main_task_panel_candidate_2",
+      module_id: "main_task_panel",
+      width: 286,
+      height: 330,
+      target_x: 24,
+      target_y: 40,
+      canvas_width: 1728,
+      canvas_height: 972,
+      prompt: "生成一个 996 传奇手游横屏主界面左上任务追踪 HUD 模块皮肤。",
+      image_path: "candidates/main_task_panel_candidate_2.png",
+      image_url:
+        "/production-studio/files/996-ready/HUD_MODULES/main_task_panel/job-main-task-panel/candidates/main_task_panel_candidate_2.png",
+      selected: false,
+    },
+    {
+      candidate_id: "main_task_panel_candidate_3",
+      module_id: "main_task_panel",
+      width: 286,
+      height: 330,
+      target_x: 24,
+      target_y: 40,
+      canvas_width: 1728,
+      canvas_height: 972,
+      prompt: "生成一个 996 传奇手游横屏主界面左上任务追踪 HUD 模块皮肤。",
+      image_path: "candidates/main_task_panel_candidate_3.png",
+      image_url:
+        "/production-studio/files/996-ready/HUD_MODULES/main_task_panel/job-main-task-panel/candidates/main_task_panel_candidate_3.png",
+      selected: false,
+    },
+  ],
+  canvas_preview_url: "",
+  component_url: "",
+  manifest_url: "",
+} as const;
+
 const layerPackageResult = {
   package_id: "layer-package-test",
   package_dir: "assets/uploads/layer-packages/layer-package-test",
@@ -311,6 +375,31 @@ beforeEach(() => {
     confirmed: false,
   });
   api.exportMainUiProduction.mockResolvedValue(mainUiProductionResult);
+  api.generateMainTaskPanelCandidates.mockResolvedValue(mainTaskPanelResult);
+  api.selectMainTaskPanelCandidate.mockResolvedValue({
+    ...mainTaskPanelResult,
+    selected_candidate_id: "main_task_panel_candidate_2",
+    candidates: mainTaskPanelResult.candidates.map((candidate) => ({
+      ...candidate,
+      selected: candidate.candidate_id === "main_task_panel_candidate_2",
+    })),
+  });
+  api.previewMainTaskPanelOnCanvas.mockResolvedValue({
+    ...mainTaskPanelResult,
+    selected_candidate_id: "main_task_panel_candidate_2",
+    canvas_preview_url:
+      "/production-studio/files/996-ready/HUD_MODULES/main_task_panel/job-main-task-panel/canvas_preview.png",
+  });
+  api.acceptMainTaskPanel.mockResolvedValue({
+    ...mainTaskPanelResult,
+    selected_candidate_id: "main_task_panel_candidate_2",
+    accepted: true,
+    canvas_preview_url:
+      "/production-studio/files/996-ready/HUD_MODULES/main_task_panel/job-main-task-panel/canvas_preview.png",
+    component_url:
+      "/production-studio/files/996-ready/HUD_MODULES/main_task_panel/job-main-task-panel/components/main_task_panel.png",
+    manifest_url: "/production-studio/files/996-ready/HUD_MODULES/main_task_panel/job-main-task-panel/manifest.json",
+  });
   api.generateProductionStudioPackage.mockResolvedValue({
     style_code: "STYLE_0003",
     device_type: "mobile_landscape",
@@ -362,6 +451,42 @@ beforeEach(() => {
       },
     ],
   });
+});
+
+test("主界面任务模块可生成候选、选择、预览到主画布并验收入库", async () => {
+  const user = userEvent.setup();
+  render(<ProductionStudio api={api} />);
+
+  expect(await screen.findByText("UI素材生产")).toBeInTheDocument();
+  await user.click(screen.getByRole("button", { name: "生成任务模块候选" }));
+
+  expect(api.generateMainTaskPanelCandidates).toHaveBeenCalled();
+  expect(await screen.findByText("主界面左上任务追踪模块")).toBeInTheDocument();
+  expect(screen.getByText("1728×972")).toBeInTheDocument();
+  expect(screen.getByText("x=24 y=40 w=286 h=330")).toBeInTheDocument();
+  expect(screen.getByText("main_task_panel_candidate_2")).toBeInTheDocument();
+
+  await user.click(screen.getByRole("button", { name: "选择候选 2" }));
+  expect(api.selectMainTaskPanelCandidate).toHaveBeenCalledWith(
+    "assets/uploads/996-ready/HUD_MODULES/main_task_panel/job-main-task-panel",
+    "main_task_panel_candidate_2",
+  );
+
+  await user.click(screen.getByRole("button", { name: "预览到主画布" }));
+  expect(api.previewMainTaskPanelOnCanvas).toHaveBeenCalledWith(
+    "assets/uploads/996-ready/HUD_MODULES/main_task_panel/job-main-task-panel",
+  );
+  expect(await screen.findByAltText("main_task_panel 主画布预览")).toHaveAttribute(
+    "src",
+    "http://127.0.0.1:8000/production-studio/files/996-ready/HUD_MODULES/main_task_panel/job-main-task-panel/canvas_preview.png",
+  );
+
+  await user.click(screen.getByRole("button", { name: "验收入库" }));
+  expect(api.acceptMainTaskPanel).toHaveBeenCalledWith(
+    "assets/uploads/996-ready/HUD_MODULES/main_task_panel/job-main-task-panel",
+  );
+  expect(await screen.findByText("main_task_panel.png")).toBeInTheDocument();
+  expect(screen.getByText("查看 main_task_panel manifest")).toBeInTheDocument();
 });
 
 test("UI素材生产流程可生成、标记、确认、切图并预览输出", async () => {

@@ -12,6 +12,7 @@ from scripts.main_ui_production_chain import create_main_ui_package
 from scripts.main_ui_production_chain import create_ui_package
 from scripts.main_ui_production_chain import export_confirmed_components
 from scripts.main_ui_production_chain import update_candidate_confirmation
+from scripts import main_ui_production_chain as chain
 
 
 def write_source(path: Path, *, mode: str = "RGB") -> None:
@@ -132,3 +133,54 @@ def test_manual_confirmation_controls_export(tmp_path: Path) -> None:
     assert acceptance_by_id["skill_01"]["output_file"] == ""
     assert acceptance_by_id["skill_02"]["confirmed"] is True
     assert acceptance_by_id["skill_02"]["output_file"].endswith(".png")
+
+
+def test_main_task_panel_module_loop_generates_selects_previews_and_accepts(tmp_path: Path) -> None:
+    result = chain.create_main_task_panel_package(tmp_path / "uploads", job_id="job-main-task-panel")
+    package = Path(result["package_dir"])
+
+    assert result["module_id"] == "main_task_panel"
+    assert len(result["candidates"]) == 3
+    assert result["selected_candidate_id"] == ""
+    assert result["accepted"] is False
+
+    for candidate in result["candidates"]:
+        assert candidate["module_id"] == "main_task_panel"
+        assert candidate["width"] == 286
+        assert candidate["height"] == 330
+        assert candidate["target_x"] == 24
+        assert candidate["target_y"] == 40
+        assert candidate["canvas_width"] == 1728
+        assert candidate["canvas_height"] == 972
+        assert "生成一个 996 传奇手游横屏主界面左上任务追踪 HUD 模块皮肤" in candidate["prompt"]
+        assert candidate["image_path"].startswith("candidates/")
+        assert (package / candidate["image_path"]).exists()
+
+    selected = chain.select_main_task_panel_candidate(package, "main_task_panel_candidate_2")
+    assert selected["selected_candidate_id"] == "main_task_panel_candidate_2"
+
+    preview = chain.preview_main_task_panel_on_canvas(package)
+    preview_path = package / preview["canvas_preview_path"]
+    assert preview["canvas_width"] == 1728
+    assert preview["canvas_height"] == 972
+    assert preview["target_rect"] == {"x": 24, "y": 40, "width": 286, "height": 330}
+    assert preview_path.exists()
+    with Image.open(preview_path) as image:
+        assert image.size == (1728, 972)
+
+    accepted = chain.accept_main_task_panel_candidate(package)
+    component_path = package / "components" / "main_task_panel.png"
+    manifest = json.loads((package / "manifest.json").read_text(encoding="utf-8"))
+    component_record = json.loads((package / "component_record.json").read_text(encoding="utf-8"))
+
+    assert accepted["accepted"] is True
+    assert accepted["component_file"] == "components/main_task_panel.png"
+    assert component_path.exists()
+    with Image.open(component_path) as image:
+        assert image.size == (286, 330)
+        assert image.mode == "RGBA"
+    assert manifest["components"][0]["module_id"] == "main_task_panel"
+    assert manifest["components"][0]["file"] == "components/main_task_panel.png"
+    assert manifest["components"][0]["bounds"] == {"x": 24, "y": 40, "width": 286, "height": 330}
+    assert component_record["module_id"] == "main_task_panel"
+    assert component_record["selected_candidate_id"] == "main_task_panel_candidate_2"

@@ -82,6 +82,52 @@ def test_main_ui_candidate_update_and_export(tmp_path: Path, monkeypatch) -> Non
     assert next(item for item in saved["candidates"] if item["component_id"] == "skill_01")["image_path"] == ""
 
 
+def test_main_task_panel_module_api_loop(tmp_path: Path) -> None:
+    client = make_client(tmp_path)
+
+    generated = client.post("/production-studio/hud-modules/main-task-panel/generate")
+
+    assert generated.status_code == 200
+    body = generated.json()
+    assert body["module_id"] == "main_task_panel"
+    assert body["accepted"] is False
+    assert len(body["candidates"]) == 3
+    first = body["candidates"][0]
+    assert first["candidate_id"] == "main_task_panel_candidate_1"
+    assert first["module_id"] == "main_task_panel"
+    assert first["width"] == 286
+    assert first["height"] == 330
+    assert first["target_x"] == 24
+    assert first["target_y"] == 40
+    assert first["canvas_width"] == 1728
+    assert first["canvas_height"] == 972
+    assert first["image_url"].endswith("/candidates/main_task_panel_candidate_1.png")
+
+    package_dir = body["package_dir"]
+    selected = client.post(
+        "/production-studio/hud-modules/main-task-panel/select",
+        params={"package_dir": package_dir, "candidate_id": "main_task_panel_candidate_2"},
+    )
+    assert selected.status_code == 200
+    assert selected.json()["selected_candidate_id"] == "main_task_panel_candidate_2"
+
+    preview = client.post("/production-studio/hud-modules/main-task-panel/preview", params={"package_dir": package_dir})
+    assert preview.status_code == 200
+    preview_body = preview.json()
+    assert preview_body["canvas_preview_url"].endswith("/canvas_preview.png")
+    assert preview_body["target_rect"] == {"x": 24, "y": 40, "width": 286, "height": 330}
+
+    accepted = client.post("/production-studio/hud-modules/main-task-panel/accept", params={"package_dir": package_dir})
+    assert accepted.status_code == 200
+    accepted_body = accepted.json()
+    assert accepted_body["accepted"] is True
+    assert accepted_body["component_url"].endswith("/components/main_task_panel.png")
+    assert accepted_body["manifest_url"].endswith("/manifest.json")
+    manifest = json.loads((Path(package_dir) / "manifest.json").read_text(encoding="utf-8"))
+    assert manifest["components"][0]["module_id"] == "main_task_panel"
+    assert manifest["components"][0]["bounds"] == {"x": 24, "y": 40, "width": 286, "height": 330}
+
+
 def test_main_ui_endpoint_rejects_outside_package_path(tmp_path: Path) -> None:
     client = make_client(tmp_path)
     outside = tmp_path / "outside"

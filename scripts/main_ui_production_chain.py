@@ -33,6 +33,60 @@ LEVEL_A_TYPES = {
 }
 JPG_TYPES = {"screen", "background", "panel", "hud_bar", "chat", "map", "skill_bar"}
 
+MAIN_TASK_PANEL_SPEC: dict[str, Any] = {
+    "module_id": "main_task_panel",
+    "name": "主界面左上任务追踪模块",
+    "canvas": {"width": 1728, "height": 972},
+    "fixed_rect": {"x": 24, "y": 40, "width": 286, "height": 330},
+    "max_width": 302,
+    "transparent_required": True,
+    "text_allowed": False,
+    "forbidden_elements": [
+        "complete_game_screen",
+        "map",
+        "character",
+        "monster",
+        "scene_background",
+        "chinese_text",
+        "other_hud_regions",
+    ],
+    "internal_structure": [
+        "task_panel_background",
+        "title_bar_base",
+        "task_item_rows",
+        "divider_lines",
+        "fold_button_base",
+        "subtle_ornamental_frame",
+    ],
+}
+
+MAIN_TASK_PANEL_PROMPT = """生成一个 996 传奇手游横屏主界面左上任务追踪 HUD 模块皮肤。
+
+画布尺寸：286×330 px。
+透明背景。
+正视图。
+只生成该任务模块，不要生成完整游戏界面。
+
+模块内容：
+- 暗金色半透明任务面板底板
+- 顶部小标题栏底板
+- 3 到 5 条任务列表底板
+- 细金属边框
+- 轻微传奇风装饰纹理
+- 一个小型折叠按钮底板
+
+禁止：
+- 不要中文文字
+- 不要人物
+- 不要怪物
+- 不要地图
+- 不要场景背景
+- 不要其他 UI 区域
+- 不要超出画布边界
+
+风格：
+暗金、金属、复古传奇、手游 HUD、边界清晰、适合叠加在游戏画面上。"""
+
 
 def utc_now() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
@@ -869,6 +923,348 @@ def create_main_ui_package(
         "exported_count": len(export_result["exported"]),
         "exported": export_result["exported"],
     }
+
+
+def main_task_panel_rect() -> dict[str, int]:
+    rect = MAIN_TASK_PANEL_SPEC["fixed_rect"]
+    return {
+        "x": int(rect["x"]),
+        "y": int(rect["y"]),
+        "width": int(rect["width"]),
+        "height": int(rect["height"]),
+    }
+
+
+def main_task_panel_canvas() -> dict[str, int]:
+    canvas = MAIN_TASK_PANEL_SPEC["canvas"]
+    return {"width": int(canvas["width"]), "height": int(canvas["height"])}
+
+
+def draw_main_task_panel_placeholder(target: Path, variant_index: int) -> None:
+    rect = main_task_panel_rect()
+    width = rect["width"]
+    height = rect["height"]
+    palettes = [
+        {"panel": (42, 31, 20, 188), "edge": (214, 166, 82, 235), "inner": (105, 77, 42, 145)},
+        {"panel": (27, 29, 31, 196), "edge": (190, 139, 67, 235), "inner": (86, 72, 51, 150)},
+        {"panel": (48, 36, 29, 184), "edge": (230, 183, 96, 235), "inner": (122, 86, 48, 138)},
+    ]
+    palette = palettes[(variant_index - 1) % len(palettes)]
+    image = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(image, "RGBA")
+
+    draw.rounded_rectangle((6, 8, width - 7, height - 8), radius=14, fill=palette["panel"], outline=palette["edge"], width=3)
+    draw.rounded_rectangle((14, 18, width - 15, 54), radius=8, fill=(78, 55, 32, 185), outline=palette["edge"], width=2)
+    draw.line((26, 61, width - 26, 61), fill=(230, 184, 91, 150), width=1)
+
+    row_top = 76
+    row_gap = 48 if variant_index != 3 else 42
+    rows = 4 if variant_index != 2 else 5
+    for row in range(rows):
+        y = row_top + row * row_gap
+        if y + 30 > height - 56:
+            break
+        alpha = 118 if row % 2 == 0 else 92
+        draw.rounded_rectangle((20, y, width - 22, y + 32), radius=6, fill=(*palette["inner"][:3], alpha), outline=(176, 132, 70, 95), width=1)
+        draw.rectangle((32, y + 10, width - 54, y + 14), fill=(214, 172, 96, 84))
+        draw.rectangle((32, y + 20, width - 86, y + 23), fill=(132, 106, 72, 70))
+        if row:
+            draw.line((24, y - 10, width - 24, y - 10), fill=(218, 170, 82, 58), width=1)
+
+    fold_x = width - 51
+    fold_y = height - 43
+    draw.rounded_rectangle((fold_x, fold_y, fold_x + 31, fold_y + 24), radius=5, fill=(44, 37, 31, 210), outline=palette["edge"], width=2)
+    draw.polygon(
+        [(fold_x + 10, fold_y + 9), (fold_x + 22, fold_y + 9), (fold_x + 16, fold_y + 16)],
+        fill=(223, 179, 95, 185),
+    )
+
+    for offset in (0, 1):
+        draw.arc((12 + offset, 13 + offset, 70 + offset, 70 + offset), 180, 270, fill=(232, 190, 105, 115), width=2)
+        draw.arc(
+            (width - 70 - offset, 13 + offset, width - 12 - offset, 70 + offset),
+            270,
+            360,
+            fill=(232, 190, 105, 115),
+            width=2,
+        )
+        draw.arc(
+            (12 + offset, height - 70 - offset, 70 + offset, height - 12 - offset),
+            90,
+            180,
+            fill=(232, 190, 105, 115),
+            width=2,
+        )
+        draw.arc(
+            (width - 70 - offset, height - 70 - offset, width - 12 - offset, height - 12 - offset),
+            0,
+            90,
+            fill=(232, 190, 105, 115),
+            width=2,
+        )
+
+    for x in range(18, width - 18, 34):
+        draw.line((x, 16, x + 12, 16), fill=(247, 207, 118, 72), width=1)
+    image.save(target, "PNG")
+
+
+def main_task_panel_candidate_record(candidate_id: str, image_path: str, variant_index: int) -> dict[str, Any]:
+    rect = main_task_panel_rect()
+    canvas = main_task_panel_canvas()
+    return {
+        "candidate_id": candidate_id,
+        "module_id": MAIN_TASK_PANEL_SPEC["module_id"],
+        "name": MAIN_TASK_PANEL_SPEC["name"],
+        "width": rect["width"],
+        "height": rect["height"],
+        "target_x": rect["x"],
+        "target_y": rect["y"],
+        "canvas_width": canvas["width"],
+        "canvas_height": canvas["height"],
+        "fixed_rect": rect,
+        "prompt": MAIN_TASK_PANEL_PROMPT,
+        "image_path": image_path,
+        "preview_path": image_path,
+        "selected": False,
+        "accepted": False,
+        "variant_index": variant_index,
+        "transparent_required": bool(MAIN_TASK_PANEL_SPEC["transparent_required"]),
+        "text_allowed": bool(MAIN_TASK_PANEL_SPEC["text_allowed"]),
+        "forbidden_elements": list(MAIN_TASK_PANEL_SPEC["forbidden_elements"]),
+        "internal_structure": list(MAIN_TASK_PANEL_SPEC["internal_structure"]),
+    }
+
+
+def main_task_panel_package_response(package_dir: str | Path) -> dict[str, Any]:
+    package_path = Path(package_dir)
+    candidate_path = package_path / "candidate_manifest.json"
+    delivery_path = package_path / "delivery_report.json"
+    candidate_manifest = read_json(candidate_path) if candidate_path.exists() else {"candidates": []}
+    delivery = read_json(delivery_path) if delivery_path.exists() else {}
+    candidates = [item for item in candidate_manifest.get("candidates", []) if isinstance(item, dict)]
+    selected_candidate_id = str(delivery.get("selected_candidate_id") or "")
+    return {
+        "package_dir": str(package_path),
+        "module_id": MAIN_TASK_PANEL_SPEC["module_id"],
+        "name": MAIN_TASK_PANEL_SPEC["name"],
+        "canvas": main_task_panel_canvas(),
+        "fixed_rect": main_task_panel_rect(),
+        "max_width": MAIN_TASK_PANEL_SPEC["max_width"],
+        "transparent_required": MAIN_TASK_PANEL_SPEC["transparent_required"],
+        "text_allowed": MAIN_TASK_PANEL_SPEC["text_allowed"],
+        "forbidden_elements": list(MAIN_TASK_PANEL_SPEC["forbidden_elements"]),
+        "internal_structure": list(MAIN_TASK_PANEL_SPEC["internal_structure"]),
+        "prompt": MAIN_TASK_PANEL_PROMPT,
+        "candidates": candidates,
+        "selected_candidate_id": selected_candidate_id,
+        "accepted": bool(delivery.get("accepted", False)),
+        "canvas_preview_path": str(delivery.get("canvas_preview_path") or ""),
+        "component_file": str(delivery.get("component_file") or ""),
+        "manifest_path": "manifest.json" if (package_path / "manifest.json").exists() else "",
+        "component_record_path": "component_record.json" if (package_path / "component_record.json").exists() else "",
+        "updated_at": str(delivery.get("updated_at") or ""),
+    }
+
+
+def create_main_task_panel_package(upload_root: str | Path, *, job_id: str | None = None) -> dict[str, Any]:
+    upload_path = Path(upload_root)
+    package_dir = upload_path / "996-ready" / "HUD_MODULES" / "main_task_panel" / (job_id or safe_job_id("main-task-panel"))
+    package_dir.mkdir(parents=True, exist_ok=True)
+    candidates_dir = package_dir / "candidates"
+    candidates_dir.mkdir(exist_ok=True)
+
+    candidates: list[dict[str, Any]] = []
+    for index in range(1, 4):
+        candidate_id = f"main_task_panel_candidate_{index}"
+        image_path = f"candidates/{candidate_id}.png"
+        draw_main_task_panel_placeholder(package_dir / image_path, index)
+        candidates.append(main_task_panel_candidate_record(candidate_id, image_path, index))
+
+    generated_at = utc_now()
+    write_json(
+        package_dir / "candidate_manifest.json",
+        {
+            "schema_version": "1.0",
+            "package_type": "996-hud-module-candidates",
+            "module_id": MAIN_TASK_PANEL_SPEC["module_id"],
+            "name": MAIN_TASK_PANEL_SPEC["name"],
+            "canvas": main_task_panel_canvas(),
+            "fixed_rect": main_task_panel_rect(),
+            "prompt": MAIN_TASK_PANEL_PROMPT,
+            "candidates": candidates,
+            "created_at": generated_at,
+            "updated_at": generated_at,
+        },
+    )
+    write_json(
+        package_dir / "delivery_report.json",
+        {
+            "schema_version": "1.0",
+            "workflow": "main_task_panel_hud_module_loop",
+            "module_id": MAIN_TASK_PANEL_SPEC["module_id"],
+            "selected_candidate_id": "",
+            "canvas_preview_path": "",
+            "component_file": "",
+            "accepted": False,
+            "created_at": generated_at,
+            "updated_at": generated_at,
+        },
+    )
+    write_json(
+        package_dir / "manifest.json",
+        {
+            "schema_version": "1.0",
+            "package_type": "996-hud-module",
+            "module_id": MAIN_TASK_PANEL_SPEC["module_id"],
+            "name": MAIN_TASK_PANEL_SPEC["name"],
+            "canvas": main_task_panel_canvas(),
+            "components": [],
+            "created_at": generated_at,
+            "updated_at": generated_at,
+        },
+    )
+    return main_task_panel_package_response(package_dir)
+
+
+def selected_main_task_panel_candidate(package_dir: Path) -> dict[str, Any]:
+    response = main_task_panel_package_response(package_dir)
+    selected_candidate_id = response["selected_candidate_id"]
+    if not selected_candidate_id:
+        raise ValueError("No main_task_panel candidate selected")
+    for candidate in response["candidates"]:
+        if candidate.get("candidate_id") == selected_candidate_id:
+            image_path = package_dir / str(candidate.get("image_path") or "")
+            if not image_path.exists():
+                raise FileNotFoundError(f"Selected candidate image not found: {image_path}")
+            return candidate
+    raise ValueError(f"Selected candidate not found: {selected_candidate_id}")
+
+
+def select_main_task_panel_candidate(package_dir: str | Path, candidate_id: str) -> dict[str, Any]:
+    package_path = Path(package_dir)
+    manifest = read_json(package_path / "candidate_manifest.json")
+    candidates = [item for item in manifest.get("candidates", []) if isinstance(item, dict)]
+    if not any(candidate.get("candidate_id") == candidate_id for candidate in candidates):
+        raise ValueError(f"Candidate not found: {candidate_id}")
+    for candidate in candidates:
+        selected = candidate.get("candidate_id") == candidate_id
+        candidate["selected"] = selected
+        candidate["accepted"] = False
+    manifest["candidates"] = candidates
+    write_json(package_path / "candidate_manifest.json", {**manifest, "updated_at": utc_now()})
+
+    delivery = read_json(package_path / "delivery_report.json")
+    delivery.update({"selected_candidate_id": candidate_id, "accepted": False, "updated_at": utc_now()})
+    write_json(package_path / "delivery_report.json", delivery)
+    return main_task_panel_package_response(package_path)
+
+
+def preview_main_task_panel_on_canvas(package_dir: str | Path) -> dict[str, Any]:
+    package_path = Path(package_dir)
+    candidate = selected_main_task_panel_candidate(package_path)
+    rect = main_task_panel_rect()
+    canvas = main_task_panel_canvas()
+    source_path = package_path / str(candidate["image_path"])
+
+    preview = Image.new("RGBA", (canvas["width"], canvas["height"]), (16, 18, 22, 255))
+    draw = ImageDraw.Draw(preview, "RGBA")
+    for y in range(0, canvas["height"], 72):
+        draw.line((0, y, canvas["width"], y), fill=(255, 255, 255, 12), width=1)
+    for x in range(0, canvas["width"], 96):
+        draw.line((x, 0, x, canvas["height"]), fill=(255, 255, 255, 9), width=1)
+    with Image.open(source_path) as source:
+        module_image = source.convert("RGBA").resize((rect["width"], rect["height"]))
+    preview.alpha_composite(module_image, (rect["x"], rect["y"]))
+    preview_path = "canvas_preview.png"
+    preview.save(package_path / preview_path, "PNG")
+
+    delivery = read_json(package_path / "delivery_report.json")
+    delivery.update({"canvas_preview_path": preview_path, "updated_at": utc_now()})
+    write_json(package_path / "delivery_report.json", delivery)
+    return {
+        **main_task_panel_package_response(package_path),
+        "canvas_preview_path": preview_path,
+        "canvas_width": canvas["width"],
+        "canvas_height": canvas["height"],
+        "target_rect": rect,
+    }
+
+
+def accept_main_task_panel_candidate(package_dir: str | Path) -> dict[str, Any]:
+    package_path = Path(package_dir)
+    candidate = selected_main_task_panel_candidate(package_path)
+    preview_main_task_panel_on_canvas(package_path)
+
+    components_dir = package_path / "components"
+    components_dir.mkdir(exist_ok=True)
+    component_file = "components/main_task_panel.png"
+    source_path = package_path / str(candidate["image_path"])
+    with Image.open(source_path) as source:
+        source.convert("RGBA").save(package_path / component_file, "PNG")
+
+    rect = main_task_panel_rect()
+    canvas = main_task_panel_canvas()
+    generated_at = utc_now()
+    component_record = {
+        "schema_version": "1.0",
+        "component_id": "main_task_panel",
+        "module_id": MAIN_TASK_PANEL_SPEC["module_id"],
+        "name": MAIN_TASK_PANEL_SPEC["name"],
+        "selected_candidate_id": candidate["candidate_id"],
+        "file": component_file,
+        "bounds": rect,
+        "width": rect["width"],
+        "height": rect["height"],
+        "target_x": rect["x"],
+        "target_y": rect["y"],
+        "canvas_width": canvas["width"],
+        "canvas_height": canvas["height"],
+        "transparent_required": True,
+        "prompt": MAIN_TASK_PANEL_PROMPT,
+        "accepted": True,
+        "updated_at": generated_at,
+    }
+    write_json(package_path / "component_record.json", component_record)
+    write_json(
+        package_path / "manifest.json",
+        {
+            "schema_version": "1.0",
+            "package_type": "996-hud-module",
+            "module_id": MAIN_TASK_PANEL_SPEC["module_id"],
+            "name": MAIN_TASK_PANEL_SPEC["name"],
+            "canvas": canvas,
+            "fixed_rect": rect,
+            "components": [
+                {
+                    "component_id": "main_task_panel",
+                    "module_id": MAIN_TASK_PANEL_SPEC["module_id"],
+                    "name": MAIN_TASK_PANEL_SPEC["name"],
+                    "file": component_file,
+                    "bounds": rect,
+                    "width": rect["width"],
+                    "height": rect["height"],
+                    "target_x": rect["x"],
+                    "target_y": rect["y"],
+                    "canvas_width": canvas["width"],
+                    "canvas_height": canvas["height"],
+                    "transparent_png_required": True,
+                    "source_candidate_id": candidate["candidate_id"],
+                }
+            ],
+            "updated_at": generated_at,
+        },
+    )
+
+    manifest = read_json(package_path / "candidate_manifest.json")
+    for item in manifest.get("candidates", []):
+        if isinstance(item, dict):
+            item["accepted"] = item.get("candidate_id") == candidate["candidate_id"]
+    write_json(package_path / "candidate_manifest.json", {**manifest, "updated_at": generated_at})
+
+    delivery = read_json(package_path / "delivery_report.json")
+    delivery.update({"component_file": component_file, "accepted": True, "updated_at": generated_at})
+    write_json(package_path / "delivery_report.json", delivery)
+    return {**main_task_panel_package_response(package_path), "component_file": component_file}
 
 
 def main() -> int:

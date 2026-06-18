@@ -8,6 +8,7 @@ import {
   ProductionAssetMode,
   ProductionDeviceType,
   ProductionGenerationMode,
+  MainTaskPanelResult,
   MainUiProductionResult,
   MarkingAcceptanceResult,
   ManualAcceptanceStatus,
@@ -86,6 +87,10 @@ type ProductionStudioApi = Pick<
   | "runOpenCvUiSlicer"
   | "runMarkingAcceptanceTest"
   | "runMainUiProduction"
+  | "generateMainTaskPanelCandidates"
+  | "selectMainTaskPanelCandidate"
+  | "previewMainTaskPanelOnCanvas"
+  | "acceptMainTaskPanel"
   | "getMainUiProduction"
   | "updateMainUiCandidate"
   | "exportMainUiProduction"
@@ -272,6 +277,9 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
   const [uploadingReference, setUploadingReference] = useState(false);
   const [result, setResult] = useState<ProductionStudioResult | null>(null);
   const [mainUiProduction, setMainUiProduction] = useState<MainUiProductionResult | null>(null);
+  const [mainTaskPanel, setMainTaskPanel] = useState<MainTaskPanelResult | null>(null);
+  const [mainTaskPanelLoading, setMainTaskPanelLoading] = useState(false);
+  const [mainTaskPanelMessage, setMainTaskPanelMessage] = useState("");
   const [mainUiLoading, setMainUiLoading] = useState(false);
   const [uiProductionScreenType, setUiProductionScreenType] = useState<UiProductionScreenType>("main_ui");
   const [uiProductionGenerationMode, setUiProductionGenerationMode] = useState<UiProductionGenerationMode>("plain");
@@ -792,6 +800,72 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
       setError("主界面实验包生成失败，请确认 P5 主界面参考资源可访问。");
     } finally {
       setMainUiLoading(false);
+    }
+  }
+
+  async function generateMainTaskPanelCandidates() {
+    setMainTaskPanelLoading(true);
+    setError("");
+    setMainTaskPanelMessage("");
+    try {
+      const response = await api.generateMainTaskPanelCandidates();
+      setMainTaskPanel(response);
+      setMainTaskPanelMessage("已生成 3 张 main_task_panel 候选。");
+    } catch (exc) {
+      setError(`生成任务模块候选失败：${exc instanceof Error ? exc.message : "unknown"}`);
+    } finally {
+      setMainTaskPanelLoading(false);
+    }
+  }
+
+  async function selectMainTaskPanelCandidate(candidateId: string) {
+    if (!mainTaskPanel) {
+      return;
+    }
+    setMainTaskPanelLoading(true);
+    setError("");
+    try {
+      const response = await api.selectMainTaskPanelCandidate(mainTaskPanel.package_dir, candidateId);
+      setMainTaskPanel(response);
+      setMainTaskPanelMessage(`已选择 ${candidateId}。`);
+    } catch (exc) {
+      setError(`选择任务模块候选失败：${exc instanceof Error ? exc.message : "unknown"}`);
+    } finally {
+      setMainTaskPanelLoading(false);
+    }
+  }
+
+  async function previewMainTaskPanelOnCanvas() {
+    if (!mainTaskPanel) {
+      return;
+    }
+    setMainTaskPanelLoading(true);
+    setError("");
+    try {
+      const response = await api.previewMainTaskPanelOnCanvas(mainTaskPanel.package_dir);
+      setMainTaskPanel(response);
+      setMainTaskPanelMessage("已预览到 1728×972 主画布。");
+    } catch (exc) {
+      setError(`预览任务模块失败：${exc instanceof Error ? exc.message : "unknown"}`);
+    } finally {
+      setMainTaskPanelLoading(false);
+    }
+  }
+
+  async function acceptMainTaskPanel() {
+    if (!mainTaskPanel) {
+      return;
+    }
+    setMainTaskPanelLoading(true);
+    setError("");
+    try {
+      const response = await api.acceptMainTaskPanel(mainTaskPanel.package_dir);
+      setMainTaskPanel(response);
+      setMainTaskPanelMessage("main_task_panel 已验收入库。");
+    } catch (exc) {
+      setError(`任务模块验收入库失败：${exc instanceof Error ? exc.message : "unknown"}`);
+    } finally {
+      setMainTaskPanelLoading(false);
     }
   }
 
@@ -1376,6 +1450,97 @@ export function ProductionStudio({ api = studioApi }: { api?: ProductionStudioAp
               OpenCV baseline 切图
             </button>
           </div>
+          <section className="grid gap-3 rounded-md border border-studio-line bg-slate-50 p-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <h3 className="text-sm font-semibold">主界面左上任务追踪模块</h3>
+                <div className="mt-1 flex flex-wrap gap-2 text-xs text-studio-muted">
+                  <span>1728×972</span>
+                  <span>x=24 y=40 w=286 h=330</span>
+                </div>
+              </div>
+              <button
+                className="rounded-md bg-studio-action px-3 py-2 text-sm font-semibold text-white disabled:opacity-60"
+                disabled={mainTaskPanelLoading}
+                onClick={generateMainTaskPanelCandidates}
+                type="button"
+              >
+                生成任务模块候选
+              </button>
+            </div>
+            {mainTaskPanel ? (
+              <div className="grid gap-3">
+                <div className="grid gap-2 md:grid-cols-3">
+                  {mainTaskPanel.candidates.map((candidate, index) => (
+                    <article
+                      className={`grid gap-2 rounded-md border p-2 ${
+                        candidate.selected ? "border-studio-action bg-white" : "border-studio-line bg-white"
+                      }`}
+                      key={candidate.candidate_id}
+                    >
+                      {candidate.image_url ? (
+                        <img
+                          alt={`${candidate.candidate_id} 候选`}
+                          className="aspect-[286/330] w-full rounded-md bg-slate-950 object-contain"
+                          src={api.getProductionStudioFileUrl(candidate.image_url)}
+                        />
+                      ) : null}
+                      <div className="break-all text-xs font-medium">{candidate.candidate_id}</div>
+                      <button
+                        className="rounded-md border border-studio-line px-2 py-1 text-xs disabled:opacity-60"
+                        disabled={mainTaskPanelLoading}
+                        onClick={() => selectMainTaskPanelCandidate(candidate.candidate_id)}
+                        type="button"
+                      >
+                        {`选择候选 ${index + 1}`}
+                      </button>
+                    </article>
+                  ))}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    className="rounded-md border border-studio-line bg-white px-3 py-2 text-sm disabled:opacity-60"
+                    disabled={mainTaskPanelLoading || !mainTaskPanel.selected_candidate_id}
+                    onClick={previewMainTaskPanelOnCanvas}
+                    type="button"
+                  >
+                    预览到主画布
+                  </button>
+                  <button
+                    className="rounded-md border border-studio-line bg-white px-3 py-2 text-sm font-semibold disabled:opacity-60"
+                    disabled={mainTaskPanelLoading || !mainTaskPanel.selected_candidate_id}
+                    onClick={acceptMainTaskPanel}
+                    type="button"
+                  >
+                    验收入库
+                  </button>
+                </div>
+                {mainTaskPanel.canvas_preview_url ? (
+                  <img
+                    alt="main_task_panel 主画布预览"
+                    className="aspect-video w-full rounded-md border border-studio-line bg-slate-950 object-contain"
+                    src={api.getProductionStudioFileUrl(mainTaskPanel.canvas_preview_url)}
+                  />
+                ) : null}
+                {mainTaskPanel.component_url || mainTaskPanel.manifest_url ? (
+                  <div className="flex flex-wrap items-center gap-2 text-xs">
+                    {mainTaskPanel.component_url ? <span className="rounded-md bg-white px-2 py-1">main_task_panel.png</span> : null}
+                    {mainTaskPanel.manifest_url ? (
+                      <a
+                        className="rounded-md border border-studio-line bg-white px-2 py-1"
+                        href={api.getProductionStudioFileUrl(mainTaskPanel.manifest_url)}
+                        rel="noreferrer"
+                        target="_blank"
+                      >
+                        查看 main_task_panel manifest
+                      </a>
+                    ) : null}
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+            {mainTaskPanelMessage ? <p className="text-sm text-amber-700">{mainTaskPanelMessage}</p> : null}
+          </section>
           {uiProductionMessage ? <p className="text-sm text-amber-700">{uiProductionMessage}</p> : null}
           {markingAcceptanceResult ? (
             <section className="grid gap-4 rounded-md border border-emerald-300 bg-emerald-50 p-4">

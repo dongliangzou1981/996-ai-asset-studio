@@ -48,11 +48,16 @@ from app.schemas import (
     StyleProfileList,
 )
 from scripts.analyze_production_package import analyze_package, utc_now
+from scripts.main_ui_production_chain import accept_main_task_panel_candidate
+from scripts.main_ui_production_chain import create_main_task_panel_package
 from scripts.main_ui_production_chain import create_ui_package
 from scripts.main_ui_production_chain import create_main_ui_package
 from scripts.main_ui_production_chain import export_confirmed_components
+from scripts.main_ui_production_chain import main_task_panel_package_response
 from scripts.main_ui_production_chain import mark_candidate_components
+from scripts.main_ui_production_chain import preview_main_task_panel_on_canvas
 from scripts.main_ui_production_chain import select_candidate_option
+from scripts.main_ui_production_chain import select_main_task_panel_candidate
 from scripts.main_ui_production_chain import update_candidate_confirmation
 from scripts.opencv_ui_slicer import slice_ui_image as run_opencv_ui_slicer
 
@@ -799,6 +804,41 @@ def create_app(database_path: str | Path | None = None, upload_dir: str | Path |
             else 0,
         }
 
+    def main_task_panel_api_response(package_dir: Path) -> dict:
+        response = main_task_panel_package_response(package_dir)
+        candidates = []
+        for candidate in response.get("candidates", []):
+            if not isinstance(candidate, dict):
+                continue
+            image_path = str(candidate.get("image_path") or "")
+            candidates.append(
+                {
+                    **candidate,
+                    "image_url": package_file_url(package_dir, image_path) if image_path and (package_dir / image_path).exists() else "",
+                    "preview_url": package_file_url(package_dir, image_path) if image_path and (package_dir / image_path).exists() else "",
+                }
+            )
+        canvas_preview_path = str(response.get("canvas_preview_path") or "")
+        component_file = str(response.get("component_file") or "")
+        manifest_path = str(response.get("manifest_path") or "")
+        component_record_path = str(response.get("component_record_path") or "")
+        return {
+            **response,
+            "candidates": candidates,
+            "canvas_preview_url": package_file_url(package_dir, canvas_preview_path)
+            if canvas_preview_path and (package_dir / canvas_preview_path).exists()
+            else "",
+            "component_url": package_file_url(package_dir, component_file)
+            if component_file and (package_dir / component_file).exists()
+            else "",
+            "manifest_url": package_file_url(package_dir, manifest_path)
+            if manifest_path and (package_dir / manifest_path).exists()
+            else "",
+            "component_record_url": package_file_url(package_dir, component_record_path)
+            if component_record_path and (package_dir / component_record_path).exists()
+            else "",
+        }
+
     def opencv_source_image(package_dir: Path) -> Path:
         for filename in ["main_ui.jpg", "main_ui.png", "ui_preview.png", "original.jpg", "original.png", "candidate_preview.jpg"]:
             candidate = package_dir / filename
@@ -922,6 +962,46 @@ def create_app(database_path: str | Path | None = None, upload_dir: str | Path |
             {"status": "generated"},
         )
         return response
+
+    @app.post("/production-studio/hud-modules/main-task-panel/generate")
+    def generate_main_task_panel_candidates() -> dict:
+        try:
+            result = create_main_task_panel_package(upload_root=upload_root)
+        except (FileNotFoundError, RuntimeError, ValueError, OSError) as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        package_path = resolve_production_package_dir(str(result["package_dir"]))
+        return main_task_panel_api_response(package_path)
+
+    @app.post("/production-studio/hud-modules/main-task-panel/select")
+    def select_main_task_panel_module_candidate(package_dir: str, candidate_id: str) -> dict:
+        package_path = resolve_production_package_dir(package_dir)
+        try:
+            select_main_task_panel_candidate(package_path, candidate_id)
+        except (FileNotFoundError, RuntimeError, ValueError, OSError) as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        return main_task_panel_api_response(package_path)
+
+    @app.post("/production-studio/hud-modules/main-task-panel/preview")
+    def preview_main_task_panel_module(package_dir: str) -> dict:
+        package_path = resolve_production_package_dir(package_dir)
+        try:
+            result = preview_main_task_panel_on_canvas(package_path)
+        except (FileNotFoundError, RuntimeError, ValueError, OSError) as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        response = main_task_panel_api_response(package_path)
+        response["target_rect"] = result.get("target_rect", response.get("fixed_rect"))
+        response["canvas_width"] = result.get("canvas_width")
+        response["canvas_height"] = result.get("canvas_height")
+        return response
+
+    @app.post("/production-studio/hud-modules/main-task-panel/accept")
+    def accept_main_task_panel_module(package_dir: str) -> dict:
+        package_path = resolve_production_package_dir(package_dir)
+        try:
+            accept_main_task_panel_candidate(package_path)
+        except (FileNotFoundError, RuntimeError, ValueError, OSError) as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+        return main_task_panel_api_response(package_path)
 
     @app.post("/production-studio/ui-production/select-candidate")
     def select_ui_production_candidate(package_dir: str, candidate_id: str) -> dict:
